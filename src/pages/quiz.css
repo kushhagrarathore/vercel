@@ -14,9 +14,9 @@
 }
 
 .dark .question-type-window {
-  background-color: #1f2937; /* Tailwind gray-800 */
-  border-color: #374151;     /* Tailwind gray-700 */
-  color: #f9fafb;            /* Light text */
+  background-color: #1f2937;
+  border-color: #374151;
+  color: #f9fafb;
 }
 
 /* === Question Type Option Buttons === */
@@ -43,7 +43,7 @@
 }
 
 .dark .question-type-option:hover {
-  background-color: #374151; /* darker gray on hover */
+  background-color: #374151;
 }
 
 /* === Result Panel === */
@@ -93,6 +93,7 @@
 input, select, textarea, button {
   color: #1f2937;
   background-color: white;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .dark input,
