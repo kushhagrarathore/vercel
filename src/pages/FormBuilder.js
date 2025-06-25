@@ -334,12 +334,17 @@ const FormBuilder = () => {
       data: { user },
     } = await supabase.auth.getUser(); // ✅ Fetch current user ONCE
 
+    if (!user) {
+      alert('❌ You must be logged in to save forms');
+      return;
+    }
+
     // ✅ CREATE NEW FORM if no ID
     if (!currentFormId) {
       const formData = {
         title: title.trim(),
         customization_settings: customization,
-        created_by: user?.email || 'anonymous', // ✅ attach user email
+        user_id: user.id, // ✅ Changed from created_by to user_id
       };
 
       const { data: form, error: formError } = await supabase
@@ -350,14 +355,14 @@ const FormBuilder = () => {
 
       if (formError) {
         console.error('❌ Form creation failed:', formError);
-        alert(`❌ Failed to create form`);
+        alert(`❌ Failed to create form: ${formError.message || 'Unknown error'}`);
         return;
       }
 
       currentFormId = form.id;
       setFormId(currentFormId);
       localStorage.setItem('currentFormId', currentFormId);
-      localStorage.setItem('formUserEmail', user?.email);
+      localStorage.setItem('formUserId', user.id);
     } else {
       // ✅ UPDATE FORM if already exists
       const { error: updateError } = await supabase
@@ -366,105 +371,108 @@ const FormBuilder = () => {
           title: title.trim(),
           customization_settings: customization
         })
-        .eq('id', currentFormId);
+        .eq('id', currentFormId)
+        .eq('user_id', user.id); // ✅ Added security check
 
       if (updateError) {
-        alert('❌ Failed to update form');
+        console.error('❌ Form update failed:', updateError);
+        alert(`❌ Failed to update form: ${updateError.message || 'Unknown error'}`);
         return;
       }
     }
 
-    // Proceed with deleting and inserting questions...
+    // Step 2: Delete old questions
+    console.log('🟡 Deleting old questions for form ID:', currentFormId);
+    const { error: deleteError } = await supabase
+      .from('questions')
+      .delete()
+      .eq('form_id', currentFormId);
 
-  
-
-      // Step 2: Delete old questions
-      console.log('🟡 Deleting old questions for form ID:', currentFormId);
-      const { error: deleteError } = await supabase
-        .from('questions')
-        .delete()
-        .eq('form_id', currentFormId);
-
-      if (deleteError) {
-        console.error('❌ Question deletion failed:', deleteError);
-        alert(`❌ Failed to delete old questions: ${deleteError.message || 'Unknown error'}`);
-        return;
-      }
-      console.log('✅ Old questions deleted successfully');
-
-      // Step 3: Insert new questions
-      console.log('📝 Processing questions for insertion...');
-      console.log('📋 Raw questions data:', questions);
-      
-      const formattedQuestions = questions.map((q, index) => {
-        // Ensure all required fields are properly formatted
-        const formatted = {
-          form_id: currentFormId,
-          question_text: (q.label && q.label.trim()) || `Question ${index + 1}`,
-          question_type: (q.type || 'short_text').replace('-', '_'),
-
-          options: Array.isArray(q.options) ? q.options : [],
-          media: (q.media && typeof q.media === 'string') ? q.media : '',
-          required: Boolean(q.required),
-          order_index: index,
-          settings: (typeof q.settings === 'object' && q.settings !== null) ? q.settings : {},
-        };
-        
-        console.log(`📋 Question ${index + 1} formatted:`, formatted);
-        return formatted;
-      });
-
-      console.log('🟡 Inserting questions:', formattedQuestions);
-      console.log('📊 Total questions to insert:', formattedQuestions.length);
-
-      const { data: insertedQuestions, error: questionsError } = await supabase
-        .from('questions')
-        .insert(formattedQuestions)
-        .select();
-
-      if (questionsError) {
-        console.error('❌ Questions insert failed:', questionsError);
-        console.log('🧪 Data that failed to insert:', formattedQuestions);
-        
-        // More specific error handling
-        let errorMessage = 'Unknown error occurred while inserting questions.';
-        
-        if (questionsError.code === '23503') {
-          errorMessage = 'Foreign key constraint failed. The form ID might not exist in the database.';
-        } else if (questionsError.code === '42601') {
-          errorMessage = 'SQL syntax error. There might be an issue with the data format.';
-        } else if (questionsError.code === '23502') {
-          errorMessage = 'A required field is missing. Check that all questions have the necessary data.';
-        } else if (questionsError.message) {
-          errorMessage = questionsError.message;
-        }
-        
-        alert(`❌ Failed to insert questions: ${errorMessage}`);
-        return;
-      }
-
-      console.log('✅ Questions inserted successfully:', insertedQuestions);
-      console.log(`✅ Total questions inserted: ${insertedQuestions?.length || 0}`);
-
-      // Step 4: Verify the save was successful
-      const { data: verifyQuestions, error: verifyError } = await supabase
-        .from('questions')
-        .select('*')
-        .eq('form_id', currentFormId)
-        .order('order_index');
-
-      if (!verifyError) {
-        console.log('✅ Verification - Questions in database:', verifyQuestions);
-        console.log(`✅ Verification - Found ${verifyQuestions.length} questions in database`);
-      }
-
-      alert(`✅ Form saved successfully! ${insertedQuestions?.length || 0} questions saved.`);
-      
-    } catch (error) {
-      console.error('❌ Unexpected error saving form:', error);
-      alert(`❌ Unexpected error: ${error.message || 'Unknown error occurred'}`);
+    if (deleteError) {
+      console.error('❌ Question deletion failed:', deleteError);
+      alert(`❌ Failed to delete old questions: ${deleteError.message || 'Unknown error'}`);
+      return;
     }
-  };
+    console.log('✅ Old questions deleted successfully');
+
+    // Step 3: Insert new questions
+    console.log('📝 Processing questions for insertion...');
+    console.log('📋 Raw questions data:', questions);
+    
+    const formattedQuestions = questions.map((q, index) => {
+      // Ensure all required fields are properly formatted
+      const formatted = {
+        form_id: currentFormId,
+        question_text: (q.label && q.label.trim()) || `Question ${index + 1}`,
+        question_type: (q.type || 'short_text').replace('-', '_'),
+        options: Array.isArray(q.options) ? q.options : [],
+        media: (q.media && typeof q.media === 'string') ? q.media : '',
+        required: Boolean(q.required),
+        order_index: index,
+        settings: (typeof q.settings === 'object' && q.settings !== null) ? q.settings : {},
+      };
+      
+      console.log(`📋 Question ${index + 1} formatted:`, formatted);
+      return formatted;
+    });
+
+    console.log('🟡 Inserting questions:', formattedQuestions);
+    console.log('📊 Total questions to insert:', formattedQuestions.length);
+
+    if (formattedQuestions.length === 0) {
+      console.log('⚠️ No questions to insert');
+      alert('✅ Form saved successfully! (No questions to save)');
+      return;
+    }
+
+    const { data: insertedQuestions, error: questionsError } = await supabase
+      .from('questions')
+      .insert(formattedQuestions)
+      .select();
+
+    if (questionsError) {
+      console.error('❌ Questions insert failed:', questionsError);
+      console.log('🧪 Data that failed to insert:', formattedQuestions);
+      
+      // More specific error handling
+      let errorMessage = 'Unknown error occurred while inserting questions.';
+      
+      if (questionsError.code === '23503') {
+        errorMessage = 'Foreign key constraint failed. The form ID might not exist in the database.';
+      } else if (questionsError.code === '42601') {
+        errorMessage = 'SQL syntax error. There might be an issue with the data format.';
+      } else if (questionsError.code === '23502') {
+        errorMessage = 'A required field is missing. Check that all questions have the necessary data.';
+      } else if (questionsError.message) {
+        errorMessage = questionsError.message;
+      }
+      
+      alert(`❌ Failed to insert questions: ${errorMessage}`);
+      return;
+    }
+
+    console.log('✅ Questions inserted successfully:', insertedQuestions);
+    console.log(`✅ Total questions inserted: ${insertedQuestions?.length || 0}`);
+
+    // Step 4: Verify the save was successful
+    const { data: verifyQuestions, error: verifyError } = await supabase
+      .from('questions')
+      .select('*')
+      .eq('form_id', currentFormId)
+      .order('order_index');
+
+    if (!verifyError) {
+      console.log('✅ Verification - Questions in database:', verifyQuestions);
+      console.log(`✅ Verification - Found ${verifyQuestions.length} questions in database`);
+    }
+
+    alert(`✅ Form saved successfully! ${insertedQuestions?.length || 0} questions saved.`);
+    
+  } catch (error) { // ✅ This closing brace for try was missing in your original code
+    console.error('❌ Unexpected error saving form:', error);
+    alert(`❌ Unexpected error: ${error.message || 'Unknown error occurred'}`);
+  }
+};
 
   // Delete the current form
   const handleDeleteForm = async () => {

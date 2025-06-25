@@ -33,7 +33,8 @@ const Dashboard = () => {
         error: userError,
       } = await supabase.auth.getUser();
 
-      if (user && user.email) {
+      if (user && user.id) { // Changed from user.email to user.id
+        // Get user profile
         const { data: profile } = await supabase
           .from('users')
           .select('name')
@@ -41,19 +42,31 @@ const Dashboard = () => {
           .single();
         if (profile?.name) setUsername(profile.name);
 
-        const { data: formData } = await supabase
+        // Fetch forms using user_id instead of created_by email
+        const { data: formData, error: formError } = await supabase
           .from('forms')
           .select('*')
-          .eq('created_by', user.email)
+          .eq('user_id', user.id) // Changed from created_by to user_id
           .order('created_at', { ascending: false });
-        if (formData) setForms(formData);
+        
+        if (formError) {
+          console.error('Error fetching forms:', formError);
+        } else if (formData) {
+          setForms(formData);
+        }
 
-        const { data: quizData } = await supabase
+        // Fetch quizzes using user_id instead of created_by email
+        const { data: quizData, error: quizError } = await supabase
           .from('quizzes')
           .select('*')
-          .eq('created_by', user.email)
+          .eq('user_id', user.id) // Changed from created_by to user_id
           .order('created_at', { ascending: false });
-        if (quizData) setQuizzes(quizData);
+        
+        if (quizError) {
+          console.error('Error fetching quizzes:', quizError);
+        } else if (quizData) {
+          setQuizzes(quizData);
+        }
       } else {
         console.error('User not logged in:', userError);
       }
@@ -72,12 +85,29 @@ const Dashboard = () => {
   const currentData = activeTab === 'forms' ? filteredForms : filteredQuizzes;
 
   const handlePublishToggle = async (formId, newStatus) => {
-    await supabase.from('forms').update({ is_published: newStatus }).eq('id', formId);
-    setForms((prev) => prev.map(f => f.id === formId ? { ...f, is_published: newStatus } : f));
+    const { error } = await supabase
+      .from('forms')
+      .update({ is_published: newStatus })
+      .eq('id', formId);
+    
+    if (error) {
+      console.error('Error updating form:', error);
+    } else {
+      setForms((prev) => prev.map(f => f.id === formId ? { ...f, is_published: newStatus } : f));
+    }
   };
 
-  const handleDeleteForm = (formId) => {
-    setForms((prev) => prev.filter(f => f.id !== formId));
+  const handleDeleteForm = async (formId) => {
+    const { error } = await supabase
+      .from('forms')
+      .delete()
+      .eq('id', formId);
+    
+    if (error) {
+      console.error('Error deleting form:', error);
+    } else {
+      setForms((prev) => prev.filter(f => f.id !== formId));
+    }
   };
 
   return (
