@@ -1,0 +1,157 @@
+/* Container */
+.signup-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #f0f8ff;
+  padding-left: 20px;
+  min-height: 100vh;
+}
+
+.admin-header {
+  display: flex;
+  flex-direction: row;
+  background-color: #2c3e50;
+  color: white;
+  padding: 18px 30px;
+  font-size: 1.3em;
+  font-weight: bold;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  text-align: left;
+  width: 100%;
+}
+
+/* Navbar */
+.navbar {
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+}
+
+.navbar h1 {
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1.5rem;
+  color: #fff;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.login-button {
+  background-color: #fff;
+  color: #2c3e50;
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  border: none;
+  cursor: pointer;
+}
+
+/* Main Card */
+.signup-card {
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.05);
+  margin-top: 2rem;
+  width: 100%;
+  max-width: 1100px;
+}
+
+@media (min-width: 768px) {
+  .signup-card {
+    flex-direction: row;
+  }
+}
+
+/* Form Section */
+.signup-form {
+  flex: 1;
+  padding-right: 2rem;
+}
+
+.signup-form h2 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.signup-form form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.signup-form label {
+  font-size: 0.9rem;
+  margin-bottom: 0.3rem;
+}
+
+.signup-form input {
+  padding: 0.6rem;
+  background-color: #f0f4f8;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  outline: none;
+}
+
+.signup-form button {
+  background-color: #36aaf4;
+  color: white;
+  padding: 0.6rem;
+  font-size: 1rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+.signup-form button:hover {
+  background-color: #1e90ff;
+}
+
+.signup-form p {
+  font-size: 0.85rem;
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.signup-form p a {
+  color: #1e90ff;
+  text-decoration: underline;
+}
+
+/* Image Section */
+.signup-image {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+@media (min-width: 768px) {
+  .signup-image {
+    margin-top: 0;
+  }
+}
+
+.signup-image img {
+  width: 280px;
+  max-width: 100%;
+  border-radius: 12px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+}

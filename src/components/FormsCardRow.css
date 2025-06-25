@@ -1,0 +1,116 @@
+/* ===== LIST VIEW ===== */
+.table-row.list {
+  display: grid;
+  grid-template-columns: 2fr 2fr 2fr 1fr 1.5fr;
+  padding: 18px 24px;
+  border-bottom: 1px solid #e0e0e0;
+  align-items: center;
+  font-size: 14px;
+  background-color: #fff;
+  transition: background 0.2s ease;
+  gap: 10px;
+  border-radius: 10px;
+}
+
+.table-row.list:hover {
+  background-color: #f0f4f8;
+}
+
+/* ===== GRID VIEW CARD ===== */
+.form-card-grid {
+  background-color: #ffffff;
+  border: 1px solid #e5eaf0;
+  border-radius: 16px;
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(30, 50, 80, 0.08);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.form-card-grid:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 8px 24px rgba(30, 50, 80, 0.12);
+}
+
+/* ===== TITLE ===== */
+.form-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1a202c;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+/* ===== META INFO ===== */
+.form-meta {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.4;
+  font-weight: 500;
+}
+
+/* ===== GRID WRAPPER ===== */
+.table-body.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+  padding: 0 20px;
+}
+
+/* ===== INTERACTABLE LINK ===== */
+.clickable-title {
+  color: #2563eb;
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.clickable-title:hover {
+  color: #1d4ed8;
+}
+
+/* ===== BUTTON STYLES ===== */
+button {
+  transition: all 0.2s ease;
+  font-weight: 500;
+  border-radius: 6px;
+}
+
+button:hover {
+  filter: brightness(1.08);
+}
+
+/* ===== STATUS BADGE ===== */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+/* ===== INPUT LINK FIELD ===== */
+input[type="text"].copy-link {
+  font-size: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 4px 8px;
+  width: 100%;
+  background: #f9fafb;
+  color: #111827;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
