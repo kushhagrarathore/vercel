@@ -337,10 +337,10 @@ const FormBuilder = () => {
     // ✅ CREATE NEW FORM if no ID
     if (!currentFormId) {
       const formData = {
-  title: title.trim(),
-  customization_settings: customization,
-  user_id: user?.id || null,  // ✅ correct key
-};
+        title: title.trim(),
+        customization_settings: customization,
+        created_by: user?.email || 'anonymous', // ✅ attach user email
+      };
 
       const { data: form, error: formError } = await supabase
         .from('forms')
@@ -364,8 +364,7 @@ const FormBuilder = () => {
         .from('forms')
         .update({
           title: title.trim(),
-          customization_settings: customization,
-           user_id: user?.id || null,
+          customization_settings: customization
         })
         .eq('id', currentFormId);
 

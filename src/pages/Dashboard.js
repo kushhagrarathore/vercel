@@ -44,7 +44,7 @@ const Dashboard = () => {
         const { data: formData } = await supabase
           .from('forms')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('created_by', user.email)
           .order('created_at', { ascending: false });
         if (formData) setForms(formData);
 
@@ -76,12 +76,8 @@ const Dashboard = () => {
     setForms((prev) => prev.map(f => f.id === formId ? { ...f, is_published: newStatus } : f));
   };
 
- const handleDeleteForm = async (formId) => {
+  const handleDeleteForm = (formId) => {
     setForms((prev) => prev.filter(f => f.id !== formId));
-    const { error } = await supabase.from('forms').delete().eq('id', formId);
-    if (error) {
-      alert('Failed to delete form from database: ' + error.message);
-    }
   };
 
   return (
