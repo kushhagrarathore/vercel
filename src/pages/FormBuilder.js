@@ -339,7 +339,8 @@ const FormBuilder = () => {
       const formData = {
         title: title.trim(),
         customization_settings: customization,
-        created_by: user?.email || 'anonymous', // ✅ attach user email
+        created_by: user?.email || 'anonymous',
+         user_id: user?.id || null, // ✅ attach user email
       };
 
       const { data: form, error: formError } = await supabase
@@ -364,7 +365,8 @@ const FormBuilder = () => {
         .from('forms')
         .update({
           title: title.trim(),
-          customization_settings: customization
+          customization_settings: customization,
+           user_id: user?.id || null,
         })
         .eq('id', currentFormId);
 
