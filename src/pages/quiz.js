@@ -282,34 +282,48 @@ export default function Quiz() {
   const currentSlide = slides[selectedSlide];
   const shareURL = `https://inquizo.com/quiz/${title.replace(/\s+/g, "-")}`;
 
-  const saveQuiz = () => {
-    try {
-      const quizData = {
-        id: Date.now(),
-        title,
-        slides: slides.map((slide, index) => ({
-          id: slide.id,
-          index,
-          question: slide.question,
-          type: slide.type,
-          options: slide.options,
-          correctAnswerIndex: slide.correctAnswerIndex,
-          background: slide.background,
-          textColor: slide.textColor,
-          fontSize: slide.fontSize,
-          timer: slide.timer,
-        })),
-        createdAt: new Date().toISOString(),
-      };
-      
-      setSavedQuizzes(prev => [...prev, quizData]);
-      showNotification("Quiz saved successfully!");
-    } catch (error) {
-      showNotification("Error saving quiz");
-      console.error("Save error:", error);
-    }
-  };
+ const saveQuiz = async () => {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
+    if (!user || !user.email) {
+      showNotification("You must be logged in to save a quiz.");
+      return;
+    }
+
+    const quizData = {
+      title,
+      slides: slides.map((slide, index) => ({
+        id: slide.id,
+        index,
+        question: slide.question,
+        type: slide.type,
+        options: slide.options,
+        correctAnswerIndex: slide.correctAnswerIndex,
+        background: slide.background,
+        textColor: slide.textColor,
+        fontSize: slide.fontSize,
+        timer: slide.timer,
+      })),
+      created_by: user.email, // ✅ This line is key
+      created_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase.from('quizzes').insert([quizData]);
+    
+    if (error) {
+      console.error("❌ Error saving to Supabase:", error);
+      showNotification("❌ Failed to save quiz to Supabase");
+    } else {
+      showNotification("✅ Quiz saved to Supabase!");
+    }
+  } catch (error) {
+    showNotification("❌ Error saving quiz");
+    console.error("Save error:", error);
+  }
+};
   const validateSlide = (slide) => {
     if (!slide.question.trim()) return "Question is required";
     if (slide.type === "multiple" && slide.options.some(opt => !opt.trim())) {
