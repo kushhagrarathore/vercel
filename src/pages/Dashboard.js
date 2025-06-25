@@ -61,6 +61,20 @@ const Dashboard = () => {
 
     fetchUserData();
   }, []);
+const deleteForm = async (formId) => {
+  const { error } = await supabase
+    .from('forms')
+    .delete()
+    .eq('id', formId);
+
+  if (error) {
+    console.error('Error deleting form:', error);
+    alert('Failed to delete form');
+  } else {
+    // Update your UI state to remove the form locally after successful delete
+    setForms((prevForms) => prevForms.filter(form => form.id !== formId));
+  }
+};
 
   const filteredForms = forms.filter((form) =>
     form.title?.toLowerCase().includes(searchTerm.toLowerCase())
