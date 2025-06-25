@@ -44,7 +44,7 @@ const Dashboard = () => {
         const { data: formData } = await supabase
           .from('forms')
           .select('*')
-          .eq('created_by', user.email)
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false });
         if (formData) setForms(formData);
 
