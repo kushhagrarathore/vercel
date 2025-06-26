@@ -1,0 +1,121 @@
+import React, { useState } from 'react';
+import './FormsCardRow.css';
+import { useNavigate } from 'react-router-dom';
+import { FaEye, FaChartBar, FaTimes, FaCopy, FaLink } from 'react-icons/fa';
+
+const FormCardRow = ({
+  view,
+  name,
+  timestamp,
+  formId,
+  isForm,
+  onDelete,
+  isPublished,
+  link,
+  onPublishToggle,
+}) => {
+  const navigate = useNavigate();
+  const [copied, setCopied] = useState(false);
+
+  const handleEdit = (e) => {
+    if (e) e.stopPropagation();
+    navigate(`/builder/${formId}`);
+  };
+
+  const handlePreview = (e) => {
+    e.stopPropagation();
+    navigate(`/preview/${formId}`);
+  };
+
+  const handleResults = (e) => {
+    e.stopPropagation();
+    navigate(`/results/${formId}`);
+  };
+
+  const handleDelete = (e) => {
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this form?')) return;
+    if (onDelete) onDelete(formId);
+  };
+
+  const handleToggle = (e) => {
+    e.stopPropagation();
+    if (onPublishToggle) onPublishToggle(formId, !isPublished);
+  };
+
+  const handleCopy = (e) => {
+    e.stopPropagation();
+    if (link) {
+      navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    }
+  };
+
+  const ActionButtons = () => (
+    <div className="card-actions-big">
+      <button className="card-action-btn" title="Preview" onClick={handlePreview} tabIndex={-1}>
+        <FaEye size={18} />
+      </button>
+      <button className="card-action-btn" title="Results" onClick={handleResults} tabIndex={-1}>
+        <FaChartBar size={18} />
+      </button>
+      <button className="card-action-btn delete" title="Delete" onClick={handleDelete} tabIndex={-1}>
+        <FaTimes size={18} />
+      </button>
+    </div>
+  );
+
+  // --- Toggle Switch ---
+  const ToggleSwitch = () => (
+    <label className={`toggle-switch${isPublished ? ' active' : ''}`} title={isPublished ? 'Deactivate' : 'Activate'} onClick={e => e.stopPropagation()}>
+      <input type="checkbox" checked={!!isPublished} onChange={handleToggle} />
+      <span className="slider" />
+    </label>
+  );
+
+  // --- Link Display ---
+  const LinkDisplay = () => (
+    isPublished && link ? (
+      <div className="share-link-row" onClick={e => e.stopPropagation()}>
+        <FaLink style={{ marginRight: 6, color: 'var(--accent)' }} />
+        <span className="share-link-url">{link}</span>
+        <button className="copy-link-btn" onClick={handleCopy} title="Copy link">
+          {copied ? 'Copied!' : <FaCopy />}
+        </button>
+      </div>
+    ) : null
+  );
+
+  // --- Grid View ---
+  if (view === 'grid') {
+    return (
+      <div className="form-card-balanced grid small" onClick={handleEdit} tabIndex={0} role="button" style={{ outline: 'none' }}>
+        <div className="form-card-title-row">
+          <span className="form-title-balanced" onClick={handleEdit}>{name}</span>
+          <ToggleSwitch />
+        </div>
+        <div className="form-card-date-balanced">{timestamp}</div>
+        <ActionButtons />
+        <LinkDisplay />
+      </div>
+    );
+  }
+
+  // --- List View ---
+  return (
+    <div className="form-card-balanced list minimal-row" onClick={handleEdit} tabIndex={0} role="button" style={{ outline: 'none' }}>
+      <div className="minimal-cell" style={{ flex: 2, minWidth: 0 }}>
+        <span className="form-title-balanced" onClick={handleEdit}>{name}</span>
+      </div>
+      <div className="minimal-cell" style={{ flex: 1 }}>
+        <span className="form-card-date-balanced">{timestamp}</span>
+      </div>
+      <div className="minimal-cell"><ToggleSwitch /></div>
+      <div className="minimal-cell"><ActionButtons /></div>
+      <div className="minimal-cell"><LinkDisplay /></div>
+    </div>
+  );
+};
+
+export default FormCardRow;
