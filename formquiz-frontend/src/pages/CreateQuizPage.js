@@ -42,21 +42,18 @@ const CreateQuizPage = () => {
   };
   const handleReorderSlides = newSlides => { setSlides(newSlides); setDirty(true); };
   const handleDuplicateSlide = idx => {
-    if (slides.length >= 4) return;
     const newSlides = [...slides];
     newSlides.splice(idx + 1, 0, { ...slides[idx], question: slides[idx].question + ' (Copy)' });
     setSlides(newSlides);
     setDirty(true);
   };
   const handleDeleteSlide = idx => {
-    if (slides.length <= 4) return;
     const newSlides = slides.filter((_, i) => i !== idx);
     setSlides(newSlides);
     setCurrent(Math.max(0, current - (idx === current ? 1 : 0)));
     setDirty(true);
   };
   const handleAddSlide = () => {
-    if (slides.length >= 4) return;
     setSlides([...slides, { question: '', options: ['Option 1'], correctAnswer: 0, type: 'single', image: '', settings: { ...defaultSettings } }]);
     setCurrent(slides.length);
     setDirty(true);
