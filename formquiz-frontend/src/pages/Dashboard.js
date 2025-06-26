@@ -93,7 +93,13 @@ const Dashboard = () => {
     setForms((prev) => prev.map(f => f.id === formId ? { ...f, is_published: newStatus } : f));
   };
 
- const handleDeleteForm = async (formId) => {
+ // Alternative simpler fix for Dashboard.js - replace the existing handleDeleteForm function
+
+const handleDeleteForm = async (formId) => {
+  if (!window.confirm('Are you sure you want to delete this form?')) {
+    return;
+  }
+
   try {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -104,18 +110,31 @@ const Dashboard = () => {
 
     console.log("🧠 Deleting form:", formId, "for user:", user.id);
 
-    const { error } = await supabase
+    // Delete questions first
+    const { error: questionsError } = await supabase
+      .from('questions')
+      .delete()
+      .eq('form_id', formId);
+
+    if (questionsError) {
+      console.error("❌ Error deleting questions:", questionsError);
+      // Continue anyway, might not have questions
+    }
+
+    // Delete the form using both user_id and created_by for maximum compatibility
+    const { error: formError } = await supabase
       .from('forms')
       .delete()
-      .eq('id', formId)
-      .eq('user_id', user.id);  // ✅ use user.id — not user.email
+      .or(`user_id.eq.${user.id},created_by.eq.${user.email}`)
+      .eq('id', formId);
 
-    if (error) {
-      console.error("❌ Delete error:", error.message);
-      toast('Failed to delete form', 'error');
+    if (formError) {
+      console.error("❌ Delete error:", formError.message);
+      toast('Failed to delete form: ' + formError.message, 'error');
       return;
     }
 
+    // Update the UI immediately
     setForms((prev) => prev.filter(f => f.id !== formId));
     toast('✅ Form deleted successfully!', 'success');
 
@@ -124,7 +143,6 @@ const Dashboard = () => {
     toast('Failed to delete form', 'error');
   }
 };
-
 
 
 
