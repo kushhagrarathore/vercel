@@ -6,6 +6,7 @@ import QuizSettingsPanel from '../components/QuizSettingsPanel';
 import { FaChevronLeft, FaEye, FaCloudUploadAlt, FaMoon, FaSun } from 'react-icons/fa';
 import { supabase } from '../supabase';
 import { generateLiveLink } from '../utils/generateLiveLink';
+import ShareModal from '../components/quiz/ShareModal';
 
 const defaultSettings = {
   font: 'Inter',
@@ -198,12 +199,12 @@ const CreateQuizPage = () => {
         if (slideError) throw new Error(slideError.message || JSON.stringify(slideError));
       }
       setShareQuizId(quizIdToUse);
-      setShareQuizLink(publicLink);
+      setShareQuizLink(`/quiz/fill/${quizIdToUse}`);
       setShowShareModal(true);
+      setPublishing(false);
       setDirty(false);
     } catch (err) {
-      alert('Failed to publish quiz: ' + (err.message || JSON.stringify(err)));
-    } finally {
+      alert(err.message || 'Failed to publish quiz');
       setPublishing(false);
     }
   };
@@ -324,6 +325,13 @@ const CreateQuizPage = () => {
           />
         </div>
       </div>
+      <ShareModal
+        quizId={shareQuizId}
+        open={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        fillLink={shareQuizLink}
+        title="Share Quiz Fill Link"
+      />
     </div>
   );
 };

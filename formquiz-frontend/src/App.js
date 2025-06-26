@@ -20,6 +20,7 @@ import ViewResponses from './pages/ViewResponses';
 import Profile from './pages/Profile';
 import JoinQuiz from './pages/join/JoinQuiz';
 import Leaderboard from './pages/live/Leaderboard';
+import QuizFillPage from './pages/QuizFillPage';
 
 function App() {
   return (
@@ -64,6 +65,7 @@ function App() {
             <Route path="/quiz/present/:quizId" element={<PresentQuizPage />} />
             <Route path="/quiz/preview/:quizId" element={<PreviewQuizPage />} />
             <Route path="/quiz/results/:quizId" element={<ResultsPage />} />
+            <Route path="/quiz/fill/:quizId" element={<QuizFillPage />} />
 
             {/* Profile/Settings */}
             <Route path="/profile" element={<Profile />} />
