@@ -94,23 +94,26 @@ const Dashboard = () => {
   };
 
   const handleDeleteForm = async (formId) => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase
-        .from('forms')
-        .delete()
-        .eq('id', formId)
-        .eq('user_id', user?.id);
-      if (error) {
-        toast('Failed to delete form', 'error');
-        return;
-      }
-      setForms((prev) => prev.filter(f => f.id !== formId));
-      toast('Form deleted!', 'success');
-    } catch (err) {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from('forms')
+      .delete()
+      .eq('id', formId)
+      .eq('created_by', user?.email); // Match email not user_id
+
+    if (error) {
       toast('Failed to delete form', 'error');
+      return;
     }
-  };
+
+    setForms((prev) => prev.filter(f => f.id !== formId));
+    toast('Form deleted!', 'success');
+  } catch (err) {
+    toast('Failed to delete form', 'error');
+  }
+};
+
 
   const handleTabToggle = (tab) => {
     setActiveTab(tab);
