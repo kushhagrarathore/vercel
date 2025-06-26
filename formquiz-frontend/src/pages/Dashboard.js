@@ -93,78 +93,9 @@ const Dashboard = () => {
     setForms((prev) => prev.map(f => f.id === formId ? { ...f, is_published: newStatus } : f));
   };
 
- // Alternative simpler fix for Dashboard.js - replace the existing handleDeleteForm function
-
-// Updated handleDeleteForm function for Dashboard.js
-
-const handleDeleteForm = async (formId) => {
-  try {
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      toast('User not found', 'error');
-      return;
-    }
-
-    console.log("🧠 Deleting form:", formId, "for user:", user.id);
-
-    // First, let's verify the form belongs to the current user
-    const { data: formToDelete, error: fetchError } = await supabase
-      .from('forms')
-      .select('*')
-      .eq('id', formId)
-      .single();
-
-    if (fetchError) {
-      console.error("❌ Error fetching form:", fetchError.message);
-      toast('Form not found', 'error');
-      return;
-    }
-
-    // Check ownership using both user_id and created_by (email) for backward compatibility
-    const isOwner = formToDelete.user_id === user.id || formToDelete.created_by === user.email;
-    
-    if (!isOwner) {
-      console.error("❌ User doesn't own this form");
-      toast('You do not have permission to delete this form', 'error');
-      return;
-    }
-
-    // Delete associated questions first (if not using CASCADE)
-    const { error: questionsDeleteError } = await supabase
-      .from('questions')
-      .delete()
-      .eq('form_id', formId);
-
-    if (questionsDeleteError) {
-      console.error("❌ Error deleting questions:", questionsDeleteError.message);
-      toast('Failed to delete form questions', 'error');
-      return;
-    }
-
-    // Delete the form
-    const { error: formDeleteError } = await supabase
-      .from('forms')
-      .delete()
-      .eq('id', formId);
-
-    if (formDeleteError) {
-      console.error("❌ Delete error:", formDeleteError.message);
-      toast('Failed to delete form', 'error');
-      return;
-    }
-
-    // Update the local state
+  const handleDeleteForm = (formId) => {
     setForms((prev) => prev.filter(f => f.id !== formId));
-    toast('✅ Form deleted successfully!', 'success');
-
-  } catch (err) {
-    console.error("❌ Exception during delete:", err);
-    toast('Failed to delete form', 'error');
-  }
-};
-
-
+  };
 
   const handleTabToggle = (tab) => {
     setActiveTab(tab);

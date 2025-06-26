@@ -11,7 +11,6 @@ import FormView from './pages/FormView';
 import ResultsPage from './pages/ResultsPage';
 import Quiz from './pages/quiz';
 import UserEnd from './pages/userend';
-import ResponsePage from './pages/ResponsePage';
 import CreateQuizPage from './pages/CreateQuizPage';
 import PresentQuizPage from './pages/PresentQuizPage';
 import PreviewQuizPage from './pages/PreviewQuizPage';
@@ -45,10 +44,9 @@ function App() {
           <Route path="/preview" element={<UserEnd />} /> {/* Preview for quiz/test form */}
 
           {/* Results */}
-          <Route path="/results/:formId" element={<ViewResponses />} />
+          <Route path="/results/:formId" element={<ResultsPage />} />
 
-          {/* Response Page */}
-          <Route path="/respond/:formId" element={<ResponsePage />} />
+          
 
           {/* Future Features - Uncomment when ready */}
           {/* <Route path="/create" element={<CreateForm />} /> */}
