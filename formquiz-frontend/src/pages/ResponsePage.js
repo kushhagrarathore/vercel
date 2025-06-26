@@ -1,39 +1,83 @@
-import { useParams } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { supabase } from "../supabase";
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { supabase } from '../supabase';
 
-export default function ResponsePage() {
+const ViewResponses = () => {
   const { formId } = useParams();
-  const [form, setForm] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [responses, setResponses] = useState([]);
+  const [questions, setQuestions] = useState([]);
+  const [formTitle, setFormTitle] = useState('');
 
   useEffect(() => {
-    async function fetchForm() {
-      const { data, error } = await supabase
-        .from("forms")
-        .select("*")
-        .eq("id", formId)
+    const fetchData = async () => {
+      // Get responses
+      const { data: respData, error: respError } = await supabase
+        .from('responses')
+        .select('*, users(email)')
+        .eq('form_id', formId);
+
+      if (respError) {
+        console.error('Error fetching responses:', respError);
+        return;
+      }
+      setResponses(respData);
+
+      // Get form questions
+      const { data: formData, error: formError } = await supabase
+        .from('forms')
+        .select('title')
+        .eq('id', formId)
         .single();
 
-      if (error) {
-        console.error("Error fetching form:", error);
-      } else {
-        setForm(data);
-      }
-      setLoading(false);
-    }
+      const { data: qData, error: qError } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('form_id', formId)
+        .order('order_index');
 
-    fetchForm();
+      if (formData) setFormTitle(formData.title);
+      if (qData) setQuestions(qData);
+    };
+
+    fetchData();
   }, [formId]);
 
-  if (loading) return <p>Loading...</p>;
-  if (!form) return <p>Form not found</p>;
+  const getQuestionText = (questionId) => {
+    const q = questions.find(q => q.id === questionId);
+    return q ? q.question_text : questionId;
+  };
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h2>Respond to: {form.formname}</h2>
-      {/* Replace below with your form rendering logic */}
-      <p>(Form questions will go here)</p>
+    <div style={{ padding: '30px' }}>
+      <h2 style={{ marginBottom: '20px' }}>📋 Responses for: {formTitle}</h2>
+      {responses.length === 0 ? (
+        <p>No responses submitted yet.</p>
+      ) : (
+        responses.map((resp, idx) => (
+          <div
+            key={idx}
+            style={{
+              border: '1px solid #ddd',
+              padding: '15px',
+              marginBottom: '20px',
+              borderRadius: '8px',
+              background: '#f9f9f9',
+            }}
+          >
+            <p><strong>🧑 User:</strong> {resp.users?.email || 'Anonymous'}</p>
+            <p><strong>🕒 Submitted At:</strong> {new Date(resp.submitted_at).toLocaleString()}</p>
+            <ul style={{ marginTop: '10px' }}>
+              {Object.entries(resp.answers || {}).map(([qid, answer], i) => (
+                <li key={i} style={{ marginBottom: 5 }}>
+                  <strong>{getQuestionText(qid)}:</strong> {answer}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      )}
     </div>
   );
-}
+};
+
+export default ViewResponses;
