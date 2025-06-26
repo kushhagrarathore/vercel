@@ -112,6 +112,25 @@ const Dashboard = () => {
     }
   };
 
+  const handleDeleteQuiz = async (quizId) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from('quizzes')
+        .delete()
+        .eq('id', quizId)
+        .eq('user_id', user?.id);
+      if (error) {
+        toast('Failed to delete quiz', 'error');
+        return;
+      }
+      setQuizzes((prev) => prev.filter(q => q.id !== quizId));
+      toast('Quiz deleted!', 'success');
+    } catch (err) {
+      toast('Failed to delete quiz', 'error');
+    }
+  };
+
   const handleTabToggle = (tab) => {
     setActiveTab(tab);
   };
@@ -177,20 +196,20 @@ const Dashboard = () => {
                       name={item.title}
                       timestamp={new Date(item.created_at).toLocaleString()}
                       sharedWith={item.shared_with || []}
-                      link={item.form_url || `/form/${item.id}`}
+                      link={activeTab === 'forms' ? `/form/${item.id}` : `/join/${item.id}`}
                       creator={username}
                       formId={item.id}
-                      isPublished={item.is_published}
-                      onPublishToggle={handlePublishToggle}
                       isForm={activeTab === 'forms'}
-                      onDelete={handleDeleteForm}
+                      onDelete={activeTab === 'forms' ? handleDeleteForm : handleDeleteQuiz}
+                      isPublished={item.is_published}
+                      onPublishToggle={activeTab === 'forms' ? handlePublishToggle : undefined}
                     />
                   </motion.div>
                 ))
               ) : (
-                <p style={{ padding: '1rem', color: 'gray' }}>
-                  No {activeTab === 'forms' ? 'forms' : 'quizzes'} created yet.
-                </p>
+                <div style={{ padding: 32, color: '#888', textAlign: 'center' }}>
+                  {activeTab === 'forms' ? 'No forms found.' : 'No quizzes found.'}
+                </div>
               )}
             </AnimatePresence>
           </motion.div>

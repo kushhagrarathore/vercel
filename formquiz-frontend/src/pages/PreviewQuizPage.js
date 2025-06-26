@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import TimerBar from '../components/quiz/TimerBar';
 import './CreateQuizPage.css';
@@ -23,9 +23,13 @@ const PreviewQuizPage = () => {
   const [selected, setSelected] = useState(null);
   const toast = useToast();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+  const navigate = useNavigate();
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
     if (quizId === 'preview') {
       // Load from localStorage
       const draft = localStorage.getItem('quizPreview');
@@ -33,40 +37,52 @@ const PreviewQuizPage = () => {
         try {
           const { slides, globalSettings, quizTitle } = JSON.parse(draft);
           setQuiz({ title: quizTitle, customization_settings: globalSettings });
-          setSlides(slides);
-          setTimer(slides[0]?.timer || 20);
+          setSlides(Array.isArray(slides) ? slides : []);
+          setTimer(slides?.[0]?.timer || 20);
           setProgress(1);
         } catch (err) {
-          toast('Failed to load preview data', 'error');
+          setError('Failed to load preview data.');
         }
+      } else {
+        setError('No preview data found.');
       }
       setLoading(false);
     } else {
       // Load from Supabase
       (async () => {
         try {
-          const { data: quizData } = await import('../supabase').then(m => m.supabase)
-            .then(supabase => supabase.from('quizzes').select('*').eq('id', quizId).single())
-            .then(res => res.data);
+          const { data: quizData, error: quizError } = await import('../supabase').then(m => m.supabase)
+            .then(supabase => supabase.from('quizzes').select('*').eq('id', quizId).single());
+          if (quizError || !quizData) {
+            setError('Quiz not found.');
+            setLoading(false);
+            return;
+          }
           setQuiz(quizData);
-          const { data: slidesData } = await import('../supabase').then(m => m.supabase)
-            .then(supabase => supabase.from('quiz_slides').select('*').eq('quiz_id', quizId).order('order'))
-            .then(res => res.data);
+          const { data: slidesData, error: slidesError } = await import('../supabase').then(m => m.supabase)
+            .then(supabase => supabase.from('slides').select('*').eq('quiz_id', quizId).order('slide_index'));
+          if (slidesError || !Array.isArray(slidesData) || slidesData.length === 0) {
+            setError('No slides found for this quiz.');
+            setSlides([]);
+            setLoading(false);
+            return;
+          }
           setSlides(slidesData);
-          setTimer(slidesData[0]?.timer || 20);
+          setTimer(slidesData?.[0]?.timer || 20);
           setProgress(1);
         } catch (err) {
-          toast('Failed to load quiz', 'error');
+          setError('Failed to load quiz. Please check your connection.');
         } finally {
           setLoading(false);
         }
       })();
     }
-  }, [quizId, toast]);
+    // eslint-disable-next-line
+  }, [quizId, toast, retryCount]);
 
   useEffect(() => {
     if (!slides.length) return;
-    setTimer(slides[current]?.timer || 20);
+    setTimer(slides?.[current]?.timer || 20);
     setProgress(1);
     setSubmitted(false);
     setSelected(null);
@@ -77,7 +93,7 @@ const PreviewQuizPage = () => {
           clearInterval(interval);
           return 0;
         }
-        setProgress((t - 1) / (slides[current]?.timer || 20));
+        setProgress((t - 1) / (slides?.[current]?.timer || 20));
         return t - 1;
       });
     }, 1000);
@@ -93,9 +109,18 @@ const PreviewQuizPage = () => {
   };
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center' }}><Spinner size={40} /></div>;
-  if (!quiz || !slides.length) return <div style={{ padding: 40 }}>Loading...</div>;
+  if (error) return (
+    <div style={{ padding: 40, color: 'red', textAlign: 'center' }}>
+      <div style={{ marginBottom: 16 }}>{error}</div>
+      <button onClick={() => setRetryCount(c => c + 1)} style={{ padding: '8px 20px', borderRadius: 8, background: '#4a6bff', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', marginRight: 12 }}>Retry</button>
+      <button onClick={() => navigate('/dashboard')} style={{ padding: '8px 20px', borderRadius: 8, background: '#888', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Back to Dashboard</button>
+    </div>
+  );
+  if (!quiz || !slides.length) return <div style={{ padding: 40, color: 'red' }}>No slides found for this quiz. Please check your quiz setup.</div>;
   const customization = quiz.customization_settings?.theme || {};
-  const slide = slides[current];
+  const slide = slides?.[current];
+  if (!slide) return <div style={{ padding: 40, color: 'red' }}>No slide data available.</div>;
+  const options = Array.isArray(slide.options) ? slide.options : [];
 
   return (
     <div className="quiz-preview-root" style={{
@@ -139,7 +164,9 @@ const PreviewQuizPage = () => {
             <TimerBar duration={slide.timer} progress={progress} />
             <h2 style={{ color: customization.textColor || '#222', fontWeight: 700, fontSize: 22, margin: '18px 0 18px 0', textAlign: 'center' }}>{slide.question}</h2>
             <div className="options-list" style={{ width: '100%', marginTop: 8 }}>
-              {slide.options.map((opt, idx) => (
+              {options.length === 0 ? (
+                <div style={{ color: 'red', textAlign: 'center' }}>No options available for this question.</div>
+              ) : options.map((opt, idx) => (
                 <motion.button
                   key={idx}
                   className={`option-btn${selected === idx ? ' selected' : ''}`}

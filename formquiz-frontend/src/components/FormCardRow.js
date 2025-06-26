@@ -19,17 +19,29 @@ const FormCardRow = ({
 
   const handleEdit = (e) => {
     if (e) e.stopPropagation();
-    navigate(`/builder/${formId}`);
+    if (isForm) {
+      navigate(`/builder/${formId}`);
+    } else {
+      navigate(`/quiz/create/${formId}`);
+    }
   };
 
   const handlePreview = (e) => {
     e.stopPropagation();
-    navigate(`/preview/${formId}`);
+    if (isForm) {
+      navigate(`/preview/${formId}`);
+    } else {
+      navigate(`/quiz/preview/${formId}`);
+    }
   };
 
   const handleResults = (e) => {
     e.stopPropagation();
-    navigate(`/results/${formId}`);
+    if (isForm) {
+      navigate(`/results/${formId}`);
+    } else {
+      navigate(`/quiz/results/${formId}`);
+    }
   };
 
   const handleDelete = (e) => {
@@ -75,17 +87,20 @@ const FormCardRow = ({
   );
 
   // --- Link Display ---
-  const LinkDisplay = () => (
-    isPublished && link ? (
+  const LinkDisplay = () => {
+    if (!isPublished) return null;
+    return link ? (
       <div className="share-link-row" onClick={e => e.stopPropagation()}>
         <FaLink style={{ marginRight: 6, color: 'var(--accent)' }} />
-        <span className="share-link-url">{link}</span>
+        <a href={link} target="_blank" rel="noopener noreferrer" className="share-link-url" style={{ color: '#2563eb', textDecoration: 'underline', wordBreak: 'break-all' }}>{link}</a>
         <button className="copy-link-btn" onClick={handleCopy} title="Copy link">
           {copied ? 'Copied!' : <FaCopy />}
         </button>
       </div>
-    ) : null
-  );
+    ) : (
+      <div className="share-link-row" style={{ color: '#aaa', fontStyle: 'italic', fontSize: 13 }}>No public link available</div>
+    );
+  };
 
   // --- Grid View ---
   if (view === 'grid') {

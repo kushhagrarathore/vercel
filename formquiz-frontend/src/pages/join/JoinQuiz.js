@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '../supabase';
-import { useLiveQuiz } from '../context/LiveQuizContext';
-import QuestionTimer from '../components/quiz/QuestionTimer';
-import AnswerFeedback from '../components/quiz/AnswerFeedback';
-import Leaderboard from './live/Leaderboard';
+import { supabase } from '../../supabase';
+import { useLiveQuiz } from '../../context/LiveQuizContext';
+import QuestionTimer from '../../components/quiz/QuestionTimer';
+import AnswerFeedback from '../../components/quiz/AnswerFeedback';
 
-const LiveQuizPage = () => {
+const JoinQuiz = () => {
   const { quizId } = useParams();
   const { quizState, setQuizState } = useLiveQuiz();
   const [questions, setQuestions] = useState([]);
@@ -16,10 +15,11 @@ const LiveQuizPage = () => {
   const [feedback, setFeedback] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitted, setSubmitted] = useState(false);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [username, setUsername] = useState('');
   const [error, setError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  // Fetch quiz state and questions
+  // Fetch quiz and questions, and subscribe to real-time updates
   useEffect(() => {
     const fetchQuiz = async () => {
       setLoading(true);
@@ -74,7 +74,7 @@ const LiveQuizPage = () => {
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line
-  }, [quizId, setQuizState]);
+  }, [quizId, setQuizState, retryCount]);
 
   // Update current question
   useEffect(() => {
@@ -84,13 +84,12 @@ const LiveQuizPage = () => {
       setFeedback(null);
       setIsLocked(false);
       setSubmitted(false);
-      setShowLeaderboard(false);
     }
   }, [questions, quizState.currentQuestionIndex]);
 
   // Handle answer submission
   const handleSubmit = async () => {
-    if (selectedOption == null || isLocked || submitted) return;
+    if (!selectedOption || isLocked || submitted || !username.trim()) return;
     setIsLocked(true);
     setSubmitted(true);
     if (!currentQuestion) return;
@@ -101,7 +100,7 @@ const LiveQuizPage = () => {
         question_id: currentQuestion.id,
         selected_option: selectedOption,
         user_id: null, // Optionally use auth
-        username: 'Anonymous', // Optionally get from context or input
+        username: username.trim() || 'Anonymous',
         submitted_at: new Date().toISOString(),
       },
     ]);
@@ -111,7 +110,6 @@ const LiveQuizPage = () => {
         correctAnswer: currentQuestion.options?.[currentQuestion.correct_answer_index],
         feedbackText: 'Failed to submit answer. Please try again.',
       });
-      setShowLeaderboard(true);
       return;
     }
     // Show feedback
@@ -121,23 +119,38 @@ const LiveQuizPage = () => {
       correctAnswer: currentQuestion.options?.[currentQuestion.correct_answer_index],
       feedbackText: isCorrect ? 'Great job!' : 'Better luck next time!',
     });
-    setShowLeaderboard(true);
   };
 
   // Timer expire handler
   const handleTimerExpire = () => {
     setIsLocked(true);
     if (!submitted) handleSubmit();
-    setShowLeaderboard(true);
   };
 
   if (loading) return <div>Loading quiz...</div>;
-  if (error) return <div style={{ color: 'red', padding: 24 }}>{error}</div>;
+  if (error) return (
+    <div style={{ maxWidth: 480, margin: '0 auto', padding: 24 }}>
+      <div style={{ color: 'red', marginBottom: 16 }}>{error}</div>
+      <button onClick={() => setRetryCount(c => c + 1)} style={{ padding: '8px 20px', borderRadius: 8, background: '#4a6bff', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Retry</button>
+    </div>
+  );
   if (!currentQuestion) return <div>No active question at the moment.</div>;
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', padding: 24 }}>
       <h2>Live Quiz</h2>
+      <div style={{ marginBottom: 16 }}>
+        <label htmlFor="username" style={{ fontWeight: 600 }}>Username:</label>
+        <input
+          id="username"
+          type="text"
+          value={username}
+          onChange={e => setUsername(e.target.value)}
+          placeholder="Enter your name"
+          style={{ marginLeft: 8, padding: '6px 12px', borderRadius: 6, border: '1px solid #ccc', width: 180 }}
+          maxLength={32}
+        />
+      </div>
       <div style={{ marginBottom: 16 }}>
         <b>Question {quizState.currentQuestionIndex + 1}:</b> {currentQuestion.question}
       </div>
@@ -167,15 +180,16 @@ const LiveQuizPage = () => {
       <QuestionTimer seconds={20} onExpire={handleTimerExpire} isLocked={isLocked} />
       <button
         onClick={handleSubmit}
-        disabled={isLocked || submitted || selectedOption == null}
-        style={{ marginTop: 16, padding: '10px 24px', borderRadius: 8, background: '#4a6bff', color: '#fff', border: 'none', fontWeight: 700, cursor: isLocked || submitted ? 'not-allowed' : 'pointer' }}
+        disabled={isLocked || submitted || selectedOption == null || !username.trim()}
+        style={{ marginTop: 16, padding: '10px 24px', borderRadius: 8, background: '#4a6bff', color: '#fff', border: 'none', fontWeight: 700, cursor: isLocked || submitted || !username.trim() ? 'not-allowed' : 'pointer' }}
       >
         Submit Answer
       </button>
-      {feedback && <AnswerFeedback {...feedback} />}
-      {showLeaderboard && <Leaderboard />}
+      {feedback && (
+        <AnswerFeedback {...feedback} />
+      )}
     </div>
   );
 };
 
-export default LiveQuizPage; 
+export default JoinQuiz;
