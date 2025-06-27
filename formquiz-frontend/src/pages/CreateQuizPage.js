@@ -20,9 +20,6 @@ const defaultSettings = {
 
 const defaultSlides = [
   { question: 'Your first question?', options: ['Option 1', 'Option 2'], correctAnswer: 0, type: 'single', image: '', settings: { ...defaultSettings } },
-  { question: 'Second question?', options: ['Option 1', 'Option 2'], correctAnswer: 0, type: 'single', image: '', settings: { ...defaultSettings } },
-  { question: 'Third question?', options: ['Option 1', 'Option 2'], correctAnswer: 0, type: 'single', image: '', settings: { ...defaultSettings } },
-  { question: 'Fourth question?', options: ['Option 1', 'Option 2'], correctAnswer: 0, type: 'single', image: '', settings: { ...defaultSettings } },
 ];
 
 const CreateQuizPage = () => {
@@ -73,6 +70,21 @@ const CreateQuizPage = () => {
     // eslint-disable-next-line
   }, [quizId]);
 
+  // On mount, restore from localStorage if not editing
+  useEffect(() => {
+    if (!quizId) {
+      const draft = localStorage.getItem('quizDraft');
+      if (draft) {
+        try {
+          const { slides: savedSlides, globalSettings: savedSettings, quizTitle: savedTitle } = JSON.parse(draft);
+          if (savedSlides) setSlides(savedSlides);
+          if (savedSettings) setGlobalSettings(savedSettings);
+          if (savedTitle) setQuizTitle(savedTitle);
+        } catch {}
+      }
+    }
+  }, [quizId]);
+
   // Slide list handlers
   const handleSelectSlide = idx => setCurrent(idx);
   const handleRenameSlide = (idx, title) => {
@@ -87,6 +99,7 @@ const CreateQuizPage = () => {
     setDirty(true);
   };
   const handleDeleteSlide = idx => {
+    if (slides.length <= 1) return;
     const newSlides = slides.filter((_, i) => i !== idx);
     setSlides(newSlides);
     setCurrent(Math.max(0, current - (idx === current ? 1 : 0)));
@@ -125,6 +138,7 @@ const CreateQuizPage = () => {
   // Settings panel handlers
   const handleSettingsChange = newSettings => {
     setSlides(slides.map((s, i) => i === current ? { ...s, settings: newSettings } : s));
+    setGlobalSettings(newSettings);
     setDirty(true);
   };
   const handleApplyAll = () => {
@@ -203,6 +217,7 @@ const CreateQuizPage = () => {
       setShowShareModal(true);
       setPublishing(false);
       setDirty(false);
+      localStorage.removeItem('quizDraft');
     } catch (err) {
       alert(err.message || 'Failed to publish quiz');
       setPublishing(false);
@@ -212,7 +227,7 @@ const CreateQuizPage = () => {
   // Preview navigation
   const handlePreview = () => {
     // Save quiz draft to localStorage for PreviewQuizPage
-    localStorage.setItem('quizPreview', JSON.stringify({
+    localStorage.setItem('quizDraft', JSON.stringify({
       slides,
       globalSettings,
       quizTitle
@@ -289,7 +304,6 @@ const CreateQuizPage = () => {
       <div style={{ display: 'flex', gap: 32, padding: '38px 0 0 0', maxWidth: 1800, margin: '0 auto' }}>
         {/* Left: Slide List Card */}
         <div style={{ minWidth: 260, maxWidth: 320, width: 320, background: darkMode ? '#23263a' : '#fff', borderRadius: 12, boxShadow: '0 2px 12px rgba(30,50,80,0.06)', border: '1.5px solid #ede9fe', padding: 18, display: 'flex', flexDirection: 'column', gap: 12, height: 'fit-content' }}>
-          <button onClick={handleAddSlide} style={{ width: '100%', marginBottom: 12, background: '#ede9fe', color: '#2563eb', border: 'none', borderRadius: 8, padding: '10px 0', fontWeight: 700, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={slides.length >= 4}>+ Add Slide</button>
           <QuizSlideList
             slides={slides}
             current={current}

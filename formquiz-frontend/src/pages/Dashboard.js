@@ -131,6 +131,11 @@ const Dashboard = () => {
     }
   };
 
+  const handleQuizPublishToggle = async (quizId, newStatus) => {
+    await supabase.from('quizzes').update({ is_published: newStatus }).eq('id', quizId);
+    setQuizzes((prev) => prev.map(q => q.id === quizId ? { ...q, is_published: newStatus } : q));
+  };
+
   const handleTabToggle = (tab) => {
     setActiveTab(tab);
   };
@@ -196,13 +201,15 @@ const Dashboard = () => {
                       name={item.title}
                       timestamp={new Date(item.created_at).toLocaleString()}
                       sharedWith={item.shared_with || []}
-                      link={activeTab === 'forms' ? `/form/${item.id}` : `/join/${item.id}`}
+                      link={activeTab === 'forms'
+                        ? `/form/${item.id}`
+                        : (item.is_published ? `${window.location.origin}/join/${item.id}` : '')}
                       creator={username}
                       formId={item.id}
                       isForm={activeTab === 'forms'}
                       onDelete={activeTab === 'forms' ? handleDeleteForm : handleDeleteQuiz}
                       isPublished={item.is_published}
-                      onPublishToggle={activeTab === 'forms' ? handlePublishToggle : undefined}
+                      onPublishToggle={activeTab === 'forms' ? handlePublishToggle : handleQuizPublishToggle}
                     />
                   </motion.div>
                 ))
