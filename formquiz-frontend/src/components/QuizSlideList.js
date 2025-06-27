@@ -4,7 +4,7 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable } 
 import { CSS } from '@dnd-kit/utilities';
 import { FaGripVertical, FaCopy, FaTrash, FaPlus } from 'react-icons/fa';
 
-function SortableSlide({ id, index, title, isActive, onSelect, onRename, onDuplicate, onDelete }) {
+function SortableSlide({ id, index, title, isActive, onSelect, onRename, onDuplicate, onDelete, disableDelete }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   return (
     <div
@@ -36,7 +36,7 @@ function SortableSlide({ id, index, title, isActive, onSelect, onRename, onDupli
         onClick={e => e.stopPropagation()}
       />
       <button onClick={e => { e.stopPropagation(); onDuplicate(index); }} style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#b6c3d1', fontSize: 16, padding: 4 }} title="Duplicate"><FaCopy /></button>
-      <button onClick={e => { e.stopPropagation(); onDelete(index); }} style={{ marginLeft: 6, background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 16, padding: 4 }} title="Delete"><FaTrash /></button>
+      <button onClick={e => { e.stopPropagation(); if (!disableDelete) onDelete(index); }} style={{ marginLeft: 6, background: 'none', border: 'none', cursor: disableDelete ? 'not-allowed' : 'pointer', color: disableDelete ? '#ccc' : '#ef4444', fontSize: 16, padding: 4 }} title="Delete" disabled={disableDelete}><FaTrash /></button>
     </div>
   );
 }
@@ -47,6 +47,7 @@ const QuizSlideList = ({ slides, current, onSelect, onRename, onReorder, onDupli
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
   const slideIds = slides.map((_, i) => i.toString());
+  const disableDelete = slides.length === 1;
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
@@ -72,6 +73,7 @@ const QuizSlideList = ({ slides, current, onSelect, onRename, onReorder, onDupli
               onRename={onRename}
               onDuplicate={onDuplicate}
               onDelete={onDelete}
+              disableDelete={disableDelete}
             />
           ))}
         </SortableContext>
