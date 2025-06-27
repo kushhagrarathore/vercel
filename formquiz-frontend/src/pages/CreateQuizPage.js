@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import QuizSlideList from '../components/QuizSlideList';
 import QuizSlideEditor from '../components/QuizSlideEditor';
 import QuizSettingsPanel from '../components/QuizSettingsPanel';
 import { FaChevronLeft, FaEye, FaCloudUploadAlt, FaMoon, FaSun } from 'react-icons/fa';
 import { supabase } from '../supabase';
-import { generateLiveLink } from '../utils/generateLiveLink';
-import ShareModal from '../components/quiz/ShareModal';
 
 const defaultSettings = {
   font: 'Inter',
@@ -20,11 +18,13 @@ const defaultSettings = {
 
 const defaultSlides = [
   { question: 'Your first question?', options: ['Option 1', 'Option 2'], correctAnswer: 0, type: 'single', image: '', settings: { ...defaultSettings } },
+  { question: 'Second question?', options: ['Option 1', 'Option 2'], correctAnswer: 0, type: 'single', image: '', settings: { ...defaultSettings } },
+  { question: 'Third question?', options: ['Option 1', 'Option 2'], correctAnswer: 0, type: 'single', image: '', settings: { ...defaultSettings } },
+  { question: 'Fourth question?', options: ['Option 1', 'Option 2'], correctAnswer: 0, type: 'single', image: '', settings: { ...defaultSettings } },
 ];
 
 const CreateQuizPage = () => {
   const navigate = useNavigate();
-  const { quizId } = useParams();
   const [slides, setSlides] = useState(defaultSlides);
   const [current, setCurrent] = useState(0);
   const [quizTitle, setQuizTitle] = useState('Untitled Presentation');
@@ -33,57 +33,6 @@ const CreateQuizPage = () => {
   const [darkMode, setDarkMode] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [shareQuizId, setShareQuizId] = useState(null);
-  const [shareQuizLink, setShareQuizLink] = useState('');
-  const [showShareModal, setShowShareModal] = useState(false);
-
-  // Load quiz if editing
-  useEffect(() => {
-    const fetchQuiz = async () => {
-      if (!quizId) return;
-      setLoading(true);
-      const { data: quizData, error: quizError } = await supabase.from('quizzes').select('*').eq('id', quizId).single();
-      if (quizData) {
-        setQuizTitle(quizData.title || 'Untitled Presentation');
-        setGlobalSettings(quizData.customization_settings || defaultSettings);
-      }
-      const { data: slidesData, error: slidesError } = await supabase.from('slides').select('*').eq('quiz_id', quizId).order('slide_index');
-      if (slidesData && slidesData.length > 0) {
-        setSlides(slidesData.map(s => ({
-          question: s.question,
-          options: s.options,
-          correctAnswer: s.correct_answer_index,
-          type: s.type,
-          image: s.image || '',
-          settings: {
-            backgroundColor: s.background || defaultSettings.backgroundColor,
-            textColor: s.text_color || defaultSettings.textColor,
-            fontSize: s.font_size || defaultSettings.fontSize,
-            ...defaultSettings
-          }
-        })));
-      }
-      setLoading(false);
-    };
-    fetchQuiz();
-    // eslint-disable-next-line
-  }, [quizId]);
-
-  // On mount, restore from localStorage if not editing
-  useEffect(() => {
-    if (!quizId) {
-      const draft = localStorage.getItem('quizDraft');
-      if (draft) {
-        try {
-          const { slides: savedSlides, globalSettings: savedSettings, quizTitle: savedTitle } = JSON.parse(draft);
-          if (savedSlides) setSlides(savedSlides);
-          if (savedSettings) setGlobalSettings(savedSettings);
-          if (savedTitle) setQuizTitle(savedTitle);
-        } catch {}
-      }
-    }
-  }, [quizId]);
 
   // Slide list handlers
   const handleSelectSlide = idx => setCurrent(idx);
@@ -99,7 +48,6 @@ const CreateQuizPage = () => {
     setDirty(true);
   };
   const handleDeleteSlide = idx => {
-    if (slides.length <= 1) return;
     const newSlides = slides.filter((_, i) => i !== idx);
     setSlides(newSlides);
     setCurrent(Math.max(0, current - (idx === current ? 1 : 0)));
@@ -138,7 +86,6 @@ const CreateQuizPage = () => {
   // Settings panel handlers
   const handleSettingsChange = newSettings => {
     setSlides(slides.map((s, i) => i === current ? { ...s, settings: newSettings } : s));
-    setGlobalSettings(newSettings);
     setDirty(true);
   };
   const handleApplyAll = () => {
@@ -162,64 +109,37 @@ const CreateQuizPage = () => {
       }
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not logged in');
-      let quizIdToUse = quizId;
-      let publicLink = '';
-      if (quizId) {
-        publicLink = generateLiveLink(quizId);
-        const { error: quizError } = await supabase.from('quizzes').update({
+      const { data: quizData, error: quizError } = await supabase.from('quizzes').insert([
+        {
+          user_id: user.id,
           title: quizTitle,
-          customization_settings: globalSettings,
-          is_active: true,
-          is_shared: false,
-          is_published: true,
-          form_url: publicLink,
-          created_by: user.email,
-        }).eq('id', quizId);
-        if (quizError) throw new Error(quizError.message || JSON.stringify(quizError));
-        await supabase.from('slides').delete().eq('quiz_id', quizId);
-      } else {
-        const { data: quizData, error: quizError } = await supabase.from('quizzes').insert([
-          {
-            user_id: user.id,
-            title: quizTitle,
-            description: '',
-            customization_settings: globalSettings,
-            is_active: true,
-            is_shared: false,
-            is_published: true,
-            form_url: '', // temp, will update after getting id
-            created_by: user.email,
-            created_at: new Date().toISOString(),
-          }
-        ]).select('id').single();
-        if (quizError) throw new Error(quizError.message || JSON.stringify(quizError));
-        quizIdToUse = quizData.id;
-        publicLink = generateLiveLink(quizIdToUse);
-        await supabase.from('quizzes').update({ form_url: publicLink }).eq('id', quizIdToUse);
-      }
+          questions: slides,
+          theme: slides[0]?.settings || {},
+          settings: {},
+          created_at: new Date().toISOString(),
+        }
+      ]).select('id').single();
+      if (quizError) throw quizError;
+      const quizId = quizData.id;
       const slidesToInsert = slides.map((slide, idx) => ({
-        quiz_id: quizIdToUse,
-        slide_index: idx,
-        question: slide.question,
+        quiz_id: quizId,
+        order: idx,
         type: slide.type,
+        question: slide.question,
         options: slide.options,
-        correct_answer_index: slide.correctAnswer ?? 0,
-        background: slide.settings?.backgroundColor || '',
-        text_color: slide.settings?.textColor || '',
-        font_size: slide.settings?.fontSize || 20,
+        timer: slide.settings?.timer || 20,
+        theme: slide.settings || {},
       }));
       if (slidesToInsert.length) {
-        const { error: slideError } = await supabase.from('slides').insert(slidesToInsert);
-        if (slideError) throw new Error(slideError.message || JSON.stringify(slideError));
+        const { error: slideError } = await supabase.from('quiz_slides').insert(slidesToInsert);
+        if (slideError) throw slideError;
       }
-      setShareQuizId(quizIdToUse);
-      setShareQuizLink(`/quiz/fill/${quizIdToUse}`);
-      setShowShareModal(true);
-      setPublishing(false);
+      alert('Quiz published!');
       setDirty(false);
-      localStorage.removeItem('quizDraft');
+      // Optionally: show a modal with a shareable link
     } catch (err) {
-      alert(err.message || 'Failed to publish quiz');
+      alert('Failed to publish quiz: ' + (err.message || err));
+    } finally {
       setPublishing(false);
     }
   };
@@ -227,7 +147,7 @@ const CreateQuizPage = () => {
   // Preview navigation
   const handlePreview = () => {
     // Save quiz draft to localStorage for PreviewQuizPage
-    localStorage.setItem('quizDraft', JSON.stringify({
+    localStorage.setItem('quizPreview', JSON.stringify({
       slides,
       globalSettings,
       quizTitle
@@ -250,37 +170,11 @@ const CreateQuizPage = () => {
   const cancelBack = () => setShowUnsavedModal(false);
 
   // Main layout
-  if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Loading quiz...</div>;
   return (
     <div style={{ minHeight: '100vh', background: darkMode ? '#181c24' : '#f8f9fb', fontFamily: 'Inter, Segoe UI, Arial, sans-serif' }}>
       {/* Top Bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 32px 18px 18px', background: darkMode ? '#23263a' : '#fff', borderBottom: '1.5px solid #ececec', boxShadow: '0 2px 8px rgba(30,50,80,0.03)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
-          <button onClick={handleBack} style={{ background: darkMode ? '#23263a' : '#f3f4f6', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, color: darkMode ? '#fff' : '#222', fontSize: 17 }}><FaChevronLeft /> Back</button>
-          <input
-            type="text"
-            value={quizTitle}
-            onChange={e => setQuizTitle(e.target.value)}
-            placeholder="Quiz name..."
-            style={{
-              fontSize: 22,
-              fontWeight: 600,
-              padding: '7px 16px',
-              borderRadius: 7,
-              border: '1.5px solid #ede9fe',
-              background: darkMode ? '#23263a' : '#f8f9fb',
-              color: darkMode ? '#fff' : '#222',
-              outline: 'none',
-              minWidth: 180,
-              maxWidth: 320,
-              marginLeft: 8,
-              marginRight: 8,
-              transition: 'border 0.18s',
-            }}
-            maxLength={80}
-            required
-          />
-        </div>
+        <button onClick={handleBack} style={{ background: darkMode ? '#23263a' : '#f3f4f6', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, color: darkMode ? '#fff' : '#222', fontSize: 17 }}><FaChevronLeft /> Back</button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <button onClick={handlePreview} style={{ background: '#f3f4f6', color: '#2563eb', border: 'none', borderRadius: 999, padding: '10px 28px', fontWeight: 700, fontSize: 17, cursor: 'pointer', boxShadow: 'none', marginRight: 8, display: 'flex', alignItems: 'center', gap: 10 }}><FaEye /> Preview</button>
           <button onClick={handlePublish} disabled={publishing} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 999, padding: '10px 28px', fontWeight: 700, fontSize: 17, cursor: 'pointer', boxShadow: '0 2px 8px rgba(37,99,235,0.10)', opacity: publishing ? 0.7 : 1, marginRight: 8, display: 'flex', alignItems: 'center', gap: 10 }}><FaCloudUploadAlt /> {publishing ? 'Publishing...' : 'Publish'}</button>
@@ -304,6 +198,7 @@ const CreateQuizPage = () => {
       <div style={{ display: 'flex', gap: 32, padding: '38px 0 0 0', maxWidth: 1800, margin: '0 auto' }}>
         {/* Left: Slide List Card */}
         <div style={{ minWidth: 260, maxWidth: 320, width: 320, background: darkMode ? '#23263a' : '#fff', borderRadius: 12, boxShadow: '0 2px 12px rgba(30,50,80,0.06)', border: '1.5px solid #ede9fe', padding: 18, display: 'flex', flexDirection: 'column', gap: 12, height: 'fit-content' }}>
+          <button onClick={handleAddSlide} style={{ width: '100%', marginBottom: 12, background: '#ede9fe', color: '#2563eb', border: 'none', borderRadius: 8, padding: '10px 0', fontWeight: 700, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }} disabled={slides.length >= 4}>+ Add Slide</button>
           <QuizSlideList
             slides={slides}
             current={current}
@@ -339,13 +234,6 @@ const CreateQuizPage = () => {
           />
         </div>
       </div>
-      <ShareModal
-        quizId={shareQuizId}
-        open={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        fillLink={shareQuizLink}
-        title="Share Quiz Fill Link"
-      />
     </div>
   );
 };
