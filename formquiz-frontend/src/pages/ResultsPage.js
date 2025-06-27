@@ -2,78 +2,139 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import Leaderboard from './live/Leaderboard';
+import './ResultsPage.css';
 
 const ResultsPage = () => {
-  const { quizId } = useParams();
+  const { quizId, formId } = useParams();
   const navigate = useNavigate();
+
+  // Quiz mode
   const [quiz, setQuiz] = useState(null);
   const [slides, setSlides] = useState([]);
   const [participants, setParticipants] = useState(0);
+
+  // Form mode
+  const [questions, setQuestions] = useState([]);
+  const [responses, setResponses] = useState([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
-    const fetchResults = async () => {
-      setLoading(true);
-      setError(null);
-      // Fetch quiz info
-      const { data: quizData, error: quizError } = await supabase
-        .from('quizzes')
-        .select('*')
-        .eq('id', quizId)
-        .single();
-      if (quizError || !quizData) {
-        setError('Quiz not found.');
-        setLoading(false);
-        return;
-      }
-      setQuiz(quizData);
-      // Fetch slides
-      const { data: slidesData, error: slidesError } = await supabase
-        .from('slides')
-        .select('*')
-        .eq('quiz_id', quizId);
-      setSlides(Array.isArray(slidesData) ? slidesData : []);
-      // Fetch unique participants from live_responses
-      const { data: responses, error: respError } = await supabase
-        .from('live_responses')
-        .select('username', { count: 'exact', head: false })
-        .eq('quiz_id', quizId);
-      if (!respError && Array.isArray(responses)) {
+    const fetchQuizData = async () => {
+      try {
+        setLoading(true);
+        const { data: quizData, error: quizError } = await supabase
+          .from('quizzes')
+          .select('*')
+          .eq('id', quizId)
+          .single();
+
+        if (quizError || !quizData) throw new Error('Quiz not found.');
+        setQuiz(quizData);
+
+        const { data: slidesData } = await supabase
+          .from('quiz_slides')
+          .select('*')
+          .eq('quiz_id', quizId)
+          .order('order', { ascending: true });
+        setSlides(slidesData);
+
+        const { data: responses } = await supabase
+          .from('live_responses')
+          .select('username');
         const unique = new Set(responses.map(r => r.username || 'Anonymous'));
         setParticipants(unique.size);
-      } else {
-        setParticipants(0);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-    fetchResults();
-    // eslint-disable-next-line
-  }, [quizId, retryCount]);
+
+    const fetchFormData = async () => {
+      try {
+        setLoading(true);
+        const { data: qData } = await supabase
+          .from('questions')
+          .select('id, question_text')
+          .eq('form_id', formId)
+          .order('order_index');
+
+        const { data: rData } = await supabase
+          .from('responses')
+          .select('answers, submitted_at')
+          .eq('form_id', formId)
+          .order('submitted_at', { ascending: false });
+
+        if (qData) setQuestions(qData);
+        if (rData) setResponses(rData);
+      } catch (err) {
+        setError('Failed to fetch form results.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (quizId) fetchQuizData();
+    else if (formId) fetchFormData();
+  }, [quizId, formId]);
 
   if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Loading results...</div>;
-  if (error) return (
-    <div style={{ padding: 40, color: 'red', textAlign: 'center' }}>
-      <div style={{ marginBottom: 16 }}>{error}</div>
-      <button onClick={() => setRetryCount(c => c + 1)} style={{ padding: '8px 20px', borderRadius: 8, background: '#4a6bff', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer', marginRight: 12 }}>Retry</button>
-      <button onClick={() => navigate('/dashboard')} style={{ padding: '8px 20px', borderRadius: 8, background: '#888', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Back to Dashboard</button>
-    </div>
-  );
+
+  if (error) {
+    return (
+      <div style={{ padding: 40, color: 'red', textAlign: 'center' }}>
+        <div>{error}</div>
+        <button onClick={() => navigate('/dashboard')} style={{ marginTop: 20 }}>← Back to Dashboard</button>
+      </div>
+    );
+  }
 
   return (
-    <div className="results-layout" style={{ maxWidth: 600, margin: '0 auto', padding: 32 }}>
-      <h1 style={{ fontWeight: 700, marginBottom: 12 }}>Quiz Results</h1>
-      <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontWeight: 600 }}>{quiz?.title}</h2>
-        <div style={{ color: '#555', marginTop: 8 }}>
-          <b>Total Questions:</b> {slides.length} <br />
-          <b>Participants:</b> {participants}
-        </div>
-      </div>
-      <Leaderboard />
-      {/* Placeholder for word cloud or answer stats */}
-      {/* <div style={{ marginTop: 32 }}>[Word cloud/answer stats coming soon]</div> */}
+    <div className="results-container" style={{ maxWidth: 800, margin: '0 auto', padding: 32 }}>
+      <button className="back-button" onClick={() => navigate('/dashboard')}>← Back to Dashboard</button>
+
+      {/* ✅ Quiz Results View */}
+      {quizId && (
+        <>
+          <h2 className="results-title">Quiz Results</h2>
+          <div style={{ marginBottom: 24 }}>
+            <h3>{quiz?.title}</h3>
+            <p><b>Total Questions:</b> {slides.length}</p>
+            <p><b>Participants:</b> {participants}</p>
+          </div>
+          <Leaderboard quizId={quizId} />
+        </>
+      )}
+
+      {/* ✅ Form Results Table */}
+      {formId && (
+        <>
+          <h2 className="results-title">Responses</h2>
+          <div className="responses-table">
+            <div className="table-header">
+              <span>No.</span>
+              <span>Date</span>
+              {questions.map((q, i) => (
+                <span key={q.id}>Q{i + 1}. {q.question_text}</span>
+              ))}
+            </div>
+
+            {responses.map((resp, idx) => (
+              <div key={idx} className="table-row">
+                <span>{idx + 1}</span>
+                <span>{new Date(resp.submitted_at).toLocaleString()}</span>
+                {questions.map((q, i) => (
+                  <span key={q.id}>
+                    <strong>{i + 1}:</strong> {resp.answers?.[q.id] || '—'}
+                  </span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 };
