@@ -1,34 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { generateLiveLink } from '../utils/generateLiveLink';
-import { socket } from '../utils/socket';
 import Leaderboard from '../components/quiz/Leaderboard';
 // TODO: Import TimerBar, Leaderboard, LiveAudienceView, etc.
 
 function randomRoomCode() {
-  return Math.random().toString().slice(2, 8);
+  return Math.random().slice(2, 8);
 }
 
 const PresentQuizPage = () => {
   const { quizId } = useParams();
-  const [status, setStatus] = useState('idle'); // idle, starting, live, error
+  const [status, setStatus] = useState('idle');
   const [error, setError] = useState(null);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
   const [slides, setSlides] = useState([]);
-  const [isLive, setIsLive] = useState(false);
   const [roomCode, setRoomCode] = useState('');
-  const [participants, setParticipants] = useState([]);
+  const [liveQuiz, setLiveQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
+  const channelRef = useRef(null);
 
+  // Fetch slides for this quiz
   useEffect(() => {
-    // Fetch slides for this quiz
     const fetchSlides = async () => {
       setLoading(true);
       const { data, error } = await supabase.from('slides').select('*').eq('quiz_id', quizId).order('slide_index');
-      console.log('PresentQuizPage: quizId', quizId, 'slides', data);
       if (error) setError('Failed to load slides');
       else setSlides(data || []);
       setLoading(false);
@@ -36,93 +33,114 @@ const PresentQuizPage = () => {
     fetchSlides();
   }, [quizId]);
 
-  // Socket.IO host logic
+  // Subscribe to sessions for this room
   useEffect(() => {
-    if (!quizId || !slides.length) return;
     if (!roomCode) return;
-    // Host creates quiz room
-    socket.emit('host_create_quiz', {
-      quizId,
-      roomCode,
-      questions: slides.map(s => ({
-        text: s.question,
-        options: s.options,
-        correctIndex: s.correct_answer_index,
-        timeLimit: s.timer || 20,
-      })),
-    });
-    socket.on('quiz_created', ({ roomCode }) => {
-      setStatus('waiting');
-    });
-    socket.on('participants_updated', (list) => {
-      setParticipants(list);
-    });
-    socket.on('quiz_started', () => {
-      setIsLive(true);
-      setStatus('live');
-      setCurrentQuestion(0);
-    });
-    socket.on('question_changed', ({ index }) => {
-      setCurrentQuestion(index);
-    });
-    socket.on('leaderboard', (players) => {
-      setLeaderboard(players);
-      setShowLeaderboard(true);
-    });
-    socket.on('quiz_ended', () => {
-      setIsLive(false);
-      setStatus('ended');
-    });
-    return () => {
-      socket.off('quiz_created');
-      socket.off('participants_updated');
-      socket.off('quiz_started');
-      socket.off('question_changed');
-      socket.off('leaderboard');
-      socket.off('quiz_ended');
+    const subscribe = async () => {
+      const { data } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('code', roomCode)
+        .single();
+      setLiveQuiz(data);
+      if (channelRef.current) supabase.removeChannel(channelRef.current);
+      channelRef.current = supabase
+        .channel('live-quiz-' + roomCode)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `code=eq.${roomCode}` }, (payload) => {
+          setLiveQuiz(payload.new);
+        })
+        .subscribe();
     };
-  }, [quizId, slides, roomCode]);
+    subscribe();
+    return () => {
+      if (channelRef.current) supabase.removeChannel(channelRef.current);
+    };
+  }, [roomCode]);
 
+  // Host: Start Live Quiz (create sessions row)
   const handleStart = async () => {
-    // Always fetch fresh slides before starting
     setLoading(true);
     setError(null);
-    const { data, error } = await supabase.from('slides').select('*').eq('quiz_id', quizId).order('slide_index');
-    if (error || !data || data.length === 0) {
-      setError('No questions found for this quiz. Please add questions and publish again.');
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    // Remove any previous session for this quizId
+    await supabase.from('sessions').delete().eq('quiz_id', quizId);
+    const { error: insertError } = await supabase.from('sessions').insert([{
+      quiz_id: quizId,
+      code: code,
+      is_live: false,
+      current_question_id: null,
+      timer_end: null,
+    }]);
+    if (insertError) {
+      console.error('Supabase insert error:', insertError);
+      setError('Failed to start live quiz: ' + (insertError.message || insertError.details || 'Unknown error'));
       setLoading(false);
       return;
     }
-    setSlides(data);
+    // Fetch the new session row to ensure it's available for joiners
+    const { data: newLiveQuiz, error: fetchError } = await supabase
+      .from('sessions')
+      .select('*')
+      .eq('code', code)
+      .single();
+    if (fetchError || !newLiveQuiz) {
+      setError('Failed to fetch live quiz after creation.');
+      setLoading(false);
+      return;
+    }
+    setRoomCode(code);
+    setLiveQuiz(newLiveQuiz);
     setLoading(false);
-    // Generate new room code and clear state
-    setRoomCode(randomRoomCode());
-    setParticipants([]);
     setStatus('waiting');
-    setIsLive(false);
-    setShowLeaderboard(false);
-    setLeaderboard([]);
-    setCurrentQuestion(0);
   };
 
-  const handleStartQuiz = () => {
-    socket.emit('start_quiz', { roomCode });
-    setIsLive(true);
+  // Host: Start Quiz (set is_live, current_question_id, timer_end)
+  const handleStartQuiz = async () => {
+    if (!liveQuiz || !slides.length) return;
+    const timer = slides[0]?.timer || 20;
+    const timerEnd = new Date(Date.now() + timer * 1000).toISOString();
+    await supabase.from('sessions').update({
+      is_live: true,
+      current_question_id: slides[0]?.id,
+      timer_end: timerEnd,
+    }).eq('code', roomCode);
     setStatus('live');
-    setCurrentQuestion(0);
+    setLiveQuiz({ ...liveQuiz, is_live: true, current_question_id: slides[0]?.id, timer_end: timerEnd });
   };
 
-  const handleNext = () => {
-    if (currentQuestion < slides.length - 1) {
-      const next = currentQuestion + 1;
-      socket.emit('next_question', { roomCode, index: next });
+  // Sync host view with sessions changes
+  useEffect(() => {
+    if (liveQuiz && status === 'live' && liveQuiz.current_question_id != null) {
+      // Show the current question and timer to the host
+      // (UI below will use liveQuiz.current_question_id and timer_end)
+    }
+  }, [liveQuiz, status]);
+
+  // Host: Next Question
+  const handleNext = async () => {
+    if (!liveQuiz || !slides.length) return;
+    const currentIdx = slides.findIndex(s => s.id === liveQuiz.current_question_id);
+    const next = currentIdx + 1;
+    if (next < slides.length) {
+      const timer = slides[next]?.timer || 20;
+      const timerEnd = new Date(Date.now() + timer * 1000).toISOString();
+      await supabase.from('sessions').update({
+        current_question_id: slides[next]?.id,
+        timer_end: timerEnd,
+      }).eq('code', roomCode);
+    } else {
+      await handleEnd();
     }
   };
 
-  const handleEnd = () => {
-    socket.emit('end_quiz', { roomCode });
-    setIsLive(false);
-    setStatus('idle');
+  // Host: End Quiz
+  const handleEnd = async () => {
+    if (!liveQuiz) return;
+    await supabase.from('sessions').update({
+      is_live: false,
+      timer_end: null,
+    }).eq('code', roomCode);
+    setStatus('ended');
   };
 
   if (status === 'ended') {
@@ -173,9 +191,9 @@ const PresentQuizPage = () => {
           <span style={{ color: '#888', fontSize: 14 }}>quizId: {quizId}</span>
         </div>
       )}
-      {!roomCode ? (
-        <button onClick={handleStart} style={{ padding: '12px 32px', fontSize: 18, borderRadius: 8, background: '#4a6bff', color: '#fff', border: 'none', fontWeight: 700, marginBottom: 24 }}>
-          Start Live Quiz
+      {(!roomCode && !loading) ? (
+        <button onClick={handleStart} style={{ padding: '12px 32px', fontSize: 18, borderRadius: 8, background: '#4a6bff', color: '#fff', border: 'none', fontWeight: 700, marginBottom: 24 }} disabled={loading}>
+          {loading ? 'Starting...' : 'Start Live Quiz'}
         </button>
       ) : status === 'waiting' ? (
         <>
@@ -184,14 +202,19 @@ const PresentQuizPage = () => {
             <b>Share this link with participants:</b><br />
             <a href={generateLiveLink(roomCode)} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline', wordBreak: 'break-all', fontSize: 16 }}>{generateLiveLink(roomCode)}</a>
           </div>
-          <div style={{ marginBottom: 16 }}>
-            <b>Participants:</b> {participants.length > 0 ? participants.map(p => p.name).join(', ') : 'None yet'}
-          </div>
-          <button onClick={handleStartQuiz} style={{ padding: '12px 32px', fontSize: 18, borderRadius: 8, background: '#2563eb', color: '#fff', border: 'none', fontWeight: 700, marginBottom: 24 }}>
-            Start Quiz
+          {/* Remove participants display for now, or handle undefined safely */}
+          {/* <div style={{ marginBottom: 16 }}>
+            <b>Participants:</b> {Array.isArray(liveQuiz?.participants) && liveQuiz.participants.length > 0 ? liveQuiz.participants.map(p => p.name).join(', ') : 'None yet'}
+          </div> */}
+          <button
+            onClick={handleStartQuiz}
+            style={{ padding: '12px 32px', fontSize: 18, borderRadius: 8, background: '#2563eb', color: '#fff', border: 'none', fontWeight: 700, marginBottom: 24 }}
+            disabled={loading || !slides.length}
+          >
+            {loading ? 'Starting...' : 'Start Quiz'}
           </button>
         </>
-      ) : isLive ? (
+      ) : status === 'live' && liveQuiz && slides.length > 0 && liveQuiz.current_question_id != null ? (
         <>
           <div style={{ marginBottom: 16, color: '#059669', fontWeight: 600 }}>Quiz is LIVE!</div>
           <div style={{
@@ -209,10 +232,10 @@ const PresentQuizPage = () => {
             position: 'relative',
             transition: 'box-shadow 0.2s',
           }}>
-            <div style={{ fontWeight: 800, fontSize: 24, color: '#2563eb', marginBottom: 10 }}>Q{currentQuestion + 1} / {slides.length}</div>
-            <div style={{ color: '#23272f', fontWeight: 700, fontSize: 22, margin: '0 0 18px 0', textAlign: 'center', letterSpacing: '-0.5px' }}>{slides[currentQuestion]?.question}</div>
+            <div style={{ fontWeight: 800, fontSize: 24, color: '#2563eb', marginBottom: 10 }}>Q{slides.findIndex(s => s.id === liveQuiz.current_question_id) + 1} / {slides.length}</div>
+            <div style={{ color: '#23272f', fontWeight: 700, fontSize: 22, margin: '0 0 18px 0', textAlign: 'center', letterSpacing: '-0.5px' }}>{slides.find(s => s.id === liveQuiz.current_question_id)?.question}</div>
             <div style={{ width: '100%', marginTop: 8 }}>
-              {(slides[currentQuestion]?.options || []).map((opt, idx) => (
+              {(slides.find(s => s.id === liveQuiz.current_question_id)?.options || []).map((opt, idx) => (
                 <button
                   key={idx}
                   disabled
@@ -238,7 +261,7 @@ const PresentQuizPage = () => {
               ))}
             </div>
           </div>
-          <button onClick={handleNext} disabled={currentQuestion >= slides.length - 1} style={{ padding: '10px 24px', borderRadius: 8, background: '#f59e42', color: '#fff', border: 'none', fontWeight: 700, marginRight: 12 }}>
+          <button onClick={handleNext} disabled={slides.findIndex(s => s.id === liveQuiz.current_question_id) >= slides.length - 1} style={{ padding: '10px 24px', borderRadius: 8, background: '#f59e42', color: '#fff', border: 'none', fontWeight: 700, marginRight: 12 }}>
             Next Question
           </button>
           <button onClick={handleEnd} style={{ padding: '10px 24px', borderRadius: 8, background: '#e11d48', color: '#fff', border: 'none', fontWeight: 700 }}>
