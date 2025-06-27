@@ -40,34 +40,43 @@ const CreateQuizPage = () => {
 
   // Load quiz if editing
   useEffect(() => {
-    const fetchQuiz = async () => {
-      if (!quizId) return;
-      setLoading(true);
-      const { data: quizData, error: quizError } = await supabase.from('quizzes').select('*').eq('id', quizId).single();
-      if (quizData) {
-        setQuizTitle(quizData.title || 'Untitled Presentation');
-        setGlobalSettings(quizData.customization_settings || defaultSettings);
-      }
-      const { data: slidesData, error: slidesError } = await supabase.from('slides').select('*').eq('quiz_id', quizId).order('slide_index');
-      if (slidesData && slidesData.length > 0) {
-        setSlides(slidesData.map(s => ({
-          question: s.question,
-          options: s.options,
-          correctAnswer: s.correct_answer_index,
-          type: s.type,
-          image: s.image || '',
-          settings: {
-            backgroundColor: s.background || defaultSettings.backgroundColor,
-            textColor: s.text_color || defaultSettings.textColor,
-            fontSize: s.font_size || defaultSettings.fontSize,
-            ...defaultSettings
-          }
-        })));
-      }
-      setLoading(false);
-    };
-    fetchQuiz();
-    // eslint-disable-next-line
+    if (!quizId) {
+      // Clear localStorage draft and reset state for new form
+      localStorage.removeItem('quizDraft');
+      setSlides(defaultSlides);
+      setQuizTitle('Untitled Presentation');
+      setGlobalSettings(defaultSettings);
+      setCurrent(0);
+      setDirty(false);
+    } else {
+      const fetchQuiz = async () => {
+        setLoading(true);
+        const { data: quizData, error: quizError } = await supabase.from('quizzes').select('*').eq('id', quizId).single();
+        if (quizData) {
+          setQuizTitle(quizData.title || 'Untitled Presentation');
+          setGlobalSettings(quizData.customization_settings || defaultSettings);
+        }
+        const { data: slidesData, error: slidesError } = await supabase.from('slides').select('*').eq('quiz_id', quizId).order('slide_index');
+        if (slidesData && slidesData.length > 0) {
+          setSlides(slidesData.map(s => ({
+            question: s.question,
+            options: s.options,
+            correctAnswer: s.correct_answer_index,
+            type: s.type,
+            image: s.image || '',
+            settings: {
+              backgroundColor: s.background || defaultSettings.backgroundColor,
+              textColor: s.text_color || defaultSettings.textColor,
+              fontSize: s.font_size || defaultSettings.fontSize,
+              timer: s.timer || 20,
+              ...defaultSettings
+            }
+          })));
+        }
+        setLoading(false);
+      };
+      fetchQuiz();
+    }
   }, [quizId]);
 
   // On mount, restore from localStorage if not editing
@@ -84,6 +93,18 @@ const CreateQuizPage = () => {
       }
     }
   }, [quizId]);
+
+  // Warn before leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (dirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [dirty]);
 
   // Slide list handlers
   const handleSelectSlide = idx => setCurrent(idx);
@@ -177,6 +198,26 @@ const CreateQuizPage = () => {
         }).eq('id', quizId);
         if (quizError) throw new Error(quizError.message || JSON.stringify(quizError));
         await supabase.from('slides').delete().eq('quiz_id', quizId);
+        // Save slides before navigating
+        const slidesToInsert = slides.map((slide, idx) => ({
+          quiz_id: quizId,
+          slide_index: idx,
+          question: slide.question,
+          type: slide.type,
+          options: slide.options,
+          correct_answer_index: slide.correctAnswer ?? 0,
+          background: slide.settings?.backgroundColor || '',
+          text_color: slide.settings?.textColor || '',
+          font_size: slide.settings?.fontSize || 20,
+          timer: slide.settings?.timer || 20,
+        }));
+        if (slidesToInsert.length) {
+          const { error: slideError } = await supabase.from('slides').insert(slidesToInsert);
+          if (slideError) throw new Error(slideError.message || JSON.stringify(slideError));
+        }
+        navigate(`/quiz/present/${quizId}`);
+        setPublishing(false);
+        return;
       } else {
         const { data: quizData, error: quizError } = await supabase.from('quizzes').insert([
           {
@@ -196,21 +237,26 @@ const CreateQuizPage = () => {
         quizIdToUse = quizData.id;
         publicLink = generateLiveLink(quizIdToUse);
         await supabase.from('quizzes').update({ form_url: publicLink }).eq('id', quizIdToUse);
-      }
-      const slidesToInsert = slides.map((slide, idx) => ({
-        quiz_id: quizIdToUse,
-        slide_index: idx,
-        question: slide.question,
-        type: slide.type,
-        options: slide.options,
-        correct_answer_index: slide.correctAnswer ?? 0,
-        background: slide.settings?.backgroundColor || '',
-        text_color: slide.settings?.textColor || '',
-        font_size: slide.settings?.fontSize || 20,
-      }));
-      if (slidesToInsert.length) {
-        const { error: slideError } = await supabase.from('slides').insert(slidesToInsert);
-        if (slideError) throw new Error(slideError.message || JSON.stringify(slideError));
+        // Save slides before navigating
+        const slidesToInsert = slides.map((slide, idx) => ({
+          quiz_id: quizIdToUse,
+          slide_index: idx,
+          question: slide.question,
+          type: slide.type,
+          options: slide.options,
+          correct_answer_index: slide.correctAnswer ?? 0,
+          background: slide.settings?.backgroundColor || '',
+          text_color: slide.settings?.textColor || '',
+          font_size: slide.settings?.fontSize || 20,
+          timer: slide.settings?.timer || 20,
+        }));
+        if (slidesToInsert.length) {
+          const { error: slideError } = await supabase.from('slides').insert(slidesToInsert);
+          if (slideError) throw new Error(slideError.message || JSON.stringify(slideError));
+        }
+        navigate(`/quiz/present/${quizIdToUse}`);
+        setPublishing(false);
+        return;
       }
       setShareQuizId(quizIdToUse);
       setShareQuizLink(`/quiz/fill/${quizIdToUse}`);

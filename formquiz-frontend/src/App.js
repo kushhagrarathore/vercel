@@ -75,8 +75,8 @@ function App() {
             <Route path="/profile" element={<Profile />} />
 
             {/* New live quiz routes */}
-            <Route path="/join/:quizId" element={<JoinQuiz />} />
-            <Route path="/live/leaderboard/:quizId" element={<Leaderboard />} />
+            <Route path="/join/:roomCode" element={<JoinQuiz />} />
+            {/* <Route path="/live/leaderboard/:quizId" element={<Leaderboard />} /> */}
           </Routes>
         </LiveQuizProvider>
       </BrowserRouter>
