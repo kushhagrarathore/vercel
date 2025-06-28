@@ -47,6 +47,9 @@ const PresentQuizPage = () => {
   const [currentQuestionId, setCurrentQuestionId] = useState(null);
   const isHost = true; // This is the host page
 
+  // Debug logging utility
+  const debug = (...args) => { if (process.env.NODE_ENV !== 'production') console.log('[Host]', ...args); };
+
   // Fetch slides for this quiz
   useEffect(() => {
     const fetchSlides = async () => {
@@ -91,6 +94,7 @@ const PresentQuizPage = () => {
     const channel = supabase
       .channel('quiz_state_' + roomCode)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'quiz_state', filter: `quiz_room_id=eq.${roomCode}` }, payload => {
+        debug('quiz_state update:', payload.new);
         setQuizState(payload.new);
         setTimer(payload.new?.timer_value ?? 0);
         setPhase(payload.new?.quiz_status ?? 'question');
@@ -106,6 +110,7 @@ const PresentQuizPage = () => {
     const channel = supabase
       .channel('participants_' + roomCode)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `session_code=eq.${roomCode}` }, () => {
+        debug('participants table changed');
         fetchParticipants();
       })
       .subscribe();
@@ -113,16 +118,17 @@ const PresentQuizPage = () => {
     return () => { supabase.removeChannel(channel); };
   }, [roomCode]);
 
-  // Fetch participants
+  // Fetch participants with debug
   const fetchParticipants = async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('participants')
       .select('*')
       .eq('session_code', roomCode)
       .order('created_at', { ascending: true });
+    if (error) debug('fetchParticipants error:', error);
+    debug('Fetched participants:', data);
     setParticipants(data || []);
     setParticipantCount(data?.length || 0);
-    
     // Also set leaderboard data
     const sortedData = data?.sort((a, b) => b.score - a.score) || [];
     setLeaderboard(sortedData);
@@ -211,15 +217,20 @@ const PresentQuizPage = () => {
 
   // Host: Start Quiz (set is_live, current_question_id, timer_end, phase, and update all participants to 'active')
   const handleStartQuiz = async () => {
+    debug('Starting quiz for room:', roomCode);
     if (!liveQuiz || !slides.length) return;
     const firstQuestionId = slides[0]?.id;
-    await supabase.from('participants').update({ status: 'active' }).eq('session_code', roomCode).eq('status', 'waiting');
-    await supabase.from('quiz_state').upsert({
+    // Set all waiting participants to 'active'
+    const { error: updateError } = await supabase.from('participants').update({ status: 'active' }).eq('session_code', roomCode).eq('status', 'waiting');
+    if (updateError) debug('Update participants error:', updateError);
+    // Start the quiz state
+    const { error: upsertError } = await supabase.from('quiz_state').upsert({
       quiz_room_id: roomCode,
       timer_value: 20,
       current_question_id: firstQuestionId,
       quiz_status: 'question'
     });
+    if (upsertError) debug('Quiz state upsert error:', upsertError);
     setTimer(20);
     setPhase('question');
     setCurrentQuestionId(firstQuestionId);
@@ -437,6 +448,18 @@ const PresentQuizPage = () => {
       }, 3500);
     }
   }, [quizState?.quiz_status]);
+
+  // Subscribe to live_responses for this room (optional, for live stats)
+  useEffect(() => {
+    if (!roomCode) return;
+    const channel = supabase
+      .channel('live_responses_' + roomCode)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_responses', filter: `quizRoomId=eq.${roomCode}` }, () => {
+        // Optionally fetch live responses or update UI
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [roomCode]);
 
   if (status === 'ended') {
     return (

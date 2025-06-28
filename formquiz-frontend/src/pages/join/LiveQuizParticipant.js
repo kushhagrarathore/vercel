@@ -25,6 +25,9 @@ const LiveQuizParticipant = () => {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [phase, setPhase] = useState('question');
 
+  // Debug logging utility
+  const debug = (...args) => { if (process.env.NODE_ENV !== 'production') console.log('[Participant]', ...args); };
+
   // Subscribe to sessions for this room (always keep in sync)
   useEffect(() => {
     if (!roomCode) return;
@@ -59,6 +62,7 @@ const LiveQuizParticipant = () => {
     const channel = supabase
       .channel('quiz_state_' + roomCode)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'quiz_state', filter: `quiz_room_id=eq.${roomCode}` }, payload => {
+        debug('quiz_state update:', payload.new);
         setQuizState(payload.new);
         setTimer(payload.new?.timer_value ?? 0);
         setCurrentQuestionId(payload.new?.current_question_id ?? null);
@@ -194,6 +198,19 @@ const LiveQuizParticipant = () => {
     }
   }, [quizState?.quiz_status]);
 
+  // Subscribe to live_responses for this room (optional, for live stats)
+  useEffect(() => {
+    if (!roomCode) return;
+    const channel = supabase
+      .channel('live_responses_' + roomCode)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_responses', filter: `quizRoomId=eq.${roomCode}` }, () => {
+        // Optionally fetch live responses or update UI
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [roomCode]);
+
+  // In handleSubmit, insert into live_responses and update participant score
   const handleSubmit = async () => {
     if (selectedOption == null || isLocked || submitted) return;
     setIsLocked(true);
