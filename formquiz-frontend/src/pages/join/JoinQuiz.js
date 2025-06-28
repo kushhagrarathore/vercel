@@ -146,17 +146,21 @@ const JoinQuiz = () => {
   const registerParticipant = async () => {
     if (!roomCode || !username.trim()) return;
     // Check for duplicate in participants table
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from('participants')
       .select('id, status')
       .eq('session_code', roomCode)
       .eq('name', username.trim());
+    if (existingError) {
+      setError('Supabase error: ' + existingError.message);
+      return;
+    }
     if (existing && existing.length > 0) {
       setParticipantId(existing[0].id);
       setParticipantStatus(existing[0].status);
       return existing[0].id;
     } else {
-      const { data: inserted } = await supabase.from('participants').insert([
+      const { data: inserted, error: insertError } = await supabase.from('participants').insert([
         {
           session_code: roomCode,
           name: username.trim(),
@@ -165,6 +169,10 @@ const JoinQuiz = () => {
           emoji: selectedEmoji,
         }
       ]).select();
+      if (insertError) {
+        setError('Supabase error: ' + insertError.message);
+        return;
+      }
       if (inserted && inserted.length > 0) {
         setParticipantId(inserted[0].id);
         setParticipantStatus('waiting');
@@ -198,6 +206,11 @@ const JoinQuiz = () => {
     }
     // Register participant immediately, even if quiz not started
     const pid = await registerParticipant();
+    if (!pid) {
+      // Error is already set in registerParticipant
+      setJoining(false);
+      return;
+    }
     setParticipantId(pid);
     setLiveQuiz(data);
     setJoined(true);

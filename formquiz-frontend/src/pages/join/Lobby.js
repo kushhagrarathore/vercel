@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../../supabase';
 
@@ -9,6 +9,8 @@ const Lobby = () => {
   const { username, emoji } = location.state || {};
   const [lobbyParticipants, setLobbyParticipants] = useState([]);
   const [liveQuiz, setLiveQuiz] = useState(null);
+  const [rotationAngle, setRotationAngle] = useState(0);
+  const animationRef = useRef();
 
   // Subscribe to all participants in the lobby (status: 'waiting') for this room
   useEffect(() => {
@@ -63,17 +65,35 @@ const Lobby = () => {
     };
   }, [roomCode, participantId, navigate, username, emoji]);
 
-  // Spiral layout calculation
-  const spiralCoords = (idx, total, centerX, centerY, a = 18, b = 18) => {
-    // Archimedean spiral: r = a + b*theta
-    const theta = 1.5 * Math.PI + (2 * Math.PI * idx) / Math.max(1, total) * 2;
-    const r = a + b * theta;
+  // Animate rotation
+  useEffect(() => {
+    let lastTime = performance.now();
+    const animate = (now) => {
+      const delta = now - lastTime;
+      lastTime = now;
+      setRotationAngle((angle) => (angle + 0.0015 * delta) % (2 * Math.PI)); // ~1 full rotation every 4s
+      animationRef.current = requestAnimationFrame(animate);
+    };
+    animationRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationRef.current);
+  }, []);
+
+  // Spiral layout calculation with rotation
+  const spiralCoords = (idx, total, centerX, centerY, baseRadius = 120, spread = 60, angleOffset = 0) => {
+    if (total === 1) {
+      // Center for single participant
+      return { left: centerX, top: centerY };
+    }
+    // Spread participants more for small counts
+    const angle = ((2 * Math.PI) / total) * idx + angleOffset;
+    const radius = baseRadius + (spread * (total > 6 ? idx : 0));
     return {
-      left: centerX + r * Math.cos(theta),
-      top: centerY + r * Math.sin(theta),
+      left: centerX + radius * Math.cos(angle),
+      top: centerY + radius * Math.sin(angle),
     };
   };
-  const centerX = 120, centerY = 80;
+  const spiralSize = 400;
+  const centerX = spiralSize / 2, centerY = spiralSize / 2;
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(245,247,250,0.95)', position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 1000 }}>
@@ -82,25 +102,26 @@ const Lobby = () => {
         <div style={{ fontWeight: 600, fontSize: 20, color: '#374151', marginBottom: 8 }}>Hi, {username}!</div>
         <div style={{ color: '#888', fontSize: 16, marginBottom: 18 }}>Share this code to join:</div>
         <div style={{ fontWeight: 900, fontSize: 32, color: '#2563eb', marginBottom: 18, letterSpacing: 2, background: '#e0e7ff', borderRadius: 12, padding: '8px 24px', boxShadow: '0 2px 8px rgba(60,60,100,0.10)' }}>{roomCode}</div>
-        <div style={{ position: 'relative', width: 260, height: 180, margin: '0 auto', overflow: 'visible' }}>
+        <div style={{ position: 'relative', width: spiralSize, height: spiralSize, margin: '0 auto', overflow: 'visible' }}>
           {lobbyParticipants.map((p, idx) => {
-            const { left, top } = spiralCoords(idx, lobbyParticipants.length, centerX, centerY);
+            const { left, top } = spiralCoords(idx, lobbyParticipants.length, centerX, centerY, 120, 60, rotationAngle);
             return (
               <div key={p.id} style={{
                 position: 'absolute',
                 left,
                 top,
-                transition: 'all 0.7s cubic-bezier(.68,-0.55,.27,1.55)',
-                animation: `spiralbounce 1.2s ${0.1 * idx}s infinite alternate`,
+                transform: 'translate(-50%, -50%)',
+                transition: 'left 0.3s, top 0.3s',
                 zIndex: 2,
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
+                pointerEvents: 'none',
               }}>
-                <div style={{ fontSize: 38, background: '#f1f5f9', borderRadius: '50%', padding: 10, boxShadow: '0 2px 8px rgba(60,60,100,0.10)', border: '2.5px solid #dbeafe' }}>{p.emoji || '😀'}</div>
-                <div style={{ fontWeight: 600, fontSize: 15, color: '#374151', marginTop: 4 }}>{p.name}</div>
+                <div style={{ fontSize: 48, background: '#f1f5f9', borderRadius: '50%', padding: 16, boxShadow: '0 2px 8px rgba(60,60,100,0.10)', border: '3px solid #dbeafe', animation: `bounce 1.2s ${0.1 * idx}s infinite alternate` }}>{p.emoji || '😀'}</div>
+                <div style={{ fontWeight: 700, fontSize: 18, color: '#374151', marginTop: 6 }}>{p.name}</div>
               </div>
             );
           })}
-          <style>{`@keyframes spiralbounce { 0% { transform: translateY(0); } 100% { transform: translateY(-18px); } }`}</style>
+          <style>{`@keyframes bounce { 0% { transform: translateY(0); } 100% { transform: translateY(-24px); } }`}</style>
         </div>
       </div>
     </div>

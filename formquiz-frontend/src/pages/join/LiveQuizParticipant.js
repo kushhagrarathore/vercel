@@ -19,6 +19,11 @@ const LiveQuizParticipant = () => {
   const [finalLeaderboard, setFinalLeaderboard] = useState([]);
   const [timeLeft, setTimeLeft] = useState(0);
   const channelRef = useRef(null);
+  const [quizState, setQuizState] = useState(null);
+  const [timer, setTimer] = useState(0);
+  const [currentQuestionId, setCurrentQuestionId] = useState(null);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [phase, setPhase] = useState('question');
 
   // Subscribe to sessions for this room (always keep in sync)
   useEffect(() => {
@@ -46,6 +51,21 @@ const LiveQuizParticipant = () => {
     return () => {
       if (channelRef.current) supabase.removeChannel(channelRef.current);
     };
+  }, [roomCode]);
+
+  // Subscribe to quiz_state for this room
+  useEffect(() => {
+    if (!roomCode) return;
+    const channel = supabase
+      .channel('quiz_state_' + roomCode)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quiz_state', filter: `quiz_room_id=eq.${roomCode}` }, payload => {
+        setQuizState(payload.new);
+        setTimer(payload.new?.timer_value ?? 0);
+        setCurrentQuestionId(payload.new?.current_question_id ?? null);
+        setPhase(payload.new?.quiz_status ?? 'question');
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [roomCode]);
 
   // When liveQuiz changes, update currentIndex and reset state
@@ -134,6 +154,45 @@ const LiveQuizParticipant = () => {
       fetchLeaderboard();
     }
   }, [liveQuiz, roomCode]);
+
+  // Subscribe to participants for leaderboard
+  useEffect(() => {
+    if (!roomCode) return;
+    const channel = supabase
+      .channel('participants_leaderboard_' + roomCode)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `session_code=eq.${roomCode}` }, payload => {
+        fetchLeaderboard();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [roomCode]);
+
+  // Fetch leaderboard
+  const fetchLeaderboard = async () => {
+    const { data } = await supabase
+      .from('participants')
+      .select('*')
+      .eq('session_code', roomCode)
+      .order('score', { ascending: false });
+    setLeaderboard(data || []);
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    if (roomCode) {
+      fetchLeaderboard();
+    }
+  }, [roomCode]);
+
+  // Show leaderboard after question ends
+  useEffect(() => {
+    if (quizState?.quiz_status === 'leaderboard') {
+      setShowLeaderboard(true);
+      setTimeout(() => {
+        setShowLeaderboard(false);
+      }, 3500);
+    }
+  }, [quizState?.quiz_status]);
 
   const handleSubmit = async () => {
     if (selectedOption == null || isLocked || submitted) return;
@@ -282,6 +341,62 @@ const LiveQuizParticipant = () => {
       </div>
     );
   }
+
+  // Leaderboard
+  if (showLeaderboard) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+          <h2 className="text-2xl font-bold text-center mb-4">Leaderboard</h2>
+          <div className="space-y-2">
+            {leaderboard.map((participant, index) => (
+              <div key={participant.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-sm font-bold">
+                    {index + 1}
+                  </div>
+                  <span className="text-lg mr-2">{participant.emoji}</span>
+                  <span className="font-medium">{participant.name}</span>
+                </div>
+                <span className="text-lg font-bold text-blue-600">{participant.score} pts</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-100 p-4">
+      {/* ... existing code ... */}
+      
+      {/* Leaderboard */}
+      {showLeaderboard && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-bold text-center mb-4">Leaderboard</h2>
+            <div className="space-y-2">
+              {leaderboard.map((participant, index) => (
+                <div key={participant.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-sm font-bold">
+                      {index + 1}
+                    </div>
+                    <span className="text-lg mr-2">{participant.emoji}</span>
+                    <span className="font-medium">{participant.name}</span>
+                  </div>
+                  <span className="text-lg font-bold text-blue-600">{participant.score} pts</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* ... existing code ... */}
+    </div>
+  );
 };
 
 export default LiveQuizParticipant; 

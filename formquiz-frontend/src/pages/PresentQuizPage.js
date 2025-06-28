@@ -9,6 +9,16 @@ function randomRoomCode() {
   return Math.random().slice(2, 8);
 }
 
+// Spiral layout calculation for revolving bubbles
+const spiralCoords = (idx, total, centerX, centerY, radius = 120, spacing = 40) => {
+  const angle = (2 * Math.PI * idx) / Math.max(1, total);
+  const distance = radius + (spacing * idx);
+  return {
+    left: centerX + distance * Math.cos(angle),
+    top: centerY + distance * Math.sin(angle),
+  };
+};
+
 const PresentQuizPage = () => {
   const { quizId } = useParams();
   const [status, setStatus] = useState('idle');
@@ -21,6 +31,7 @@ const PresentQuizPage = () => {
   const [leaderboard, setLeaderboard] = useState([]);
   const channelRef = useRef(null);
   const [participants, setParticipants] = useState([]);
+  const [participantCount, setParticipantCount] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
   const [phase, setPhase] = useState('question');
   const [leaderboardTopN, setLeaderboardTopN] = useState(3);
@@ -31,6 +42,10 @@ const PresentQuizPage = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [lobbyCount, setLobbyCount] = useState(0);
   const [showFinishQuiz, setShowFinishQuiz] = useState(false);
+  const [quizState, setQuizState] = useState(null);
+  const [timer, setTimer] = useState(0);
+  const [currentQuestionId, setCurrentQuestionId] = useState(null);
+  const isHost = true; // This is the host page
 
   // Fetch slides for this quiz
   useEffect(() => {
@@ -70,27 +85,54 @@ const PresentQuizPage = () => {
     };
   }, [roomCode]);
 
+  // Subscribe to quiz_state for this room
+  useEffect(() => {
+    if (!roomCode) return;
+    const channel = supabase
+      .channel('quiz_state_' + roomCode)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'quiz_state', filter: `quiz_room_id=eq.${roomCode}` }, payload => {
+        setQuizState(payload.new);
+        setTimer(payload.new?.timer_value ?? 0);
+        setPhase(payload.new?.quiz_status ?? 'question');
+        setCurrentQuestionId(payload.new?.current_question_id ?? null);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [roomCode]);
+
   // Subscribe to participants for this room
   useEffect(() => {
     if (!roomCode) return;
-    let channel;
-    const fetchParticipants = async () => {
-      const { data, error } = await supabase
-        .from('participants')
-        .select('*')
-        .eq('session_code', roomCode);
-      setParticipants(data || []);
-    };
-    channel = supabase
-      .channel('participants-' + roomCode)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `session_code=eq.${roomCode}` }, (payload) => {
+    const channel = supabase
+      .channel('participants_' + roomCode)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `session_code=eq.${roomCode}` }, () => {
         fetchParticipants();
       })
       .subscribe();
     fetchParticipants();
-    return () => {
-      if (channel) supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
+  }, [roomCode]);
+
+  // Fetch participants
+  const fetchParticipants = async () => {
+    const { data } = await supabase
+      .from('participants')
+      .select('*')
+      .eq('session_code', roomCode)
+      .order('created_at', { ascending: true });
+    setParticipants(data || []);
+    setParticipantCount(data?.length || 0);
+    
+    // Also set leaderboard data
+    const sortedData = data?.sort((a, b) => b.score - a.score) || [];
+    setLeaderboard(sortedData);
+  };
+
+  // Initial fetch
+  useEffect(() => {
+    if (roomCode) {
+      fetchParticipants();
+    }
   }, [roomCode]);
 
   // Subscribe to lobby participants (status: 'waiting') for this room
@@ -170,19 +212,18 @@ const PresentQuizPage = () => {
   // Host: Start Quiz (set is_live, current_question_id, timer_end, phase, and update all participants to 'active')
   const handleStartQuiz = async () => {
     if (!liveQuiz || !slides.length) return;
-    const timer = slides[0]?.timer || 20;
-    const timerEnd = new Date(Date.now() + timer * 1000).toISOString();
-    // Update all participants to 'active' for this room
-    await supabase.from('participants').update({ status: 'active' }).eq('session_code', roomCode);
-    await supabase.from('sessions').update({
-      is_live: true,
-      current_question_id: slides[0]?.id,
-      timer_end: timerEnd,
-      phase: 'question',
-    }).eq('code', roomCode);
-    setStatus('live');
-    setLiveQuiz({ ...liveQuiz, is_live: true, current_question_id: slides[0]?.id, timer_end: timerEnd, phase: 'question' });
+    const firstQuestionId = slides[0]?.id;
+    await supabase.from('participants').update({ status: 'active' }).eq('session_code', roomCode).eq('status', 'waiting');
+    await supabase.from('quiz_state').upsert({
+      quiz_room_id: roomCode,
+      timer_value: 20,
+      current_question_id: firstQuestionId,
+      quiz_status: 'question'
+    });
+    setTimer(20);
     setPhase('question');
+    setCurrentQuestionId(firstQuestionId);
+    setStatus('live');
   };
 
   // Sync host view with sessions changes
@@ -314,6 +355,88 @@ const PresentQuizPage = () => {
     await supabase.from('sessions').update({ phase: 'ended' }).eq('code', roomCode);
     setPhase('ended');
   };
+
+  // Ensure phase transitions always happen, even after refresh
+  useEffect(() => {
+    if (status !== 'live' || !liveQuiz || !slides.length) return;
+    if (phase === 'leaderboard') {
+      const timeout = setTimeout(async () => {
+        await supabase.from('sessions').update({ phase: 'transition' }).eq('code', roomCode);
+        setPhase('transition');
+      }, 3500);
+      return () => clearTimeout(timeout);
+    }
+    if (phase === 'transition') {
+      const currentIdx = slides.findIndex(s => s.id === liveQuiz.current_question_id);
+      const next = currentIdx + 1;
+      const timeout = setTimeout(async () => {
+        if (next < slides.length) {
+          const timer = slides[next]?.timer || 20;
+          const timerEnd = new Date(Date.now() + timer * 1000).toISOString();
+          await supabase.from('sessions').update({
+            current_question_id: slides[next]?.id,
+            timer_end: timerEnd,
+            phase: 'question',
+          }).eq('code', roomCode);
+          setPhase('question');
+        } else {
+          setShowFinishQuiz(true);
+        }
+      }, 2000);
+      return () => clearTimeout(timeout);
+    }
+  }, [status, phase, liveQuiz, slides, roomCode]);
+
+  // If in 'question' phase and timer is 0, auto-advance
+  useEffect(() => {
+    if (status === 'live' && phase === 'question' && timeLeft === 0 && liveQuiz && slides.length > 0) {
+      handleNext();
+    }
+  }, [status, phase, timeLeft, liveQuiz, slides]);
+
+  // Host broadcasts timer every second
+  useEffect(() => {
+    if (phase !== 'question' || !quizState || !roomCode) return;
+    if (!isHost) return;
+    let interval = setInterval(async () => {
+      if (timer > 0) {
+        await supabase.from('quiz_state').update({ timer_value: timer - 1 }).eq('quiz_room_id', roomCode);
+      } else {
+        // Show leaderboard first
+        await supabase.from('quiz_state').update({ quiz_status: 'leaderboard' }).eq('quiz_room_id', roomCode);
+        
+        // After 3.5s, show transition
+        setTimeout(async () => {
+          await supabase.from('quiz_state').update({ quiz_status: 'transition' }).eq('quiz_room_id', roomCode);
+          
+          // After 2s, move to next question or end
+          setTimeout(async () => {
+            const nextIdx = slides.findIndex(s => s.id === quizState.current_question_id) + 1;
+            if (nextIdx < slides.length) {
+              await supabase.from('quiz_state').update({
+                current_question_id: slides[nextIdx].id,
+                timer_value: 20,
+                quiz_status: 'question'
+              }).eq('quiz_room_id', roomCode);
+            } else {
+              await supabase.from('quiz_state').update({ quiz_status: 'ended' }).eq('quiz_room_id', roomCode);
+            }
+          }, 2000);
+        }, 3500);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [phase, quizState, timer, roomCode, isHost, slides]);
+
+  // Show leaderboard after question ends
+  useEffect(() => {
+    if (quizState?.quiz_status === 'leaderboard') {
+      setShowLeaderboard(true);
+      setTimeout(() => {
+        setShowLeaderboard(false);
+      }, 3500);
+    }
+  }, [quizState?.quiz_status]);
 
   if (status === 'ended') {
     return (
@@ -477,6 +600,87 @@ const PresentQuizPage = () => {
           </button>
         )}
       </div>
+      {/* Live Participant Count and List */}
+      <div className="fixed top-4 right-4 bg-white rounded-lg shadow-lg p-4 z-50">
+        <div className="text-center mb-2">
+          <div className="text-2xl font-bold text-blue-600">{participantCount}</div>
+          <div className="text-sm text-gray-600">Participants</div>
+        </div>
+        <div className="max-h-40 overflow-y-auto">
+          {participants.map((participant) => (
+            <div key={participant.id} className="flex items-center space-x-2 py-1">
+              <span className="text-lg">{participant.emoji}</span>
+              <span className="text-sm font-medium truncate">{participant.name}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Animated Revolving Bubbles */}
+      {participants.length > 0 && (
+        <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg p-6 z-40">
+          <div className="text-center mb-4">
+            <h3 className="text-lg font-semibold text-gray-800">Live Participants</h3>
+          </div>
+          <div className="relative w-80 h-80 mx-auto">
+            {participants.map((participant, idx) => {
+              const { left, top } = spiralCoords(idx, participants.length, 160, 160);
+              return (
+                <div
+                  key={participant.id}
+                  className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                  style={{
+                    left: `${left}px`,
+                    top: `${top}px`,
+                    animation: `revolve ${8 + idx * 0.5}s linear infinite`,
+                    animationDelay: `${idx * 0.2}s`,
+                  }}
+                >
+                  <div className="flex flex-col items-center">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-2xl shadow-lg animate-pulse">
+                      {participant.emoji}
+                    </div>
+                    <div className="mt-1 text-xs font-medium text-gray-700 bg-white px-2 py-1 rounded-full shadow-sm">
+                      {participant.name}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      {/* Leaderboard */}
+      {showLeaderboard && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h2 className="text-2xl font-bold text-center mb-4">Leaderboard</h2>
+            <div className="space-y-2">
+              {leaderboard.map((participant, index) => (
+                <div key={participant.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center text-sm font-bold">
+                      {index + 1}
+                    </div>
+                    <span className="text-lg mr-2">{participant.emoji}</span>
+                    <span className="font-medium">{participant.name}</span>
+                  </div>
+                  <span className="text-lg font-bold text-blue-600">{participant.score} pts</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+      <style jsx>{`
+        @keyframes revolve {
+          from {
+            transform: translate(-50%, -50%) rotate(0deg) translateX(0px) rotate(0deg);
+          }
+          to {
+            transform: translate(-50%, -50%) rotate(360deg) translateX(0px) rotate(-360deg);
+          }
+        }
+      `}</style>
     </div>
   );
 };
