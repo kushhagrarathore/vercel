@@ -16,6 +16,8 @@ import PresentQuizPage from './pages/PresentQuizPage';
 import PreviewQuizPage from './pages/PreviewQuizPage';
 import ViewResponses from './pages/ViewResponses';
 import Profile from './pages/Profile';
+import LiveQuiz from './pages/live/LiveQuiz';
+
 
 function App() {
   return (
@@ -45,6 +47,7 @@ function App() {
 
           {/* Results */}
           <Route path="/results/:formId" element={<ResultsPage />} />
+          <Route path="/live-quiz" element={<LiveQuiz />} />
 
           
 

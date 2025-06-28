@@ -15,8 +15,7 @@ const quizTemplates = [
     title: 'Live Quiz',
     desc: 'Host a live, interactive quiz session.',
     icon: <FaBroadcastTower size={28} color="#4a6bff" />,
-    onClick: (navigate) => navigate('/quiz/create?type=live'),
-  },
+onClick: (navigate) => navigate('/live-quiz'),  },
   {
     title: 'MCQ Quiz',
     desc: 'Multiple choice quiz template.',
