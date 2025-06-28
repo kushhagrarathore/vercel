@@ -21,6 +21,8 @@ import Profile from './pages/Profile';
 import JoinQuiz from './pages/join/JoinQuiz';
 import Leaderboard from './pages/live/Leaderboard';
 import QuizFillPage from './pages/QuizFillPage';
+import Lobby from './pages/join/Lobby';
+import LiveQuizParticipant from './pages/join/LiveQuizParticipant';
 
 function App() {
   return (
@@ -72,7 +74,9 @@ function App() {
 
             {/* New live quiz routes */}
             <Route path="/join/:roomCode" element={<JoinQuiz />} />
+            <Route path="/lobby/:roomCode/:participantId" element={<Lobby />} />
             {/* <Route path="/live/leaderboard/:quizId" element={<Leaderboard />} /> */}
+            <Route path="/quiz/live/:roomCode/:participantId" element={<LiveQuizParticipant />} />
           </Routes>
         </LiveQuizProvider>
       </BrowserRouter>

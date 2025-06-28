@@ -29,6 +29,8 @@ const PresentQuizPage = () => {
   const [transitionCountdown, setTransitionCountdown] = useState(2);
   const cardRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [lobbyCount, setLobbyCount] = useState(0);
+  const [showFinishQuiz, setShowFinishQuiz] = useState(false);
 
   // Fetch slides for this quiz
   useEffect(() => {
@@ -91,6 +93,28 @@ const PresentQuizPage = () => {
     };
   }, [roomCode]);
 
+  // Subscribe to lobby participants (status: 'waiting') for this room
+  useEffect(() => {
+    if (!roomCode) return;
+    let channel;
+    const fetchLobbyCount = async () => {
+      const { data } = await supabase
+        .from('participants')
+        .select('id')
+        .eq('session_code', roomCode)
+        .eq('status', 'waiting');
+      setLobbyCount(data ? data.length : 0);
+    };
+    channel = supabase
+      .channel('lobby-' + roomCode)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `session_code=eq.${roomCode},status=eq.waiting` }, fetchLobbyCount)
+      .subscribe();
+    fetchLobbyCount();
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [roomCode]);
+
   // Auto-advance timer for host (only in question phase)
   useEffect(() => {
     if (status !== 'live' || !liveQuiz?.timer_end || !liveQuiz?.current_question_id || phase !== 'question') return;
@@ -143,11 +167,13 @@ const PresentQuizPage = () => {
     setStatus('waiting');
   };
 
-  // Host: Start Quiz (set is_live, current_question_id, timer_end, phase)
+  // Host: Start Quiz (set is_live, current_question_id, timer_end, phase, and update all participants to 'active')
   const handleStartQuiz = async () => {
     if (!liveQuiz || !slides.length) return;
     const timer = slides[0]?.timer || 20;
     const timerEnd = new Date(Date.now() + timer * 1000).toISOString();
+    // Update all participants to 'active' for this room
+    await supabase.from('participants').update({ status: 'active' }).eq('session_code', roomCode);
     await supabase.from('sessions').update({
       is_live: true,
       current_question_id: slides[0]?.id,
@@ -193,7 +219,8 @@ const PresentQuizPage = () => {
         }, 2000); // 2s transition
       }, 3500); // 3.5s leaderboard
     } else {
-      await handleEnd();
+      // Show Finish Quiz button
+      setShowFinishQuiz(true);
     }
   };
 
@@ -282,6 +309,12 @@ const PresentQuizPage = () => {
     cardStyle.gap = 10;
   }
 
+  const handleFinishQuiz = async () => {
+    if (!liveQuiz) return;
+    await supabase.from('sessions').update({ phase: 'ended' }).eq('code', roomCode);
+    setPhase('ended');
+  };
+
   if (status === 'ended') {
     return (
       <div className="present-quiz-layout" style={{ maxWidth: 600, margin: '0 auto', padding: 32 }}>
@@ -325,7 +358,7 @@ const PresentQuizPage = () => {
               Join Link: <a href={generateLiveLink(roomCode)} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline', wordBreak: 'break-all', fontSize: 15 }}>{generateLiveLink(roomCode)}</a>
             </div>
             <div style={{ marginBottom: 6, background: '#f1f5f9', borderRadius: 10, padding: '8px 16px', boxShadow: '0 2px 8px rgba(60,60,100,0.07)', fontWeight: 700, fontSize: 17 }}>
-              Participants Joined: {participants.length}
+              Participants in Lobby: {lobbyCount}
             </div>
             {participants.length > 0 && (
               <div style={{ maxHeight: 90, overflowY: 'auto', background: '#f8fafc', borderRadius: 8, padding: '8px 14px', marginBottom: 6, width: 220, boxShadow: '0 1px 4px rgba(60,60,100,0.04)' }}>
@@ -438,6 +471,11 @@ const PresentQuizPage = () => {
             </div>
           ) : null
         ) : null}
+        {showFinishQuiz && (
+          <button onClick={handleFinishQuiz} style={{ padding: '14px 36px', fontSize: 19, borderRadius: 10, background: '#e11d48', color: '#fff', border: 'none', fontWeight: 800, marginTop: 18 }}>
+            Finish Quiz
+          </button>
+        )}
       </div>
     </div>
   );

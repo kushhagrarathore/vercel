@@ -1,17 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { supabase } from '../../supabase';
-import QuestionTimer from '../../components/quiz/QuestionTimer';
-import AnswerFeedback from '../../components/quiz/AnswerFeedback';
 import Leaderboard from '../../components/quiz/Leaderboard';
 
-const JoinQuiz = () => {
-  const params = useParams();
-  const navigate = useNavigate();
-  const [roomCode, setRoomCode] = useState(params.roomCode || '');
-  const [joined, setJoined] = useState(false);
-  const [username, setUsername] = useState('');
-  const [error, setError] = useState(null);
+const LiveQuizParticipant = () => {
+  const { roomCode, participantId } = useParams();
+  const location = useLocation();
+  const { username, emoji } = location.state || {};
   const [slides, setSlides] = useState([]);
   const [liveQuiz, setLiveQuiz] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -21,15 +16,9 @@ const JoinQuiz = () => {
   const [submitted, setSubmitted] = useState(false);
   const [finished, setFinished] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
-  const channelRef = useRef(null);
-  const [timeLeft, setTimeLeft] = useState(0);
-  const [joining, setJoining] = useState(false);
-  const [phase, setPhase] = useState('question');
-  const [participantId, setParticipantId] = useState(null);
-  const [participantStatus, setParticipantStatus] = useState('waiting');
   const [finalLeaderboard, setFinalLeaderboard] = useState([]);
-  const [selectedEmoji, setSelectedEmoji] = useState('😀');
-  const [lobbyParticipants, setLobbyParticipants] = useState([]);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const channelRef = useRef(null);
 
   // Subscribe to sessions for this room (always keep in sync)
   useEffect(() => {
@@ -41,18 +30,15 @@ const JoinQuiz = () => {
         .eq('code', roomCode)
         .single();
       if (error || !data) {
-        setError('Invalid room code.');
         setLiveQuiz(null);
         return;
       }
       setLiveQuiz(data);
-      setPhase(data?.phase || 'question');
       if (channelRef.current) supabase.removeChannel(channelRef.current);
       channelRef.current = supabase
         .channel('live-quiz-' + roomCode)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `code=eq.${roomCode}` }, (payload) => {
           setLiveQuiz(payload.new);
-          setPhase(payload.new?.phase || 'question');
         })
         .subscribe();
     };
@@ -82,10 +68,10 @@ const JoinQuiz = () => {
         setTimeLeft(Math.max(0, Math.ceil((end - now + 500) / 1000))); // add 0.5s buffer
       }
     }
-    if (liveQuiz && liveQuiz.phase === 'ended' && joined) {
+    if (liveQuiz && liveQuiz.phase === 'ended') {
       setFinished(true); // Quiz ended
     }
-  }, [liveQuiz, joined, slides]);
+  }, [liveQuiz, slides]);
 
   // Fetch slides for this quiz
   useEffect(() => {
@@ -120,150 +106,15 @@ const JoinQuiz = () => {
     return () => clearInterval(interval);
   }, [liveQuiz?.timer_end, liveQuiz?.phase]);
 
-  // Subscribe to all participants in the lobby (status: 'waiting') for this room
-  useEffect(() => {
-    if (!roomCode) return;
-    let channel;
-    const fetchLobbyParticipants = async () => {
-      const { data } = await supabase
-        .from('participants')
-        .select('id, name, emoji')
-        .eq('session_code', roomCode)
-        .eq('status', 'waiting');
-      setLobbyParticipants(data || []);
-    };
-    channel = supabase
-      .channel('lobby-participants-' + roomCode)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `session_code=eq.${roomCode},status=eq.waiting` }, fetchLobbyParticipants)
-      .subscribe();
-    fetchLobbyParticipants();
-    return () => {
-      if (channel) supabase.removeChannel(channel);
-    };
-  }, [roomCode]);
-
-  // Insert participant record (if not already present)
-  const registerParticipant = async () => {
-    if (!roomCode || !username.trim()) return;
-    // Check for duplicate in participants table
-    const { data: existing } = await supabase
-      .from('participants')
-      .select('id, status')
-      .eq('session_code', roomCode)
-      .eq('name', username.trim());
-    if (existing && existing.length > 0) {
-      setParticipantId(existing[0].id);
-      setParticipantStatus(existing[0].status);
-      return existing[0].id;
-    } else {
-      const { data: inserted } = await supabase.from('participants').insert([
-        {
-          session_code: roomCode,
-          name: username.trim(),
-          status: 'waiting',
-          score: 0,
-          emoji: selectedEmoji,
-        }
-      ]).select();
-      if (inserted && inserted.length > 0) {
-        setParticipantId(inserted[0].id);
-        setParticipantStatus('waiting');
-        return inserted[0].id;
-      }
-    }
-  };
-
-  const handleJoin = async () => {
-    setError(null);
-    if (!username.trim()) {
-      setError('Please enter your name.');
-      return;
-    }
-    if (!roomCode) {
-      setError('Please enter a room code.');
-      return;
-    }
-    setJoining(true);
-    // Always re-fetch the sessions row on join attempt
-    const { data, error } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('code', roomCode)
-      .single();
-    if (error || !data) {
-      setError('Invalid room code.');
-      setLiveQuiz(null);
-      setJoining(false);
-      return;
-    }
-    // Register participant immediately, even if quiz not started
-    const pid = await registerParticipant();
-    setParticipantId(pid);
-    setLiveQuiz(data);
-    setJoined(true);
-    setJoining(false);
-    // Navigate to lobby after joining
-    navigate(`/lobby/${roomCode}/${pid}`, { state: { username, emoji: selectedEmoji } });
-  };
-
-  const handleSubmit = async () => {
-    if (selectedOption == null || isLocked || submitted || !username.trim()) return;
-    setIsLocked(true);
-    setSubmitted(true);
-    if (!slides[currentIndex]) return;
-
-    // Check if correct
-    const isCorrect = selectedOption === slides[currentIndex].correct_answer_index;
-    const points = isCorrect ? 1 : 0; // or your custom scheme
-
-    // Save response to DB
-    await supabase.from('live_responses').insert([
-      {
-        participantId, // get from your participant state
-        quizRoomId: roomCode,
-        questionId: slides[currentIndex].id,
-        answer: selectedOption,
-        isCorrect,
-        points,
-        timestamp: new Date().toISOString(),
-      },
-    ]);
-
-    // Update participant score
-    if (participantId) {
-      await supabase.from('participants')
-        .update({ score: supabase.raw('score + ?', [points]) })
-        .eq('id', participantId);
-    }
-
-    // Show feedback
-    setFeedback({
-      isCorrect,
-      correctAnswer: slides[currentIndex].options?.[slides[currentIndex].correct_answer_index],
-      feedbackText: isCorrect ? 'Correct! +1 point' : 'Wrong! 0 points',
-    });
-
-    // If last question, show leaderboard
-    if (currentIndex >= slides.length - 1) {
-      setTimeout(() => setFinished(true), 1200);
-    }
-  };
-
   // Subscribe to own participant row for status updates
   useEffect(() => {
     if (!participantId) return;
     const channel = supabase
       .channel('participant-' + participantId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `id=eq.${participantId}` }, (payload) => {
-        setParticipantStatus(payload.new.status);
+        // Could use for status/score updates if needed
       })
       .subscribe();
-    // Initial fetch
-    const fetchStatus = async () => {
-      const { data } = await supabase.from('participants').select('status').eq('id', participantId).single();
-      if (data) setParticipantStatus(data.status);
-    };
-    fetchStatus();
     return () => {
       supabase.removeChannel(channel);
     };
@@ -284,46 +135,56 @@ const JoinQuiz = () => {
     }
   }, [liveQuiz, roomCode]);
 
-  if (joining) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)' }}>
-        <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(60,60,100,0.10)', padding: 36, minWidth: 320, maxWidth: 420, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <div className="spinner" style={{ width: 48, height: 48, border: '5px solid #e0e7ff', borderTop: '5px solid #2563eb', borderRadius: '50%', animation: 'spin 1s linear infinite', marginBottom: 18 }} />
-          <div style={{ fontWeight: 700, fontSize: 20, color: '#2563eb' }}>Joining...</div>
-          <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-        </div>
-      </div>
-    );
-  }
-  if (!joined) {
-    const emojiOptions = ['😀','😎','🤩','🥳','🦄','🐱','🐶','🐼','🐸','🐵','👾','👻','🦊','🐯','🐙','🐧','🐤','🦁','🐻','🐨','🐰','🐹','🐭','🐮','🐷','🐸','🐵','🦋','🐝','🐞'];
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)' }}>
-        <div style={{ background: '#fff', borderRadius: 22, boxShadow: '0 8px 32px rgba(60,60,100,0.13)', padding: 44, minWidth: 320, maxWidth: 420, width: '100%', border: '2px solid #e0e7ff' }}>
-          <h2 style={{ fontWeight: 900, fontSize: 32, color: '#2563eb', marginBottom: 24, letterSpacing: '-1px', textAlign: 'center' }}>Join Live Quiz</h2>
-          <div style={{ marginBottom: 22 }}>
-            <label htmlFor="roomcode" style={{ fontWeight: 700, fontSize: 17, color: '#374151' }}>Room Code:</label>
-            <input id="roomcode" value={roomCode} onChange={e => { setRoomCode(e.target.value); setError(null); }} placeholder="Enter room code" style={{ padding: 12, borderRadius: 10, border: '2px solid #c7d2fe', marginLeft: 12, fontSize: 17, width: 140, background: '#f1f5f9' }} maxLength={8} />
-          </div>
-          <div style={{ marginBottom: 22 }}>
-            <label htmlFor="username" style={{ fontWeight: 700, fontSize: 17, color: '#374151' }}>Your Name:</label>
-            <input id="username" value={username} onChange={e => { setUsername(e.target.value); setError(null); }} placeholder="Enter your name" style={{ padding: 12, borderRadius: 10, border: '2px solid #c7d2fe', marginLeft: 12, fontSize: 17, width: 180, background: '#f1f5f9' }} maxLength={32} />
-          </div>
-          <div style={{ marginBottom: 22, textAlign: 'center' }}>
-            <div style={{ fontWeight: 700, fontSize: 17, color: '#374151', marginBottom: 8 }}>Pick your emoji:</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-              {emojiOptions.map((emoji) => (
-                <button key={emoji} type="button" onClick={() => setSelectedEmoji(emoji)} style={{ fontSize: 28, padding: 6, borderRadius: '50%', border: selectedEmoji === emoji ? '2.5px solid #2563eb' : '2px solid #e0e7ff', background: selectedEmoji === emoji ? '#dbeafe' : '#f1f5f9', cursor: 'pointer', outline: 'none', transition: 'all 0.18s' }}>{emoji}</button>
-              ))}
-            </div>
-          </div>
-          <button onClick={handleJoin} style={{ padding: '14px 36px', fontSize: 19, borderRadius: 10, background: '#2563eb', color: '#fff', border: 'none', fontWeight: 800, marginBottom: 16, width: '100%' }}>Join Quiz</button>
-          {error && <div style={{ color: 'red', marginTop: 12, textAlign: 'center' }}>{error} {error === 'Invalid room code.' && <button onClick={() => window.location.reload()} style={{ marginLeft: 8, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>}</div>}
-        </div>
-      </div>
-    );
-  }
-  if (finished) return <Leaderboard players={leaderboard} roomCode={roomCode} />;
+  const handleSubmit = async () => {
+    if (selectedOption == null || isLocked || submitted) return;
+    setIsLocked(true);
+    setSubmitted(true);
+    if (!slides[currentIndex]) return;
+
+    // Check if correct
+    const isCorrect = selectedOption === slides[currentIndex].correct_answer_index;
+    const points = isCorrect ? 1 : 0; // or your custom scheme
+
+    // Save response to DB
+    await supabase.from('live_responses').insert([
+      {
+        participantId,
+        quizRoomId: roomCode,
+        questionId: slides[currentIndex].id,
+        answer: selectedOption,
+        isCorrect,
+        points,
+        timestamp: new Date().toISOString(),
+      },
+    ]);
+
+    // Update participant score (fetch, add, update)
+    if (participantId) {
+      const { data: participantData } = await supabase
+        .from('participants')
+        .select('score')
+        .eq('id', participantId)
+        .single();
+      const newScore = (participantData?.score || 0) + points;
+      await supabase.from('participants')
+        .update({ score: newScore })
+        .eq('id', participantId);
+    }
+
+    // Show feedback
+    setFeedback({
+      isCorrect,
+      correctAnswer: slides[currentIndex].options?.[slides[currentIndex].correct_answer_index],
+      feedbackText: isCorrect ? 'Correct! +1 point' : 'Wrong! 0 points',
+    });
+
+    // If last question, show leaderboard
+    if (currentIndex >= slides.length - 1) {
+      setTimeout(() => setFinished(true), 1200);
+    }
+  };
+
+  if (finished) return <Leaderboard players={finalLeaderboard} roomCode={roomCode} />;
   if (!liveQuiz?.is_live) return <div style={{ padding: 32, color: '#888', fontWeight: 600 }}>Waiting for host to start the quiz...</div>;
   if (!slides[currentIndex]) return <div style={{ padding: 32 }}>Loading question...</div>;
 
@@ -423,4 +284,4 @@ const JoinQuiz = () => {
   }
 };
 
-export default JoinQuiz;
+export default LiveQuizParticipant; 
