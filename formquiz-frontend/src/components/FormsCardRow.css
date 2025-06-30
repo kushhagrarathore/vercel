@@ -291,3 +291,31 @@ input[type="text"].copy-link {
     font-size: 1em;
   }
 }
+
+.form-card-balanced.my-forms-card, .form-card-balanced.grid.my-forms-card, .form-card-balanced.list.my-forms-card {
+  background: #f0f6ff;
+  border: 1.5px solid #60a5fa;
+  box-shadow: 0 2px 12px rgba(96,165,250,0.08);
+}
+.form-card-title-row .form-title-balanced.my-forms-title {
+  color: #2563eb;
+}
+
+.form-card-balanced.my-quizzes-card, .form-card-balanced.grid.my-quizzes-card, .form-card-balanced.list.my-quizzes-card {
+  background: #f6f0ff;
+  border: 1.5px solid #a78bfa;
+  box-shadow: 0 2px 12px rgba(167,139,250,0.08);
+}
+.form-card-title-row .form-title-balanced.my-quizzes-title {
+  color: #7c3aed;
+}
+
+/* Optionally, add a subtle hover effect for each */
+.form-card-balanced.my-forms-card:hover {
+  box-shadow: 0 6px 24px rgba(96,165,250,0.13);
+  border-color: #2563eb;
+}
+.form-card-balanced.my-quizzes-card:hover {
+  box-shadow: 0 6px 24px rgba(167,139,250,0.13);
+  border-color: #7c3aed;
+}

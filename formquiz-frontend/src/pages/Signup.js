@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase'; // Adjust path as needed
 import './Signup.css';
-import signupImage from './signup.jpg' // Update with your image name
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -49,67 +48,56 @@ const SignUp = () => {
   };
 
   return (
-    <div className="signup-wrapper">
-      <div className="admin-header">
-        INQUIZO
-        <div className="nav-links" style={{ display: 'flex', gap: '1200px' }}></div>
-      </div>
-
-      <div className="signup-card">
-        <div className="signup-form">
-          <h2>Sign up for free</h2>
-          <form onSubmit={handleSubmit}>
-            <label>Full Name</label>
-            <input
-              type="text"
-              placeholder="Enter your full name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              required
-            />
-
-            <label>Email</label>
-            <input
-              type="email"
-              placeholder="Enter your email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-
-            <label>Password</label>
-            <input
-              type="password"
-              placeholder="Create a password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-
-            <label>Confirm Password</label>
-            <input
-              type="password"
-              placeholder="Confirm your password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-            />
-
-            <button type="submit" disabled={loading}>
-              {loading ? 'Signing Up...' : 'Sign Up'}
-            </button>
-            {error && <p style={{ color: 'red' }}>{error}</p>}
-          </form>
-          <p>
-            Already have an account? <Link to="/">Log in</Link>
-          </p>
-        </div>
-
-        <div className="signup-image">
-          <img
-            src={signupImage}
-            alt="Signup Illustration"
+    <div className="signup-framer-bg">
+      {/* Company name in top left with animation */}
+      <div className="company-name company-name-animated">INQUIZO</div>
+      {/* Glassmorphism signup card */}
+      <div className="framer-signup-card">
+        <div className="framer-signup-title">Create your account</div>
+        <form className="framer-signup-form" onSubmit={handleSubmit}>
+          <label>Full Name</label>
+          <input
+            type="text"
+            placeholder="Enter your full name"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            required
+            className="framer-signup-input"
           />
+          <label>Email</label>
+          <input
+            type="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            className="framer-signup-input"
+          />
+          <label>Password</label>
+          <input
+            type="password"
+            placeholder="Create a password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="framer-signup-input"
+          />
+          <label>Confirm Password</label>
+          <input
+            type="password"
+            placeholder="Confirm your password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            className="framer-signup-input"
+          />
+          <button type="submit" className="framer-signup-btn" disabled={loading}>
+            {loading ? 'Signing Up...' : 'Sign Up'}
+          </button>
+          {error && <p className="auth-error">{error}</p>}
+        </form>
+        <div className="framer-signup-footer">
+          Already have an account? <Link to="/">Log in</Link>
         </div>
       </div>
     </div>

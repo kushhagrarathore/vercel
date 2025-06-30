@@ -105,9 +105,9 @@ const FormCardRow = ({
   // --- Grid View ---
   if (view === 'grid') {
     return (
-      <div className="form-card-balanced grid small" onClick={handleEdit} tabIndex={0} role="button" style={{ outline: 'none' }}>
+      <div className={`form-card-balanced grid ${isForm ? 'my-forms-card' : 'my-quizzes-card'}`} onClick={handleEdit} tabIndex={0} role="button" style={{ outline: 'none' }}>
         <div className="form-card-title-row">
-          <span className="form-title-balanced" onClick={handleEdit}>{name}</span>
+          <span className={`form-title-balanced ${isForm ? 'my-forms-title' : 'my-quizzes-title'}`} onClick={handleEdit}>{name}</span>
           <ToggleSwitch />
         </div>
         <div className="form-card-date-balanced">{timestamp}</div>
@@ -119,9 +119,9 @@ const FormCardRow = ({
 
   // --- List View ---
   return (
-    <div className="form-card-balanced list minimal-row" onClick={handleEdit} tabIndex={0} role="button" style={{ outline: 'none' }}>
+    <div className={`form-card-balanced list minimal-row ${isForm ? 'my-forms-card' : 'my-quizzes-card'}`} onClick={handleEdit} tabIndex={0} role="button" style={{ outline: 'none' }}>
       <div className="minimal-cell" style={{ flex: 2, minWidth: 0 }}>
-        <span className="form-title-balanced" onClick={handleEdit}>{name}</span>
+        <span className={`form-title-balanced ${isForm ? 'my-forms-title' : 'my-quizzes-title'}`} onClick={handleEdit}>{name}</span>
       </div>
       <div className="minimal-cell" style={{ flex: 1 }}>
         <span className="form-card-date-balanced">{timestamp}</span>

@@ -28,6 +28,7 @@ const FormBuilder = () => {
   const { formId: paramFormId } = useParams();
   const toast = useToast();
   const [loading, setLoading] = useState(true);
+  const [activeSection, setActiveSection] = useState('build');
 
   const [customization, setCustomization] = useState({
     backgroundColor: '#ffffff',
@@ -692,10 +693,10 @@ const FormBuilder = () => {
               />
             </div>
             <nav className="header-nav">
-              <a href="#" className="active">Build</a>
-              <a href="#">Integrate</a>
-              <a href="#">Share</a>
-              <a href="#">Results</a>
+              <button className={`nav-tab${activeSection === 'build' ? ' active' : ''}`} onClick={() => setActiveSection('build')}>Build</button>
+              <button className={`nav-tab${activeSection === 'integrate' ? ' active' : ''}`} onClick={() => setActiveSection('integrate')}>Integrate</button>
+              <button className={`nav-tab${activeSection === 'share' ? ' active' : ''}`} onClick={() => setActiveSection('share')}>Share</button>
+              <button className={`nav-tab${activeSection === 'results' ? ' active' : ''}`} onClick={() => setActiveSection('results')}>Results</button>
             </nav>
             <div className="header-right">
               <button className="save-button" onClick={saveForm}>
@@ -709,16 +710,6 @@ const FormBuilder = () => {
               </button>
               <button className="delete-button" onClick={handleDeleteForm}>
                 Delete Form
-              </button>
-              <button 
-                className="debug-button" 
-                onClick={() => setIsDebugMode(!isDebugMode)}
-                style={{ backgroundColor: '#ff6b6b', color: 'white', fontSize: '12px', padding: '5px 10px' }}
-              >
-                Debug
-              </button>
-              <button className="logout-button" onClick={handleLogout}>
-                Logout
               </button>
             </div>
           </header>
@@ -748,133 +739,117 @@ const FormBuilder = () => {
           )}
 
           <div className="form-builder-content">
-            <aside className="question-types-sidebar">
-              <div className="sidebar-tabs">
-                <button
-                  className={`tab-button ${activeTab === 'standard' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('standard')}
-                >
-                  Questions
-                </button>
-                <button
-                  className={`tab-button ${activeTab === 'premium' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('premium')}
-                  title="Premium features coming soon!"
-                >
-                  Premium
-                </button>
-                <button
-                  className={`tab-button ${activeTab === 'customize' ? 'active' : ''}`}
-                  onClick={() => setActiveTab('customize')}
-                >
-                  Customize
-                </button>
-              </div>
+            {activeSection === 'build' && (
+              <>
+                <aside className="question-types-sidebar">
+                  <div className="sidebar-tabs">
+                    <button
+                      className={`tab-button ${activeTab === 'standard' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('standard')}
+                    >
+                      Questions
+                    </button>
+                    <button
+                      className={`tab-button ${activeTab === 'premium' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('premium')}
+                      title="Premium features coming soon!"
+                    >
+                      Premium
+                    </button>
+                    <button
+                      className={`tab-button ${activeTab === 'customize' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('customize')}
+                    >
+                      Customize
+                    </button>
+                  </div>
 
-              {activeTab !== 'customize' && (
-                <ul className="question-list">
-                  {questionTypes[activeTab].map((qType) => (
-                    <li key={qType.type} onClick={() => addQuestion(qType.type)}>
-                      <span className="icon">{qType.icon}</span>
-                      {qType.name}
-                    </li>
-                  ))}
-                </ul>
-              )}
+                  {activeTab !== 'customize' && (
+                    <ul className="question-list">
+                      {questionTypes[activeTab].map((qType) => (
+                        <li key={qType.type} onClick={() => addQuestion(qType.type)}>
+                          <span className="icon">{qType.icon}</span>
+                          {qType.name}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
 
-              {activeTab === 'customize' && (
-                <CustomizationPanel
-                  customization={customization}
-                  setCustomization={(newCustomization) => {
-                    setCustomization(newCustomization);
-                    setHasUnsavedChanges(true);
-                  }}
-                  ChromePicker={ChromePicker}
-                />
-              )}
-            </aside>
+                  {activeTab === 'customize' && (
+                    <CustomizationPanel
+                      customization={customization}
+                      setCustomization={(newCustomization) => {
+                        setCustomization(newCustomization);
+                        setHasUnsavedChanges(true);
+                      }}
+                      ChromePicker={ChromePicker}
+                    />
+                  )}
+                </aside>
 
-            <main className="form-editor-area">
-              <div className="form-title-section">
-                <p className="form-editor-area-title-placeholder">
-                  Form Title: <span className="current-title">{title}</span>
-                </p>
-              </div>
+                <main className="form-editor-area">
+                  <div className="form-title-section">
+                    <p className="form-editor-area-title-placeholder">
+                      Form Title: <span className="current-title">{title}</span>
+                    </p>
+                  </div>
 
-              {questions.length > 0 ? (
-                <div className="questions-container">
-                  {questions.map((q, i) => renderQuestion(q, i))}
-                </div>
-              ) : (
-                <div className="empty-form-message">
-                  <p>Start by adding questions from the left sidebar!</p>
-                  <img src="https://placehold.co/150x150/e0e0e0/555555?text=Empty+Form" alt="Empty form" />
-                </div>
-              )}
-
-              {formId && (
-                <div className="form-share-section">
-                  <h3>Share Your Form</h3>
-                  <div className="share-options">
-                    <div className="share-url">
-                      <label>Form URL:</label>
-                      <input
-                        type="text"
-                        value={formUrl}
-                        readOnly
-                        onClick={(e) => {
-                          e.target.select();
-                          navigator.clipboard.writeText(formUrl).then(() => {
-                            alert('Form URL copied to clipboard!');
-                          }).catch(() => {
-                            document.execCommand('copy');
-                            alert('Form URL copied to clipboard!');
-                          });
-                        }}
-                        style={{
-                          color: customization.textColor,
-                          borderRadius: customization.borderRadius,
-                          borderColor: customization.buttonColor + '80',
-                        }}
-                      />
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(formUrl).then(() => {
-                            alert('Form URL copied to clipboard!');
-                          }).catch(() => {
-                            const urlInput = document.querySelector('.share-url input');
-                            if (urlInput) {
-                              urlInput.select();
-                              document.execCommand('copy');
-                              alert('Form URL copied to clipboard!');
-                            }
-                          });
-                        }}
-                        style={{
-                          backgroundColor: 'white',
-                          color: 'black',
-                          borderRadius: '4px',
-                          fontFamily: 'arial',
-                          boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
-                          transition: 'background-color 0.3s ease, transform 0.1s ease',
-                          border: `1px solid ${customization.buttonColor}80`
-                        }}
-                      >
-                        Copy URL
-                      </button>
+                  {questions.length > 0 ? (
+                    <div className="questions-container">
+                      {questions.map((q, i) => renderQuestion(q, i))}
                     </div>
-                    <div className="share-qr-code">
-                      <label>QR Code:</label>
-                      {formUrl ? (
-                        <QRCodeSVG value={formUrl} size={128} level="H" />
-                      ) : (
-                        <p>Save your form to generate a QR code.</p>
-                      )}
+                  ) : (
+                    <div className="empty-form-message">
+                      <p>Start by adding questions from the left sidebar!</p>
                     </div>
+                  )}
+                </main>
+              </>
+            )}
+            {activeSection === 'integrate' && (
+              <div className="integrate-panel">
+                <h2>Integrate Your Form</h2>
+                <p>Embed this form on your website using the following code:</p>
+                <pre className="embed-code">{'<iframe src="' + formUrl + '" width="100%" height="600" frameborder="0"></iframe>'}</pre>
+                <button className="copy-embed-button" onClick={() => {navigator.clipboard.writeText('<iframe src="' + formUrl + '" width="100%" height="600" frameborder="0"></iframe>'); toast('Embed code copied!', 'success');}}>Copy Embed Code</button>
+              </div>
+            )}
+            {activeSection === 'share' && (
+              <div className="share-panel">
+                <h2>Share Your Form</h2>
+                <div className="share-options">
+                  <div className="share-url">
+                    <label>Form URL:</label>
+                    <input
+                      type="text"
+                      value={formUrl}
+                      readOnly
+                      onClick={(e) => {
+                        e.target.select();
+                        navigator.clipboard.writeText(formUrl).then(() => {
+                          toast('Form URL copied!', 'success');
+                        });
+                      }}
+                    />
+                    <button className="copy-url-button" onClick={() => {navigator.clipboard.writeText(formUrl); toast('Form URL copied!', 'success');}}>Copy URL</button>
+                  </div>
+                  <div className="share-qr-code">
+                    <label>QR Code:</label>
+                    {formUrl ? (
+                      <QRCodeSVG value={formUrl} size={128} level="H" />
+                    ) : (
+                      <p>Save your form to generate a QR code.</p>
+                    )}
                   </div>
                 </div>
-              )}
-            </main>
+              </div>
+            )}
+            {activeSection === 'results' && (
+              <div className="results-panel">
+                <h2>Form Results</h2>
+                <button className="view-responses-button" onClick={() => navigate(`/form/${formId}/results`)}>View Responses</button>
+              </div>
+            )}
           </div>
         </>
       )}
