@@ -28,11 +28,12 @@ const JoinQuiz = () => {
   const [participantId, setParticipantId] = useState(null);
   const [participantStatus, setParticipantStatus] = useState('waiting');
   const [finalLeaderboard, setFinalLeaderboard] = useState([]);
-  const [selectedEmoji, setSelectedEmoji] = useState('😀');
   const [lobbyParticipants, setLobbyParticipants] = useState([]);
   const [showFinalLeaderboard, setShowFinalLeaderboard] = useState(false);
   const [quizPhase, setQuizPhase] = useState('waiting');
   const [currentQuestion, setCurrentQuestion] = useState(null);
+  const [answerSubmitted, setAnswerSubmitted] = useState(false);
+  const [joinAttempted, setJoinAttempted] = useState(false);
 
   // Subscribe to sessions for this room (always keep in sync)
   useEffect(() => {
@@ -129,15 +130,15 @@ const JoinQuiz = () => {
     let channel;
     const fetchLobbyParticipants = async () => {
       const { data } = await supabase
-        .from('participants')
-        .select('id, name, emoji')
+        .from('session_participants')
+        .select('id, name')
         .eq('session_code', roomCode)
         .eq('status', 'waiting');
       setLobbyParticipants(data || []);
     };
     channel = supabase
       .channel('lobby-participants-' + roomCode)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `session_code=eq.${roomCode},status=eq.waiting` }, fetchLobbyParticipants)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'session_participants', filter: `session_code=eq.${roomCode},status=eq.waiting` }, fetchLobbyParticipants)
       .subscribe();
     fetchLobbyParticipants();
     return () => {
@@ -148,9 +149,9 @@ const JoinQuiz = () => {
   // Insert participant record (if not already present)
   const registerParticipant = async () => {
     if (!roomCode || !username.trim()) return;
-    // Check for duplicate in participants table
+    // Check for duplicate in session_participants table
     const { data: existing, error: existingError } = await supabase
-      .from('participants')
+      .from('session_participants')
       .select('id, status')
       .eq('session_code', roomCode)
       .eq('name', username.trim());
@@ -163,13 +164,12 @@ const JoinQuiz = () => {
       setParticipantStatus(existing[0].status);
       return existing[0].id;
     } else {
-      const { data: inserted, error: insertError } = await supabase.from('participants').insert([
+      const { data: inserted, error: insertError } = await supabase.from('session_participants').insert([
         {
           session_code: roomCode,
           name: username.trim(),
           status: 'waiting',
           score: 0,
-          emoji: selectedEmoji,
         }
       ]).select();
       if (insertError) {
@@ -185,6 +185,7 @@ const JoinQuiz = () => {
   };
 
   const handleJoin = async () => {
+    setJoinAttempted(true);
     setError(null);
     if (!username.trim()) {
       setError('Please enter your name.');
@@ -219,47 +220,19 @@ const JoinQuiz = () => {
     setJoining(false);
   };
 
-  const handleSubmit = async () => {
-    if (selectedOption == null || isLocked || submitted || !username.trim()) return;
-    setIsLocked(true);
-    setSubmitted(true);
-    if (!slides[currentIndex]) return;
-
-    // Check if correct
-    const isCorrect = selectedOption === slides[currentIndex].correct_answer_index;
-    const points = isCorrect ? 1 : 0; // or your custom scheme
-
-    // Save response to DB
-    await supabase.from('live_responses').insert([
+  const handleAnswer = async (optionIdx) => {
+    if (answerSubmitted) return;
+    setSelectedOption(optionIdx);
+    // Submit answer to backend (adjust table/columns as needed)
+    await supabase.from('session_participant_answers').insert([
       {
-        participantId, // get from your participant state
-        quizRoomId: roomCode,
-        questionId: slides[currentIndex].id,
-        answer: selectedOption,
-        isCorrect,
-        points,
-        timestamp: new Date().toISOString(),
+        session_code: roomCode,
+        participant_id: participantId,
+        question_id: currentQuestion.id,
+        answer: optionIdx,
       },
     ]);
-
-    // Update participant score
-    if (participantId) {
-      await supabase.from('participants')
-        .update({ score: supabase.raw('score + ?', [points]) })
-        .eq('id', participantId);
-    }
-
-    // Show feedback
-    setFeedback({
-      isCorrect,
-      correctAnswer: slides[currentIndex].options?.[slides[currentIndex].correct_answer_index],
-      feedbackText: isCorrect ? 'Correct! +1 point' : 'Wrong! 0 points',
-    });
-
-    // If last question, show leaderboard
-    if (currentIndex >= slides.length - 1) {
-      setTimeout(() => setFinished(true), 1200);
-    }
+    setAnswerSubmitted(true);
   };
 
   // Subscribe to own participant row for status updates
@@ -267,13 +240,13 @@ const JoinQuiz = () => {
     if (!participantId) return;
     const channel = supabase
       .channel('participant-' + participantId)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `id=eq.${participantId}` }, (payload) => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'session_participants', filter: `id=eq.${participantId}` }, (payload) => {
         setParticipantStatus(payload.new.status);
       })
       .subscribe();
     // Initial fetch
     const fetchStatus = async () => {
-      const { data } = await supabase.from('participants').select('status').eq('id', participantId).single();
+      const { data } = await supabase.from('session_participants').select('status').eq('id', participantId).single();
       if (data) setParticipantStatus(data.status);
     };
     fetchStatus();
@@ -287,7 +260,7 @@ const JoinQuiz = () => {
     if (liveQuiz && liveQuiz.phase === 'ended') {
       const fetchLeaderboard = async () => {
         const { data } = await supabase
-          .from('participants')
+          .from('session_participants')
           .select('name, score')
           .eq('session_code', roomCode)
           .order('score', { ascending: false });
@@ -298,16 +271,15 @@ const JoinQuiz = () => {
   }, [liveQuiz, roomCode]);
 
   // Subscribe to quiz state after joining
+  let quizStateChannel = null;
   useEffect(() => {
     if (!joined || !liveQuiz) return;
-    // Listen to live_quiz_state for this session
-    const quizStateSub = supabase
-      .from(`live_quiz_state:session_code=eq.${roomCode}`)
-      .on('UPDATE', payload => {
+    quizStateChannel = supabase
+      .channel('live_quiz_state_' + roomCode)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_quiz_state', filter: `quiz_room_id=eq.${roomCode}` }, (payload) => {
         const { phase, current_question_id } = payload.new;
         setQuizPhase(phase);
         if (phase === 'question') {
-          // Fetch question from live_quiz_slides
           fetchQuestion(current_question_id);
         }
       })
@@ -315,7 +287,7 @@ const JoinQuiz = () => {
     // Initial fetch
     fetchQuizState();
     return () => {
-      supabase.removeSubscription(quizStateSub);
+      if (quizStateChannel) supabase.removeChannel(quizStateChannel);
     };
   }, [joined, liveQuiz]);
 
@@ -323,8 +295,9 @@ const JoinQuiz = () => {
     const { data } = await supabase
       .from('live_quiz_state')
       .select('*')
-      .eq('session_code', roomCode)
+      .eq('quiz_room_id', roomCode)
       .single();
+    console.log('[fetchQuizState] data:', data);
     if (data) {
       setQuizPhase(data.phase);
       if (data.phase === 'question') {
@@ -333,13 +306,29 @@ const JoinQuiz = () => {
     }
   };
 
-  const fetchQuestion = async (questionId) => {
-    const { data } = await supabase
+  const fetchQuestion = async (questionIdOrIndex) => {
+    console.log('[fetchQuestion] called with:', questionIdOrIndex, 'liveQuiz:', liveQuiz);
+    // Try to fetch by id first
+    let { data } = await supabase
       .from('live_quiz_slides')
       .select('*')
-      .eq('id', questionId)
+      .eq('id', questionIdOrIndex)
       .single();
+    console.log('[fetchQuestion] by id result:', data);
+    // If not found, try by index (slide_index)
+    if (!data && liveQuiz?.quiz_id != null) {
+      const { data: slides } = await supabase
+        .from('live_quiz_slides')
+        .select('*')
+        .eq('quiz_id', liveQuiz.quiz_id)
+        .order('slide_index');
+      console.log('[fetchQuestion] slides by quiz_id:', slides);
+      if (slides && slides.length > 0 && typeof questionIdOrIndex === 'number' && slides[questionIdOrIndex]) {
+        data = slides[questionIdOrIndex];
+      }
+    }
     setCurrentQuestion(data);
+    console.log('[fetchQuestion] setCurrentQuestion:', data);
   };
 
   if (joining) {
@@ -354,35 +343,56 @@ const JoinQuiz = () => {
     );
   }
   if (!joined) {
-    const emojiOptions = ['😀','😎','🤩','🥳','🦄','🐱','🐶','🐼','🐸','🐵','👾','👻','🦊','🐯','🐙','🐧','🐤','🦁','🐻','🐨','🐰','🐹','🐭','🐮','🐷','🐸','🐵','🦋','🐝','🐞'];
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)' }}>
-        <div style={{ background: '#fff', borderRadius: 22, boxShadow: '0 8px 32px rgba(60,60,100,0.13)', padding: 36, minWidth: 320, maxWidth: 400, width: '100%', border: '2px solid #e0e7ff', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <h2 style={{ fontWeight: 900, fontSize: 28, color: '#2563eb', marginBottom: 18, letterSpacing: '-1px', textAlign: 'center' }}>Join Quiz</h2>
-          <input value={roomCode} onChange={e => setRoomCode(e.target.value)} placeholder="Room Code" style={{ padding: 12, borderRadius: 10, border: '2px solid #c7d2fe', fontSize: 17, width: '100%', marginBottom: 16, background: '#f1f5f9' }} maxLength={8} />
-          <input value={username} onChange={e => setUsername(e.target.value)} placeholder="Your Name" style={{ padding: 12, borderRadius: 10, border: '2px solid #c7d2fe', fontSize: 17, width: '100%', marginBottom: 16, background: '#f1f5f9' }} maxLength={32} />
-          <div style={{ marginBottom: 16, textAlign: 'center' }}>
-            <div style={{ fontWeight: 700, fontSize: 15, color: '#374151', marginBottom: 8 }}>Pick your emoji:</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
-              {emojiOptions.map((emoji) => (
-                <button key={emoji} type="button" onClick={() => setSelectedEmoji(emoji)} style={{ fontSize: 24, padding: 6, borderRadius: '50%', border: selectedEmoji === emoji ? '2.5px solid #2563eb' : '2px solid #e0e7ff', background: selectedEmoji === emoji ? '#dbeafe' : '#f1f5f9', cursor: 'pointer', outline: 'none', transition: 'all 0.18s' }}>{emoji}</button>
-              ))}
-            </div>
-          </div>
-          <button onClick={handleJoin} style={{ padding: '12px 0', fontSize: 18, borderRadius: 10, background: '#2563eb', color: '#fff', border: 'none', fontWeight: 800, width: '100%' }}>Join</button>
-          {error && <div style={{ color: 'red', marginTop: 12, textAlign: 'center' }}>{error}</div>}
+        <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 4px 24px rgba(60,60,100,0.10)', padding: 32, minWidth: 320, maxWidth: 350, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <h2 style={{ fontWeight: 800, fontSize: 26, color: '#2563eb', marginBottom: 20, letterSpacing: '-1px', textAlign: 'center' }}>Join Quiz</h2>
+          <input
+            type="text"
+            placeholder="Room code"
+            value={roomCode}
+            onChange={e => setRoomCode(e.target.value)}
+            style={{ padding: 12, borderRadius: 8, border: '1.5px solid #c7d2fe', fontSize: 16, width: '100%', marginBottom: 16, background: '#f1f5f9' }}
+            maxLength={8}
+          />
+          <input
+            type="text"
+            placeholder="Your name"
+            value={username}
+            onChange={e => setUsername(e.target.value)}
+            style={{ padding: 12, borderRadius: 8, border: '1.5px solid #c7d2fe', fontSize: 16, width: '100%', marginBottom: 20, background: '#f1f5f9' }}
+            maxLength={32}
+          />
+          <button onClick={handleJoin} style={{ padding: '12px 0', fontSize: 17, borderRadius: 8, background: '#2563eb', color: '#fff', border: 'none', fontWeight: 700, width: '100%', marginBottom: 8, cursor: 'pointer', boxShadow: '0 2px 8px #e0e7ff' }}>Join</button>
+          {joinAttempted && error && <div style={{ color: 'red', marginTop: 8, fontSize: 15 }}>{error}</div>}
         </div>
       </div>
     );
   }
-  if (joined && (!liveQuiz?.is_live || liveQuiz.phase === 'lobby')) {
+  if (quizPhase === 'waiting') {
     return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)' }}>
-        <div style={{ background: '#fff', borderRadius: 22, boxShadow: '0 8px 32px rgba(60,60,100,0.13)', padding: 44, minWidth: 320, maxWidth: 420, width: '100%', border: '2px solid #e0e7ff', textAlign: 'center' }}>
-          <h2 style={{ fontWeight: 900, fontSize: 28, color: '#2563eb', marginBottom: 18 }}>Waiting for host to start the quiz...</h2>
-          <div style={{ fontSize: 18, color: '#374151', marginBottom: 12 }}>Room Code: <b style={{ color: '#2563eb' }}>{roomCode}</b></div>
-          <div style={{ fontSize: 18, color: '#374151' }}>Name: <b style={{ color: '#2563eb' }}>{username}</b></div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60vh' }}>
+        <h2>Waiting for host to start the quiz...</h2>
+      </div>
+    );
+  }
+  if (quizPhase === 'question' && currentQuestion) {
+    return (
+      <div style={{ maxWidth: 400, margin: '40px auto', padding: 24, background: 'white', borderRadius: 12, boxShadow: '0 2px 12px #eee' }}>
+        <div style={{ fontWeight: 600, fontSize: 20, marginBottom: 16 }}>{currentQuestion.question_text || currentQuestion.question}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {currentQuestion.options && currentQuestion.options.map((opt, idx) => (
+            <button
+              key={idx}
+              style={{ padding: 12, borderRadius: 8, border: '1px solid #ddd', background: selectedOption === idx ? '#dbeafe' : '#f9f9f9', cursor: answerSubmitted ? 'not-allowed' : 'pointer' }}
+              disabled={answerSubmitted}
+              onClick={() => handleAnswer(idx)}
+            >
+              {opt}
+            </button>
+          ))}
         </div>
+        {answerSubmitted && <div style={{ marginTop: 18, color: '#2563eb', fontWeight: 600 }}>Answer submitted! Waiting for next question...</div>}
       </div>
     );
   }
@@ -457,62 +467,6 @@ const JoinQuiz = () => {
         </div>
       );
     }
-  }
-  if (liveQuiz.phase === 'question') {
-    return (
-      <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ background: '#fff', borderRadius: 22, boxShadow: '0 8px 32px rgba(60,60,100,0.13)', padding: '44px 32px 36px 32px', minWidth: 320, maxWidth: 520, width: '100%', margin: '0 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', transition: 'box-shadow 0.2s', border: '2px solid #e0e7ff' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', marginBottom: 18 }}>
-            <div style={{ fontWeight: 900, fontSize: 30, color: '#2563eb', letterSpacing: '-1px' }}>Quiz Arena</div>
-            <div style={{ fontWeight: 600, color: '#888', fontSize: 18 }}>Q{currentIndex + 1} / {slides.length}</div>
-          </div>
-          <div style={{ margin: '18px 0', background: '#e0e7ff', borderRadius: 12, padding: '14px 0', fontWeight: 800, fontSize: 22, color: '#2563eb', textAlign: 'center', boxShadow: '0 2px 8px rgba(60,60,100,0.07)', width: '100%' }}>
-            Time Left: {timeLeft}s
-          </div>
-          <div style={{ color: '#23272f', fontWeight: 800, fontSize: 24, margin: '0 0 18px 0', textAlign: 'center', letterSpacing: '-0.5px' }}>{slides[currentIndex].question}</div>
-          <div style={{ width: '100%', marginTop: 8 }}>
-            {(slides[currentIndex].options || []).map((opt, idx) => (
-              <button
-                key={idx}
-                disabled={isLocked || submitted}
-                onClick={() => setSelectedOption(idx)}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  margin: '10px 0',
-                  padding: '16px 0',
-                  borderRadius: 12,
-                  background: selectedOption === idx ? '#dbeafe' : '#f3f4f6',
-                  color: '#23272f',
-                  border: selectedOption === idx ? '2.5px solid #2563eb' : '2px solid #e0e0e0',
-                  fontWeight: 700,
-                  fontSize: 19,
-                  boxShadow: 'none',
-                  cursor: isLocked || submitted ? 'not-allowed' : 'pointer',
-                  outline: 'none',
-                  transition: 'all 0.18s',
-                }}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={handleSubmit}
-            disabled={isLocked || submitted || selectedOption == null}
-            style={{ padding: '13px 34px', borderRadius: 10, background: '#2563eb', color: '#fff', border: 'none', fontWeight: 800, fontSize: 18, marginTop: 18, width: '100%' }}
-          >
-            Submit Answer
-          </button>
-          {feedback && (
-            <div style={{ marginTop: 18, color: feedback.isCorrect ? '#059669' : '#e11d48', fontWeight: 700, fontSize: 18 }}>
-              {feedback.feedbackText} <br />
-              <span style={{ color: '#2563eb', fontWeight: 600 }}>Correct Answer: {feedback.correctAnswer}</span>
-            </div>
-          )}
-        </div>
-      </div>
-    );
   }
 };
 

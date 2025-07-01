@@ -138,7 +138,7 @@ const PresentQuizPage = () => {
     return () => { supabase.removeChannel(channel); };
   }, [roomCode]);
 
-  // Timer logic
+  // Timer logic (just locks answers, does not auto-advance)
   useEffect(() => {
     if (phase !== PHASES.QUESTION || timer <= 0) return;
     setTimeLeft(timer);
@@ -147,15 +147,43 @@ const PresentQuizPage = () => {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timerInterval.current);
-          handleEndOfQuestion();
+          // Do NOT call handleEndOfQuestion or advance
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timerInterval.current);
-    // eslint-disable-next-line
   }, [phase, timer, currentIndex]);
+
+  // Host Next button handler
+  const handleNext = async () => {
+    if (phase === PHASES.QUESTION) {
+      // If last question, end quiz
+      if (currentIndex >= slides.length - 1) {
+        await supabase.from('live_quiz_state').update({ quiz_status: PHASES.ENDED }).eq('quiz_room_id', roomCode);
+        await supabase.from('sessions').update({ quiz_status: PHASES.ENDED, is_live: false }).eq('session_code', roomCode);
+        setPhase(PHASES.ENDED);
+        return;
+      }
+      // Advance to next question
+      const nextIdx = currentIndex + 1;
+      await supabase.from('live_quiz_state').update({
+        current_slide_index: nextIdx,
+        timer_value: slides[nextIdx].timer || 20,
+        quiz_status: PHASES.QUESTION,
+      }).eq('quiz_room_id', roomCode);
+      await supabase.from('sessions').update({
+        quiz_status: PHASES.QUESTION,
+        current_slide_index: nextIdx,
+        is_live: true,
+      }).eq('session_code', roomCode);
+      setPhase(PHASES.QUESTION);
+      setCurrentIndex(nextIdx);
+      setTimer(slides[nextIdx].timer || 20);
+      setTimeLeft(slides[nextIdx].timer || 20);
+    }
+  };
 
   // Start quiz handler
   const handleStartQuiz = async () => {
@@ -180,43 +208,6 @@ const PresentQuizPage = () => {
     setCurrentIndex(0);
     setTimer(slides[0].timer || 20);
     setTimeLeft(slides[0].timer || 20);
-  };
-
-  // End of question handler
-  const handleEndOfQuestion = async () => {
-    // If last question, end quiz
-    if (currentIndex >= slides.length - 1) {
-      await supabase.from('live_quiz_state').update({ quiz_status: PHASES.ENDED }).eq('quiz_room_id', roomCode);
-      await supabase.from('sessions').update({ quiz_status: PHASES.ENDED, is_live: false }).eq('session_code', roomCode);
-      setPhase(PHASES.ENDED);
-      return;
-    }
-    // Show leaderboard for 3s, then transition to next question
-    await supabase.from('live_quiz_state').update({ quiz_status: PHASES.LEADERBOARD }).eq('quiz_room_id', roomCode);
-    setPhase(PHASES.LEADERBOARD);
-    setTimeout(async () => {
-      await supabase.from('live_quiz_state').update({ quiz_status: PHASES.TRANSITION }).eq('quiz_room_id', roomCode);
-      setPhase(PHASES.TRANSITION);
-      setTimeout(async () => {
-        const nextIdx = currentIndex + 1;
-        await supabase.from('live_quiz_state').update({
-          current_slide_index: nextIdx,
-          timer_value: slides[nextIdx].timer || 20,
-          quiz_status: PHASES.QUESTION,
-        }).eq('quiz_room_id', roomCode);
-        setPhase(PHASES.QUESTION);
-        setCurrentIndex(nextIdx);
-        setTimer(slides[nextIdx].timer || 20);
-        setTimeLeft(slides[nextIdx].timer || 20);
-      }, 2000);
-    }, 3000);
-  };
-
-  // Manual next (host control)
-  const handleNext = () => {
-    if (phase === PHASES.QUESTION) {
-      setTimeLeft(0);
-    }
   };
 
   // Auto-advance timer for host (only in question phase)
