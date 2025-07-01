@@ -30,6 +30,9 @@ const JoinQuiz = () => {
   const [finalLeaderboard, setFinalLeaderboard] = useState([]);
   const [selectedEmoji, setSelectedEmoji] = useState('😀');
   const [lobbyParticipants, setLobbyParticipants] = useState([]);
+  const [showFinalLeaderboard, setShowFinalLeaderboard] = useState(false);
+  const [quizPhase, setQuizPhase] = useState('waiting');
+  const [currentQuestion, setCurrentQuestion] = useState(null);
 
   // Subscribe to sessions for this room (always keep in sync)
   useEffect(() => {
@@ -64,8 +67,8 @@ const JoinQuiz = () => {
 
   // When liveQuiz changes, update currentIndex and reset state
   useEffect(() => {
-    if (liveQuiz && liveQuiz.current_question_id != null && slides.length > 0) {
-      setCurrentIndex(slides.findIndex(s => s.id === liveQuiz.current_question_id));
+    if (liveQuiz && liveQuiz.current_slide_index != null && slides.length > 0) {
+      setCurrentIndex(liveQuiz.current_slide_index);
       setSelectedOption(null);
       setFeedback(null);
       setIsLocked(false);
@@ -192,11 +195,11 @@ const JoinQuiz = () => {
       return;
     }
     setJoining(true);
-    // Always re-fetch the sessions row on join attempt
+    // Use the correct column for room code
     const { data, error } = await supabase
       .from('sessions')
       .select('*')
-      .eq('code', roomCode)
+      .eq('session_code', roomCode)
       .single();
     if (error || !data) {
       setError('Invalid room code.');
@@ -207,7 +210,6 @@ const JoinQuiz = () => {
     // Register participant immediately, even if quiz not started
     const pid = await registerParticipant();
     if (!pid) {
-      // Error is already set in registerParticipant
       setJoining(false);
       return;
     }
@@ -215,8 +217,6 @@ const JoinQuiz = () => {
     setLiveQuiz(data);
     setJoined(true);
     setJoining(false);
-    // Navigate to lobby after joining
-    navigate(`/lobby/${roomCode}/${pid}`, { state: { username, emoji: selectedEmoji } });
   };
 
   const handleSubmit = async () => {
@@ -297,6 +297,51 @@ const JoinQuiz = () => {
     }
   }, [liveQuiz, roomCode]);
 
+  // Subscribe to quiz state after joining
+  useEffect(() => {
+    if (!joined || !liveQuiz) return;
+    // Listen to live_quiz_state for this session
+    const quizStateSub = supabase
+      .from(`live_quiz_state:session_code=eq.${roomCode}`)
+      .on('UPDATE', payload => {
+        const { phase, current_question_id } = payload.new;
+        setQuizPhase(phase);
+        if (phase === 'question') {
+          // Fetch question from live_quiz_slides
+          fetchQuestion(current_question_id);
+        }
+      })
+      .subscribe();
+    // Initial fetch
+    fetchQuizState();
+    return () => {
+      supabase.removeSubscription(quizStateSub);
+    };
+  }, [joined, liveQuiz]);
+
+  const fetchQuizState = async () => {
+    const { data } = await supabase
+      .from('live_quiz_state')
+      .select('*')
+      .eq('session_code', roomCode)
+      .single();
+    if (data) {
+      setQuizPhase(data.phase);
+      if (data.phase === 'question') {
+        fetchQuestion(data.current_question_id);
+      }
+    }
+  };
+
+  const fetchQuestion = async (questionId) => {
+    const { data } = await supabase
+      .from('live_quiz_slides')
+      .select('*')
+      .eq('id', questionId)
+      .single();
+    setCurrentQuestion(data);
+  };
+
   if (joining) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)' }}>
@@ -312,26 +357,31 @@ const JoinQuiz = () => {
     const emojiOptions = ['😀','😎','🤩','🥳','🦄','🐱','🐶','🐼','🐸','🐵','👾','👻','🦊','🐯','🐙','🐧','🐤','🦁','🐻','🐨','🐰','🐹','🐭','🐮','🐷','🐸','🐵','🦋','🐝','🐞'];
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)' }}>
-        <div style={{ background: '#fff', borderRadius: 22, boxShadow: '0 8px 32px rgba(60,60,100,0.13)', padding: 44, minWidth: 320, maxWidth: 420, width: '100%', border: '2px solid #e0e7ff' }}>
-          <h2 style={{ fontWeight: 900, fontSize: 32, color: '#2563eb', marginBottom: 24, letterSpacing: '-1px', textAlign: 'center' }}>Join Live Quiz</h2>
-          <div style={{ marginBottom: 22 }}>
-            <label htmlFor="roomcode" style={{ fontWeight: 700, fontSize: 17, color: '#374151' }}>Room Code:</label>
-            <input id="roomcode" value={roomCode} onChange={e => { setRoomCode(e.target.value); setError(null); }} placeholder="Enter room code" style={{ padding: 12, borderRadius: 10, border: '2px solid #c7d2fe', marginLeft: 12, fontSize: 17, width: 140, background: '#f1f5f9' }} maxLength={8} />
-          </div>
-          <div style={{ marginBottom: 22 }}>
-            <label htmlFor="username" style={{ fontWeight: 700, fontSize: 17, color: '#374151' }}>Your Name:</label>
-            <input id="username" value={username} onChange={e => { setUsername(e.target.value); setError(null); }} placeholder="Enter your name" style={{ padding: 12, borderRadius: 10, border: '2px solid #c7d2fe', marginLeft: 12, fontSize: 17, width: 180, background: '#f1f5f9' }} maxLength={32} />
-          </div>
-          <div style={{ marginBottom: 22, textAlign: 'center' }}>
-            <div style={{ fontWeight: 700, fontSize: 17, color: '#374151', marginBottom: 8 }}>Pick your emoji:</div>
+        <div style={{ background: '#fff', borderRadius: 22, boxShadow: '0 8px 32px rgba(60,60,100,0.13)', padding: 36, minWidth: 320, maxWidth: 400, width: '100%', border: '2px solid #e0e7ff', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <h2 style={{ fontWeight: 900, fontSize: 28, color: '#2563eb', marginBottom: 18, letterSpacing: '-1px', textAlign: 'center' }}>Join Quiz</h2>
+          <input value={roomCode} onChange={e => setRoomCode(e.target.value)} placeholder="Room Code" style={{ padding: 12, borderRadius: 10, border: '2px solid #c7d2fe', fontSize: 17, width: '100%', marginBottom: 16, background: '#f1f5f9' }} maxLength={8} />
+          <input value={username} onChange={e => setUsername(e.target.value)} placeholder="Your Name" style={{ padding: 12, borderRadius: 10, border: '2px solid #c7d2fe', fontSize: 17, width: '100%', marginBottom: 16, background: '#f1f5f9' }} maxLength={32} />
+          <div style={{ marginBottom: 16, textAlign: 'center' }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: '#374151', marginBottom: 8 }}>Pick your emoji:</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
               {emojiOptions.map((emoji) => (
-                <button key={emoji} type="button" onClick={() => setSelectedEmoji(emoji)} style={{ fontSize: 28, padding: 6, borderRadius: '50%', border: selectedEmoji === emoji ? '2.5px solid #2563eb' : '2px solid #e0e7ff', background: selectedEmoji === emoji ? '#dbeafe' : '#f1f5f9', cursor: 'pointer', outline: 'none', transition: 'all 0.18s' }}>{emoji}</button>
+                <button key={emoji} type="button" onClick={() => setSelectedEmoji(emoji)} style={{ fontSize: 24, padding: 6, borderRadius: '50%', border: selectedEmoji === emoji ? '2.5px solid #2563eb' : '2px solid #e0e7ff', background: selectedEmoji === emoji ? '#dbeafe' : '#f1f5f9', cursor: 'pointer', outline: 'none', transition: 'all 0.18s' }}>{emoji}</button>
               ))}
             </div>
           </div>
-          <button onClick={handleJoin} style={{ padding: '14px 36px', fontSize: 19, borderRadius: 10, background: '#2563eb', color: '#fff', border: 'none', fontWeight: 800, marginBottom: 16, width: '100%' }}>Join Quiz</button>
-          {error && <div style={{ color: 'red', marginTop: 12, textAlign: 'center' }}>{error} {error === 'Invalid room code.' && <button onClick={() => window.location.reload()} style={{ marginLeft: 8, color: '#2563eb', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>}</div>}
+          <button onClick={handleJoin} style={{ padding: '12px 0', fontSize: 18, borderRadius: 10, background: '#2563eb', color: '#fff', border: 'none', fontWeight: 800, width: '100%' }}>Join</button>
+          {error && <div style={{ color: 'red', marginTop: 12, textAlign: 'center' }}>{error}</div>}
+        </div>
+      </div>
+    );
+  }
+  if (joined && (!liveQuiz?.is_live || liveQuiz.phase === 'lobby')) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)' }}>
+        <div style={{ background: '#fff', borderRadius: 22, boxShadow: '0 8px 32px rgba(60,60,100,0.13)', padding: 44, minWidth: 320, maxWidth: 420, width: '100%', border: '2px solid #e0e7ff', textAlign: 'center' }}>
+          <h2 style={{ fontWeight: 900, fontSize: 28, color: '#2563eb', marginBottom: 18 }}>Waiting for host to start the quiz...</h2>
+          <div style={{ fontSize: 18, color: '#374151', marginBottom: 12 }}>Room Code: <b style={{ color: '#2563eb' }}>{roomCode}</b></div>
+          <div style={{ fontSize: 18, color: '#374151' }}>Name: <b style={{ color: '#2563eb' }}>{username}</b></div>
         </div>
       </div>
     );
@@ -360,23 +410,53 @@ const JoinQuiz = () => {
     );
   }
   if (liveQuiz.phase === 'ended') {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)' }}>
-        <div style={{ background: '#fff', borderRadius: 22, boxShadow: '0 8px 32px rgba(60,60,100,0.13)', padding: '44px 32px 36px 32px', minWidth: 320, maxWidth: 520, width: '100%', margin: '0 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', transition: 'box-shadow 0.2s', border: '2px solid #e0e7ff' }}>
-          <h2 style={{ fontWeight: 900, fontSize: 32, color: '#2563eb', marginBottom: 24, letterSpacing: '-1px', textAlign: 'center' }}>Final Leaderboard</h2>
-          <ul style={{ width: '100%', padding: 0, margin: 0 }}>
-            {finalLeaderboard.map((p, idx) => (
-              <li key={p.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: idx !== finalLeaderboard.length - 1 ? '1px solid #e5e7eb' : 'none' }}>
-                <span style={{ fontWeight: 700, color: idx === 0 ? '#2563eb' : '#374151', fontSize: 20 }}>{idx + 1}.</span>
-                <span style={{ fontWeight: 700, color: '#374151', fontSize: 18 }}>{p.name}</span>
-                <span style={{ fontWeight: 700, color: '#059669', fontSize: 18 }}>{p.score} pts</span>
-              </li>
-            ))}
-          </ul>
-          <button onClick={() => window.location.reload()} style={{ marginTop: 24, padding: '12px 32px', fontSize: 18, borderRadius: 8, background: '#2563eb', color: '#fff', border: 'none', fontWeight: 700 }}>Back to Quiz</button>
+    if (!showFinalLeaderboard) {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)' }}>
+          <div style={{ background: '#fff', borderRadius: 22, boxShadow: '0 8px 32px rgba(60,60,100,0.13)', padding: '44px 32px 36px 32px', minWidth: 320, maxWidth: 520, width: '100%', margin: '0 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative', transition: 'box-shadow 0.2s', border: '2px solid #e0e7ff' }}>
+            <h2 style={{ fontWeight: 900, fontSize: 32, color: '#2563eb', marginBottom: 24, letterSpacing: '-1px', textAlign: 'center' }}>Quiz Ended</h2>
+            <button onClick={() => setShowFinalLeaderboard(true)} style={{ margin: '18px 0', padding: '12px 32px', borderRadius: 10, background: '#2563eb', color: '#fff', border: 'none', fontWeight: 700, fontSize: 18 }}>Show Leaderboard</button>
+          </div>
         </div>
-      </div>
-    );
+      );
+    } else {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)' }}>
+          <div style={{ background: '#fff', borderRadius: 22, boxShadow: '0 8px 32px rgba(60,60,100,0.13)', padding: 44, minWidth: 320, maxWidth: 520, width: '100%', border: '2px solid #e0e7ff', textAlign: 'center' }}>
+            <h2 style={{ fontWeight: 800, fontSize: 32, color: '#2563eb', marginBottom: 24 }}>🏆 Final Leaderboard</h2>
+            {/* Podium for top 3 */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-end', marginBottom: 32, gap: 32 }}>
+              {[1, 0, 2].map((pos, idx) => {
+                const user = finalLeaderboard[pos];
+                if (!user) return <div key={idx} style={{ width: 80 }} />;
+                const colors = ['#C0C0C0', '#FFD700', '#CD7F32'];
+                const heights = [100, 140, 80];
+                return (
+                  <div key={user.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ fontWeight: 700, fontSize: 22, color: '#2563eb', marginBottom: 8 }}>{['2nd', '1st', '3rd'][idx]}</div>
+                    <div style={{ width: 80, height: heights[idx], background: colors[idx], borderRadius: 12, display: 'flex', alignItems: 'flex-end', justifyContent: 'center', boxShadow: '0 4px 16px rgba(60,60,100,0.10)' }}>
+                      <span style={{ fontWeight: 900, fontSize: 28, color: '#fff', marginBottom: 8 }}>{user.name}</span>
+                    </div>
+                    <div style={{ fontWeight: 700, fontSize: 18, color: '#374151', marginTop: 8 }}>{user.score} pts</div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* List for the rest */}
+            <div style={{ maxWidth: 400, margin: '0 auto', textAlign: 'left' }}>
+              {finalLeaderboard.slice(3).map((user, idx) => (
+                <div key={user.name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: idx !== finalLeaderboard.length - 4 ? '1px solid #e5e7eb' : 'none' }}>
+                  <span style={{ fontWeight: 700, color: '#374151', fontSize: 18 }}>{idx + 4}.</span>
+                  <span style={{ fontWeight: 700, color: '#374151', fontSize: 18 }}>{user.name}</span>
+                  <span style={{ fontWeight: 700, color: '#059669', fontSize: 18 }}>{user.score} pts</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => navigate('/dashboard')} style={{ marginTop: 32, padding: '12px 32px', borderRadius: 10, background: '#2563eb', color: '#fff', border: 'none', fontWeight: 700, fontSize: 18 }}>Back to Dashboard</button>
+          </div>
+        </div>
+      );
+    }
   }
   if (liveQuiz.phase === 'question') {
     return (

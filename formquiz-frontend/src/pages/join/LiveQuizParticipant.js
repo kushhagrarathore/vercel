@@ -56,16 +56,16 @@ const LiveQuizParticipant = () => {
     };
   }, [roomCode]);
 
-  // Subscribe to quiz_state for this room
+  // Subscribe to live_quiz_state for this room
   useEffect(() => {
     if (!roomCode) return;
     const channel = supabase
-      .channel('quiz_state_' + roomCode)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'quiz_state', filter: `quiz_room_id=eq.${roomCode}` }, payload => {
-        debug('quiz_state update:', payload.new);
+      .channel('live_quiz_state_' + roomCode)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_quiz_state', filter: `quiz_room_id=eq.${roomCode}` }, payload => {
+        debug('live_quiz_state update:', payload.new);
         setQuizState(payload.new);
         setTimer(payload.new?.timer_value ?? 0);
-        setCurrentQuestionId(payload.new?.current_question_id ?? null);
+        setCurrentQuestionId(payload.new?.current_slide_index ?? null);
         setPhase(payload.new?.quiz_status ?? 'question');
       })
       .subscribe();
@@ -134,8 +134,8 @@ const LiveQuizParticipant = () => {
   useEffect(() => {
     if (!participantId) return;
     const channel = supabase
-      .channel('participant-' + participantId)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `id=eq.${participantId}` }, (payload) => {
+      .channel('session_participant-' + participantId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'session_participants', filter: `id=eq.${participantId}` }, (payload) => {
         // Could use for status/score updates if needed
       })
       .subscribe();
@@ -149,7 +149,7 @@ const LiveQuizParticipant = () => {
     if (liveQuiz && liveQuiz.phase === 'ended') {
       const fetchLeaderboard = async () => {
         const { data } = await supabase
-          .from('participants')
+          .from('session_participants')
           .select('name, score')
           .eq('session_code', roomCode)
           .order('score', { ascending: false });
@@ -163,8 +163,8 @@ const LiveQuizParticipant = () => {
   useEffect(() => {
     if (!roomCode) return;
     const channel = supabase
-      .channel('participants_leaderboard_' + roomCode)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'participants', filter: `session_code=eq.${roomCode}` }, payload => {
+      .channel('session_participants_leaderboard_' + roomCode)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'session_participants', filter: `session_code=eq.${roomCode}` }, payload => {
         fetchLeaderboard();
       })
       .subscribe();
@@ -174,7 +174,7 @@ const LiveQuizParticipant = () => {
   // Fetch leaderboard
   const fetchLeaderboard = async () => {
     const { data } = await supabase
-      .from('participants')
+      .from('session_participants')
       .select('*')
       .eq('session_code', roomCode)
       .order('score', { ascending: false });
@@ -224,25 +224,25 @@ const LiveQuizParticipant = () => {
     // Save response to DB
     await supabase.from('live_responses').insert([
       {
-        participantId,
-        quizRoomId: roomCode,
-        questionId: slides[currentIndex].id,
+        participant_id: participantId,
+        session_code: roomCode,
+        slide_index: slides[currentIndex].slide_index,
         answer: selectedOption,
-        isCorrect,
+        is_correct: isCorrect,
         points,
-        timestamp: new Date().toISOString(),
+        submitted_at: new Date().toISOString(),
       },
     ]);
 
     // Update participant score (fetch, add, update)
     if (participantId) {
       const { data: participantData } = await supabase
-        .from('participants')
+        .from('session_participants')
         .select('score')
         .eq('id', participantId)
         .single();
       const newScore = (participantData?.score || 0) + points;
-      await supabase.from('participants')
+      await supabase.from('session_participants')
         .update({ score: newScore })
         .eq('id', participantId);
     }
