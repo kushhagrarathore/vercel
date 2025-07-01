@@ -27,7 +27,7 @@ const QuizFillPage = () => {
         return;
       }
       setQuiz(quizData);
-      const { data: slidesData, error: slidesError } = await supabase.from('slides').select('*').eq('quiz_id', quizId).order('slide_index');
+      const { data: slidesData, error: slidesError } = await supabase.from('live_quiz_slides').select('*').eq('quiz_id', quizId).order('slide_index');
       if (slidesError || !Array.isArray(slidesData) || slidesData.length === 0) {
         setError('No slides found for this quiz.');
         setLoading(false);

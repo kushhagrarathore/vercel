@@ -35,7 +35,7 @@ const LiveQuizParticipant = () => {
       const { data, error } = await supabase
         .from('sessions')
         .select('*')
-        .eq('code', roomCode)
+        .eq('session_code', roomCode)
         .single();
       if (error || !data) {
         setLiveQuiz(null);
@@ -45,7 +45,7 @@ const LiveQuizParticipant = () => {
       if (channelRef.current) supabase.removeChannel(channelRef.current);
       channelRef.current = supabase
         .channel('live-quiz-' + roomCode)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `code=eq.${roomCode}` }, (payload) => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `session_code=eq.${roomCode}` }, (payload) => {
           setLiveQuiz(payload.new);
         })
         .subscribe();
@@ -74,8 +74,8 @@ const LiveQuizParticipant = () => {
 
   // When liveQuiz changes, update currentIndex and reset state
   useEffect(() => {
-    if (liveQuiz && liveQuiz.current_question_id != null && slides.length > 0) {
-      setCurrentIndex(slides.findIndex(s => s.id === liveQuiz.current_question_id));
+    if (liveQuiz && liveQuiz.current_slide_index != null && slides.length > 0) {
+      setCurrentIndex(liveQuiz.current_slide_index);
       setSelectedOption(null);
       setFeedback(null);
       setIsLocked(false);
@@ -101,7 +101,7 @@ const LiveQuizParticipant = () => {
   useEffect(() => {
     if (!liveQuiz?.quiz_id) return;
     const fetchSlides = async () => {
-      const { data, error } = await supabase.from('slides').select('*').eq('quiz_id', liveQuiz.quiz_id).order('slide_index');
+      const { data, error } = await supabase.from('live_quiz_slides').select('*').eq('quiz_id', liveQuiz.quiz_id).order('slide_index');
       if (!error) setSlides(data || []);
     };
     fetchSlides();

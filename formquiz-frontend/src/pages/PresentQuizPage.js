@@ -54,7 +54,7 @@ const PresentQuizPage = () => {
   useEffect(() => {
     const fetchSlides = async () => {
       setLoading(true);
-      const { data, error } = await supabase.from('slides').select('*').eq('quiz_id', quizId).order('slide_index');
+      const { data, error } = await supabase.from('live_quiz_slides').select('*').eq('quiz_id', quizId).order('slide_index');
       if (error) setError('Failed to load slides');
       else setSlides(data || []);
       setLoading(false);
@@ -69,14 +69,14 @@ const PresentQuizPage = () => {
       const { data } = await supabase
         .from('sessions')
         .select('*')
-        .eq('code', roomCode)
+        .eq('session_code', roomCode)
         .single();
       setLiveQuiz(data);
       setPhase(data?.phase || 'question');
       if (channelRef.current) supabase.removeChannel(channelRef.current);
       channelRef.current = supabase
         .channel('live-quiz-' + roomCode)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `code=eq.${roomCode}` }, (payload) => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `session_code=eq.${roomCode}` }, (payload) => {
           setLiveQuiz(payload.new);
           setPhase(payload.new?.phase || 'question');
         })
@@ -98,7 +98,7 @@ const PresentQuizPage = () => {
         setQuizState(payload.new);
         setTimer(payload.new?.timer_value ?? 0);
         setPhase(payload.new?.quiz_status ?? 'question');
-        setCurrentQuestionId(payload.new?.current_question_id ?? null);
+        setCurrentQuestionId(payload.new?.current_slide_index ?? null);
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
@@ -165,7 +165,7 @@ const PresentQuizPage = () => {
 
   // Auto-advance timer for host (only in question phase)
   useEffect(() => {
-    if (status !== 'live' || !liveQuiz?.timer_end || !liveQuiz?.current_question_id || phase !== 'question') return;
+    if (status !== 'live' || !liveQuiz?.timer_end || !liveQuiz?.current_slide_index || phase !== 'question') return;
     const timer = setInterval(() => {
       const now = Date.now();
       const end = new Date(liveQuiz.timer_end).getTime();
@@ -187,9 +187,9 @@ const PresentQuizPage = () => {
     await supabase.from('sessions').delete().eq('quiz_id', quizId);
     const { error: insertError } = await supabase.from('sessions').insert([{
       quiz_id: quizId,
-      code: code,
-      is_live: false,
-      current_question_id: null,
+      session_code: code,
+      quiz_status: 'waiting',
+      current_slide_index: null,
       timer_end: null,
     }]);
     if (insertError) {
@@ -202,7 +202,7 @@ const PresentQuizPage = () => {
     const { data: newLiveQuiz, error: fetchError } = await supabase
       .from('sessions')
       .select('*')
-      .eq('code', code)
+      .eq('session_code', code)
       .single();
     if (fetchError || !newLiveQuiz) {
       setError('Failed to fetch live quiz after creation.');
@@ -215,11 +215,10 @@ const PresentQuizPage = () => {
     setStatus('waiting');
   };
 
-  // Host: Start Quiz (set is_live, current_question_id, timer_end, phase, and update all participants to 'active')
+  // Host: Start Quiz (set is_live, current_slide_index, timer_end, phase, and update all participants to 'active')
   const handleStartQuiz = async () => {
     debug('Starting quiz for room:', roomCode);
     if (!liveQuiz || !slides.length) return;
-    const firstQuestionId = slides[0]?.id;
     // Set all waiting participants to 'active'
     const { error: updateError } = await supabase.from('participants').update({ status: 'active' }).eq('session_code', roomCode).eq('status', 'waiting');
     if (updateError) debug('Update participants error:', updateError);
@@ -227,46 +226,46 @@ const PresentQuizPage = () => {
     const { error: upsertError } = await supabase.from('quiz_state').upsert({
       quiz_room_id: roomCode,
       timer_value: 20,
-      current_question_id: firstQuestionId,
+      current_slide_index: 0,
       quiz_status: 'question'
     });
     if (upsertError) debug('Quiz state upsert error:', upsertError);
     setTimer(20);
     setPhase('question');
-    setCurrentQuestionId(firstQuestionId);
+    setCurrentQuestionId(slides[0]?.id); // for local state only
     setStatus('live');
   };
 
   // Sync host view with sessions changes
   useEffect(() => {
-    if (liveQuiz && status === 'live' && liveQuiz.current_question_id != null) {
+    if (liveQuiz && status === 'live' && liveQuiz.current_slide_index != null) {
       // Show the current question and timer to the host
-      // (UI below will use liveQuiz.current_question_id and timer_end)
+      // (UI below will use liveQuiz.current_slide_index and timer_end)
     }
   }, [liveQuiz, status]);
 
   // Host: Next Question (now handles phase)
   const handleNext = async () => {
     if (!liveQuiz || !slides.length) return;
-    const currentIdx = slides.findIndex(s => s.id === liveQuiz.current_question_id);
+    const currentIdx = liveQuiz.current_slide_index ?? 0;
     const next = currentIdx + 1;
     if (next < slides.length) {
       // Show leaderboard phase first
-      await supabase.from('sessions').update({ phase: 'leaderboard' }).eq('code', roomCode);
+      await supabase.from('sessions').update({ phase: 'leaderboard' }).eq('session_code', roomCode);
       setPhase('leaderboard');
       setTimeout(async () => {
         // Show transition phase
-        await supabase.from('sessions').update({ phase: 'transition' }).eq('code', roomCode);
+        await supabase.from('sessions').update({ phase: 'transition' }).eq('session_code', roomCode);
         setPhase('transition');
         setTimeout(async () => {
           // Move to next question
           const timer = slides[next]?.timer || 20;
           const timerEnd = new Date(Date.now() + timer * 1000).toISOString();
           await supabase.from('sessions').update({
-            current_question_id: slides[next]?.id,
+            current_slide_index: next,
             timer_end: timerEnd,
             phase: 'question',
-          }).eq('code', roomCode);
+          }).eq('session_code', roomCode);
           setPhase('question');
         }, 2000); // 2s transition
       }, 3500); // 3.5s leaderboard
@@ -280,9 +279,9 @@ const PresentQuizPage = () => {
   const handleEnd = async () => {
     if (!liveQuiz) return;
     await supabase.from('sessions').update({
-      is_live: false,
+      quiz_status: 'ended',
       timer_end: null,
-    }).eq('code', roomCode);
+    }).eq('session_code', roomCode);
     setStatus('ended');
   };
 
@@ -363,7 +362,7 @@ const PresentQuizPage = () => {
 
   const handleFinishQuiz = async () => {
     if (!liveQuiz) return;
-    await supabase.from('sessions').update({ phase: 'ended' }).eq('code', roomCode);
+    await supabase.from('sessions').update({ phase: 'ended' }).eq('session_code', roomCode);
     setPhase('ended');
   };
 
@@ -372,23 +371,23 @@ const PresentQuizPage = () => {
     if (status !== 'live' || !liveQuiz || !slides.length) return;
     if (phase === 'leaderboard') {
       const timeout = setTimeout(async () => {
-        await supabase.from('sessions').update({ phase: 'transition' }).eq('code', roomCode);
+        await supabase.from('sessions').update({ phase: 'transition' }).eq('session_code', roomCode);
         setPhase('transition');
       }, 3500);
       return () => clearTimeout(timeout);
     }
     if (phase === 'transition') {
-      const currentIdx = slides.findIndex(s => s.id === liveQuiz.current_question_id);
+      const currentIdx = slides.findIndex(s => s.id === liveQuiz.current_slide_index);
       const next = currentIdx + 1;
       const timeout = setTimeout(async () => {
         if (next < slides.length) {
           const timer = slides[next]?.timer || 20;
           const timerEnd = new Date(Date.now() + timer * 1000).toISOString();
           await supabase.from('sessions').update({
-            current_question_id: slides[next]?.id,
+            current_slide_index: next,
             timer_end: timerEnd,
             phase: 'question',
-          }).eq('code', roomCode);
+          }).eq('session_code', roomCode);
           setPhase('question');
         } else {
           setShowFinishQuiz(true);
@@ -422,10 +421,10 @@ const PresentQuizPage = () => {
           
           // After 2s, move to next question or end
           setTimeout(async () => {
-            const nextIdx = slides.findIndex(s => s.id === quizState.current_question_id) + 1;
+            const nextIdx = slides.findIndex(s => s.id === quizState.current_slide_index) + 1;
             if (nextIdx < slides.length) {
               await supabase.from('quiz_state').update({
-                current_question_id: slides[nextIdx].id,
+                current_slide_index: nextIdx,
                 timer_value: 20,
                 quiz_status: 'question'
               }).eq('quiz_room_id', roomCode);
@@ -535,7 +534,7 @@ const PresentQuizPage = () => {
           </button>
         ) : null}
         {/* Phase-based UI for live quiz */}
-        {status === 'live' && liveQuiz && slides.length > 0 && liveQuiz.current_question_id != null ? (
+        {status === 'live' && liveQuiz && slides.length > 0 && liveQuiz.current_slide_index != null ? (
           phase === 'question' ? (
             <div style={{
               background: '#fff',
@@ -553,10 +552,10 @@ const PresentQuizPage = () => {
               transition: 'box-shadow 0.2s',
               border: '2px solid #e0e7ff',
             }}>
-              <div style={{ fontWeight: 800, fontSize: 24, color: '#2563eb', marginBottom: 10 }}>Q{slides.findIndex(s => s.id === liveQuiz.current_question_id) + 1} / {slides.length}</div>
-              <div style={{ color: '#23272f', fontWeight: 700, fontSize: 22, margin: '0 0 18px 0', textAlign: 'center', letterSpacing: '-0.5px' }}>{slides.find(s => s.id === liveQuiz.current_question_id)?.question}</div>
+              <div style={{ fontWeight: 800, fontSize: 24, color: '#2563eb', marginBottom: 10 }}>Q{liveQuiz.current_slide_index + 1} / {slides.length}</div>
+              <div style={{ color: '#23272f', fontWeight: 700, fontSize: 22, margin: '0 0 18px 0', textAlign: 'center', letterSpacing: '-0.5px' }}>{slides[liveQuiz.current_slide_index]?.question}</div>
               <div style={{ width: '100%', marginTop: 8 }}>
-                {(slides.find(s => s.id === liveQuiz.current_question_id)?.options || []).map((opt, idx) => (
+                {(slides[liveQuiz.current_slide_index]?.options || []).map((opt, idx) => (
                   <button
                     key={idx}
                     disabled

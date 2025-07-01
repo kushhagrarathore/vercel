@@ -56,13 +56,13 @@ const CreateQuizPage = () => {
           setQuizTitle(quizData.title || 'Untitled Presentation');
           setGlobalSettings(quizData.customization_settings || defaultSettings);
         }
-        const { data: slidesData, error: slidesError } = await supabase.from('slides').select('*').eq('quiz_id', quizId).order('slide_index');
+        const { data: slidesData, error: slidesError } = await supabase.from('live_quiz_slides').select('*').eq('quiz_id', quizId).order('slide_index');
         if (slidesData && slidesData.length > 0) {
           setSlides(slidesData.map(s => ({
             question: s.question,
             options: s.options,
             correctAnswer: s.correct_answer_index,
-            type: s.type,
+            type: s.type || 'single',
             image: s.image || '',
             settings: {
               backgroundColor: s.background || defaultSettings.backgroundColor,
@@ -197,13 +197,12 @@ const CreateQuizPage = () => {
           created_by: user.email,
         }).eq('id', quizId);
         if (quizError) throw new Error(quizError.message || JSON.stringify(quizError));
-        await supabase.from('slides').delete().eq('quiz_id', quizId);
+        await supabase.from('live_quiz_slides').delete().eq('quiz_id', quizId);
         // Save slides before navigating
         const slidesToInsert = slides.map((slide, idx) => ({
           quiz_id: quizId,
           slide_index: idx,
           question: slide.question,
-          type: slide.type,
           options: slide.options,
           correct_answer_index: slide.correctAnswer ?? 0,
           background: slide.settings?.backgroundColor || '',
@@ -212,7 +211,7 @@ const CreateQuizPage = () => {
           timer: slide.settings?.timer || 20,
         }));
         if (slidesToInsert.length) {
-          const { error: slideError } = await supabase.from('slides').insert(slidesToInsert);
+          const { error: slideError } = await supabase.from('live_quiz_slides').insert(slidesToInsert);
           if (slideError) throw new Error(slideError.message || JSON.stringify(slideError));
         }
         navigate(`/quiz/present/${quizId}`);
@@ -242,7 +241,6 @@ const CreateQuizPage = () => {
           quiz_id: quizIdToUse,
           slide_index: idx,
           question: slide.question,
-          type: slide.type,
           options: slide.options,
           correct_answer_index: slide.correctAnswer ?? 0,
           background: slide.settings?.backgroundColor || '',
@@ -251,7 +249,7 @@ const CreateQuizPage = () => {
           timer: slide.settings?.timer || 20,
         }));
         if (slidesToInsert.length) {
-          const { error: slideError } = await supabase.from('slides').insert(slidesToInsert);
+          const { error: slideError } = await supabase.from('live_quiz_slides').insert(slidesToInsert);
           if (slideError) throw new Error(slideError.message || JSON.stringify(slideError));
         }
         navigate(`/quiz/present/${quizIdToUse}`);
