@@ -71,7 +71,15 @@ const PreviewQuizPage = () => {
     </div>
   );
   if (!quiz || !slides.length) return <div style={{ padding: 40, color: 'red' }}>No slides found for this quiz. Please check your quiz setup.</div>;
-  const customization = quiz.customization_settings || {};
+  // Parse customization as in userend.js
+  let customization = quiz.customization_settings || {};
+  if (typeof customization === 'string') {
+    try {
+      customization = JSON.parse(customization);
+    } catch (e) {
+      customization = {};
+    }
+  }
   const slide = slides?.[current];
   if (!slide) return <div style={{ padding: 40, color: 'red' }}>No slide data available.</div>;
   const options = Array.isArray(slide.options) ? slide.options : [];
@@ -81,7 +89,9 @@ const PreviewQuizPage = () => {
   // Custom top right button: Back to Edit
   const TopRightButton = (
     <button
-      onClick={() => navigate(-1)}
+      onClick={() => {
+        navigate(`/quiz/${quizId}`);
+      }}
       style={{
         background: customization.nextButtonColor || '#2563eb',
         color: customization.nextButtonTextColor || '#fff',
@@ -93,12 +103,12 @@ const PreviewQuizPage = () => {
         cursor: 'pointer',
         boxShadow: '0 2px 8px rgba(37,99,235,0.10)',
         position: 'absolute',
-        top: 24,
+        top: 32,
         right: 32,
-        zIndex: 10,
+        zIndex: 20,
       }}
     >
-      Back to Edit
+      Back to Editing
     </button>
   );
 
@@ -107,7 +117,7 @@ const PreviewQuizPage = () => {
   const isFirst = current === 0;
 
   return (
-    <div style={{ position: 'relative', minHeight: '100vh', background: customization.backgroundColor || '#f8f9fb' }}>
+    <div style={{ position: 'relative', minHeight: '100vh', background: customization.background || customization.backgroundColor || '#f8f9fb', fontFamily: customization.fontFamily || customization.font || 'Inter, Arial, sans-serif' }}>
       {TopRightButton}
       <QuizArenaLayout
         logo={customization.logo}
@@ -115,21 +125,22 @@ const PreviewQuizPage = () => {
         quizTitle={quiz.title}
         questionNumber={current + 1}
         questionText={slide.question}
-        options={options}
+        options={Array.isArray(slide.options) ? slide.options : []}
         selected={null}
-        onSelect={null}
-        showNextButton={true}
-        onNext={() => isLast ? navigate(-1) : setCurrent(c => Math.min(slides.length - 1, c + 1))}
+        onSelect={null} // Disable answer selection
+        showNextButton={!isLast}
+        onNext={() => setCurrent(c => Math.min(slides.length - 1, c + 1))}
         onPrev={() => setCurrent(c => Math.max(0, c - 1))}
-        showHeader={true}
+        showHeader={false}
         showSectionGrid={true}
         sectionGrid={sectionGrid}
         customization={customization}
         disabled={true}
         showTimer={false}
-        nextButtonLabel={isLast ? 'Back to Edit' : 'Next Question'}
+        nextButtonLabel={'Next Question'}
         prevButtonLabel={'Previous'}
         showPrevButton={!isFirst}
+        topRightButton={null}
       />
     </div>
   );

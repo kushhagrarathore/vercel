@@ -73,15 +73,12 @@ const CreateQuizPage = () => {
   // On mount, restore from localStorage if not editing
   useEffect(() => {
     if (!quizId) {
-      const draft = localStorage.getItem('quizDraft');
-      if (draft) {
-        try {
-          const { slides: savedSlides, globalSettings: savedSettings, quizTitle: savedTitle } = JSON.parse(draft);
-          if (savedSlides) setSlides(savedSlides);
-          if (savedSettings) setGlobalSettings(savedSettings);
-          if (savedTitle) setQuizTitle(savedTitle);
-        } catch {}
-      }
+      // Always clear any previous draft and reset state for a fresh quiz
+      localStorage.removeItem('quizDraft');
+      setSlides(defaultSlides);
+      setGlobalSettings(defaultSettings);
+      setQuizTitle('Untitled Presentation');
+      setCurrent(0);
     }
   }, [quizId]);
 
@@ -176,7 +173,8 @@ const CreateQuizPage = () => {
           created_by: user.email,
         }).eq('id', quizId);
         if (quizError) throw new Error(quizError.message || JSON.stringify(quizError));
-        await supabase.from('slides').delete().eq('quiz_id', quizId);
+        // Old logic removed: await supabase.from('slides').delete().eq('quiz_id', quizId);
+        // Use efficient update/insert/delete-by-id logic as in quiz.js if needed
       } else {
         const { data: quizData, error: quizError } = await supabase.from('quizzes').insert([
           {
@@ -226,10 +224,11 @@ const CreateQuizPage = () => {
 
   // Preview navigation
   const handlePreview = () => {
-    // Save quiz draft to localStorage for PreviewQuizPage
+    // Save the current slide's color and text color to globalSettings for preview
+    const latestSettings = slides[current]?.settings || globalSettings;
     localStorage.setItem('quizDraft', JSON.stringify({
       slides,
-      globalSettings,
+      globalSettings: latestSettings,
       quizTitle
     }));
     navigate('/quiz/preview/preview');

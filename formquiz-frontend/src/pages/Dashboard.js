@@ -188,7 +188,7 @@ const Dashboard = () => {
                       sharedWith={item.shared_with || []}
                       link={activeTab === 'forms'
                         ? `/form/${item.id}`
-                        : (item.is_published ? `${window.location.origin}/join/${item.id}` : '')}
+                        : (item.is_published ? `${window.location.origin}/userend?quizId=${item.id}` : '')}
                       creator={username}
                       formId={item.id}
                       isForm={activeTab === 'forms'}

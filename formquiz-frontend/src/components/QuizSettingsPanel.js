@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaFont, FaPalette, FaClock } from 'react-icons/fa';
+import { FaFont, FaPalette } from 'react-icons/fa';
 import './CustomizationPanel.css';
 
 const fonts = [
@@ -67,15 +67,6 @@ const QuizSettingsPanel = ({ settings, onChange }) => {
             />
           </label>
         </div>
-      </MinimalSection>
-      <MinimalSection icon={<FaClock />} title="Timer">
-        <select
-          value={settings.timer}
-          onChange={e => onChange({ ...settings, timer: +e.target.value })}
-          className="quiz-settings-minimal-select"
-        >
-          {[10, 15, 20, 30, 45, 60].map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
       </MinimalSection>
     </div>
   );

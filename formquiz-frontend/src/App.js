@@ -3,7 +3,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ToastProvider } from './components/Toast';
 import { LiveQuizProvider } from './context/LiveQuizContext';
-
+import ResponsePage from './pages/ResponsePage';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import FormBuilder from './pages/FormBuilder';
@@ -46,18 +46,14 @@ function App() {
 
             {/* Quiz Mode */}
             <Route path="/quiz" element={<Quiz />} />
+            <Route path="/quiz/:quizId" element={<Quiz />} />
             <Route path="/preview" element={<UserEnd />} /> {/* Preview for quiz/test form */}
-
-
 
             {/* Response Page */}
             <Route path="/respond/:formId" element={<ResponsePage />} />
 
-          {/* Results */}
-          <Route path="/results/:formId" element={<ResultsPage />} />
-
-          
- 
+            {/* Results */}
+            <Route path="/results/:formId" element={<ResultsPage />} />
 
             {/* Future Features - Uncomment when ready */}
             {/* <Route path="/create" element={<CreateForm />} /> */}
@@ -70,6 +66,9 @@ function App() {
             <Route path="/quiz/preview/:quizId" element={<PreviewQuizPage />} />
             <Route path="/quiz/results/:quizId" element={<ResultsPage />} />
             <Route path="/quiz/fill/:quizId" element={<QuizFillPage />} />
+
+            {/* User-end preview route */}
+            <Route path="/userend" element={<UserEnd />} />
 
             {/* Profile/Settings */}
             <Route path="/profile" element={<Profile />} />

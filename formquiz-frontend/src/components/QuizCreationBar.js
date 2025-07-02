@@ -3,37 +3,38 @@ import { useNavigate } from 'react-router-dom';
 import { FaRegListAlt, FaBroadcastTower, FaCheckSquare, FaPoll, FaStar } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import './FormCreationBar.css';
+import { supabase } from '../supabase';
 
 const quizTemplates = [
   {
     title: 'Blank Quiz',
     desc: 'Start from scratch and build your own quiz.',
     icon: <FaRegListAlt size={28} color="#4a6bff" />,
-    onClick: (navigate) => navigate('/quiz/create'),
+    onClick: (navigate) => navigate('/quiz'),
   },
   {
     title: 'Live Quiz',
     desc: 'Host a live, interactive quiz session.',
     icon: <FaBroadcastTower size={28} color="#4a6bff" />,
-    onClick: (navigate) => navigate('/quiz/create?type=live'),
+    onClick: (navigate) => navigate('/quiz/create'),
   },
   {
     title: 'MCQ Quiz',
     desc: 'Multiple choice quiz template.',
     icon: <FaCheckSquare size={28} color="#4a6bff" />,
-    onClick: (navigate) => navigate('/quiz/create?type=mcq'),
+    onClick: (navigate) => navigate('/quiz/create'),
   },
   {
     title: 'Poll',
     desc: 'Quick poll for instant feedback.',
     icon: <FaPoll size={28} color="#4a6bff" />,
-    onClick: (navigate) => navigate('/quiz/create?type=poll'),
+    onClick: (navigate) => navigate('/quiz/create'),
   },
   {
     title: 'Trivia',
     desc: 'Fun trivia quiz template.',
     icon: <FaStar size={28} color="#4a6bff" />,
-    onClick: (navigate) => navigate('/quiz/create?type=trivia'),
+    onClick: (navigate) => navigate('/quiz/create'),
   },
 ];
 

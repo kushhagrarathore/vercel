@@ -22,7 +22,7 @@ const FormCardRow = ({
     if (isForm) {
       navigate(`/builder/${formId}`);
     } else {
-      navigate(`/quiz/create/${formId}`);
+      navigate(`/quiz/${formId}`);
     }
   };
 
@@ -40,7 +40,7 @@ const FormCardRow = ({
     if (isForm) {
       navigate(`/results/${formId}`);
     } else {
-      navigate(`/quiz/results/${formId}`);
+      navigate(`/quiz/${formId}?tab=results`);
     }
   };
 
