@@ -24,6 +24,7 @@ const LiveQuizParticipant = () => {
   const [currentQuestionId, setCurrentQuestionId] = useState(null);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [phase, setPhase] = useState('question');
+  const [channel, setChannel] = useState(null);
 
   // Debug logging utility
   const debug = (...args) => { if (process.env.NODE_ENV !== 'production') console.log('[Participant]', ...args); };
@@ -35,7 +36,7 @@ const LiveQuizParticipant = () => {
       const { data, error } = await supabase
         .from('sessions')
         .select('*')
-        .eq('session_code', roomCode)
+        .eq('code', roomCode)
         .single();
       if (error || !data) {
         setLiveQuiz(null);
@@ -45,7 +46,7 @@ const LiveQuizParticipant = () => {
       if (channelRef.current) supabase.removeChannel(channelRef.current);
       channelRef.current = supabase
         .channel('live-quiz-' + roomCode)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `session_code=eq.${roomCode}` }, (payload) => {
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `code=eq.${roomCode}` }, (payload) => {
           setLiveQuiz(payload.new);
         })
         .subscribe();
@@ -175,7 +176,7 @@ const LiveQuizParticipant = () => {
   const fetchLeaderboard = async () => {
     const { data } = await supabase
       .from('session_participants')
-      .select('*')
+      .select('name, score')
       .eq('session_code', roomCode)
       .order('score', { ascending: false });
     setLeaderboard(data || []);
@@ -198,67 +199,66 @@ const LiveQuizParticipant = () => {
     }
   }, [quizState?.quiz_status]);
 
-  // Subscribe to live_responses for this room (optional, for live stats)
-  useEffect(() => {
-    if (!roomCode) return;
-    const channel = supabase
-      .channel('live_responses_' + roomCode)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_responses', filter: `quizRoomId=eq.${roomCode}` }, () => {
-        // Optionally fetch live responses or update UI
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [roomCode]);
-
-  // In handleSubmit, insert into live_responses and update participant score
+  // Answer submission
   const handleSubmit = async () => {
     if (selectedOption == null || isLocked || submitted) return;
     setIsLocked(true);
     setSubmitted(true);
-    if (!slides[currentIndex]) return;
-
-    // Check if correct
-    const isCorrect = selectedOption === slides[currentIndex].correct_answer_index;
-    const points = isCorrect ? 1 : 0; // or your custom scheme
-
-    // Save response to DB
-    await supabase.from('live_responses').insert([
-      {
-        participant_id: participantId,
+    const slide = slides[currentIndex];
+    if (!slide) return;
+    try {
+      await supabase.from('session_participant_answers').insert({
         session_code: roomCode,
-        slide_index: slides[currentIndex].slide_index,
-        answer: selectedOption,
-        is_correct: isCorrect,
-        points,
-        submitted_at: new Date().toISOString(),
-      },
-    ]);
-
-    // Update participant score (fetch, add, update)
-    if (participantId) {
-      const { data: participantData } = await supabase
-        .from('session_participants')
-        .select('score')
-        .eq('id', participantId)
-        .single();
-      const newScore = (participantData?.score || 0) + points;
-      await supabase.from('session_participants')
-        .update({ score: newScore })
-        .eq('id', participantId);
-    }
-
-    // Show feedback
-    setFeedback({
-      isCorrect,
-      correctAnswer: slides[currentIndex].options?.[slides[currentIndex].correct_answer_index],
-      feedbackText: isCorrect ? 'Correct! +1 point' : 'Wrong! 0 points',
-    });
-
-    // If last question, show leaderboard
-    if (currentIndex >= slides.length - 1) {
-      setTimeout(() => setFinished(true), 1200);
+        participant_id: participantId,
+        question_id: slide.id,
+        answer: selectedOption
+      });
+    } catch (err) {
+      // Optionally show error to user
     }
   };
+
+  // Timer lock (locks UI if timer expires)
+  useEffect(() => {
+    if (!timer || phase !== 'question') return;
+    const timeout = setTimeout(() => setIsLocked(true), timer * 1000);
+    return () => clearTimeout(timeout);
+  }, [timer, phase]);
+
+  useEffect(() => {
+    if (!roomCode) return;
+    const ch = supabase.channel(`quiz_${roomCode}`);
+    setChannel(ch);
+    ch
+      .on('broadcast', { event: 'start_quiz' }, () => {
+        setPhase('question');
+      })
+      .on('broadcast', { event: 'new_question' }, ({ payload }) => {
+        setCurrentIndex(payload.slide_index);
+        setTimer(payload.timer);
+        setTimeLeft(payload.timer);
+        setPhase('question');
+        setSelectedOption(null);
+        setFeedback(null);
+        setIsLocked(false);
+        setSubmitted(false);
+      })
+      .on('broadcast', { event: 'lock_answers' }, ({ payload }) => {
+        setIsLocked(true);
+        setFeedback({
+          isCorrect: selectedOption === payload.correctAnswerIndex,
+          correctAnswer: payload.correctAnswerIndex,
+          stats: payload.stats
+        });
+        setPhase('leaderboard');
+      })
+      .on('broadcast', { event: 'show_leaderboard' }, ({ payload }) => {
+        setPhase('final_leaderboard');
+        setLeaderboard(payload.scores);
+      })
+      .subscribe();
+    return () => { ch.unsubscribe && ch.unsubscribe(); };
+  }, [roomCode]);
 
   if (finished) return <Leaderboard players={finalLeaderboard} roomCode={roomCode} />;
   if (!liveQuiz?.is_live) return <div style={{ padding: 32, color: '#888', fontWeight: 600 }}>Waiting for host to start the quiz...</div>;
@@ -348,6 +348,11 @@ const LiveQuizParticipant = () => {
           >
             Submit Answer
           </button>
+          {submitted && (
+            <div style={{ marginTop: 18, color: '#2563eb', fontWeight: 700, fontSize: 18 }}>
+              Waiting for host to move to the next question...
+            </div>
+          )}
           {feedback && (
             <div style={{ marginTop: 18, color: feedback.isCorrect ? '#059669' : '#e11d48', fontWeight: 700, fontSize: 18 }}>
               {feedback.feedbackText} <br />

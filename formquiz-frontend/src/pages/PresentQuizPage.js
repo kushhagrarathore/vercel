@@ -13,6 +13,7 @@ const PHASES = {
   TRANSITION: 'transition',
   ENDED: 'ended',
   FINAL_LEADERBOARD: 'final_leaderboard',
+  ANSWER_REVEAL: 'answer_reveal',
 };
 
 function randomRoomCode() {
@@ -60,6 +61,9 @@ const PresentQuizPage = () => {
   const [showQR, setShowQR] = useState(false);
   const [copySuccess, setCopySuccess] = useState('');
   const navigate = useNavigate();
+  const [channel, setChannel] = useState(null);
+  const [answerStats, setAnswerStats] = useState([]);
+  const [correctOption, setCorrectOption] = useState(null);
 
   // Debug logging utility
   const debug = (...args) => { if (process.env.NODE_ENV !== 'production') console.log('[Host]', ...args); };
@@ -81,10 +85,10 @@ const PresentQuizPage = () => {
     const createSession = async () => {
       setLoading(true);
       const code = Math.floor(100000 + Math.random() * 900000).toString();
-      await supabase.from('sessions').delete().eq('quiz_id', quizId);
+      await supabase.from('sessions').delete().eq('code', quizId);
       const { error: insertError } = await supabase.from('sessions').insert([{
         quiz_id: quizId,
-        session_code: code,
+        code: code,
         quiz_status: PHASES.LOBBY,
         current_slide_index: null,
         timer_end: null,
@@ -104,18 +108,9 @@ const PresentQuizPage = () => {
   // Subscribe to live_quiz_state for this room
   useEffect(() => {
     if (!roomCode) return;
-    const channel = supabase
-      .channel('live_quiz_state_' + roomCode)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_quiz_state', filter: `quiz_room_id=eq.${roomCode}` }, payload => {
-        const state = payload.new;
-        if (!state) return;
-        setPhase(state.quiz_status);
-        setCurrentIndex(state.current_slide_index);
-        setTimer(state.timer_value);
-        setTimeLeft(state.timer_value);
-      })
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const ch = supabase.channel(`quiz_${roomCode}`);
+    setChannel(ch);
+    return () => { ch.unsubscribe && ch.unsubscribe(); };
   }, [roomCode]);
 
   // Subscribe to session_participants for this room
@@ -156,32 +151,49 @@ const PresentQuizPage = () => {
     return () => clearInterval(timerInterval.current);
   }, [phase, timer, currentIndex]);
 
-  // Host Next button handler
+  // Host: Lock answers and show answer reveal
+  const handleLockAnswers = async () => {
+    const slide = slides[currentIndex];
+    // Fetch all answers for this question
+    const { data: answers } = await supabase
+      .from('session_participant_answers')
+      .select('answer')
+      .eq('session_code', roomCode)
+      .eq('question_id', slide.id);
+    // Count votes for each option
+    const stats = Array(slide.options.length).fill(0);
+    (answers || []).forEach(a => {
+      if (typeof a.answer === 'number' && stats[a.answer] !== undefined) stats[a.answer]++;
+    });
+    setAnswerStats(stats);
+    setCorrectOption(slide.correct_option);
+    setPhase(PHASES.ANSWER_REVEAL);
+    await supabase.from('sessions').update({
+      phase: PHASES.ANSWER_REVEAL
+    }).eq('code', roomCode);
+    console.log('[HOST] Locked answers, showing answer reveal.');
+  };
+
+  // Host: Move to next question (manual only)
   const handleNext = async () => {
-    if (phase === PHASES.QUESTION) {
-      // If last question, end quiz
-      if (currentIndex >= slides.length - 1) {
-        await supabase.from('live_quiz_state').update({ quiz_status: PHASES.ENDED }).eq('quiz_room_id', roomCode);
-        await supabase.from('sessions').update({ quiz_status: PHASES.ENDED, is_live: false }).eq('session_code', roomCode);
-        setPhase(PHASES.ENDED);
-        return;
-      }
-      // Advance to next question
-      const nextIdx = currentIndex + 1;
-      await supabase.from('live_quiz_state').update({
-        current_slide_index: nextIdx,
-        timer_value: slides[nextIdx].timer || 20,
-        quiz_status: PHASES.QUESTION,
-      }).eq('quiz_room_id', roomCode);
-      await supabase.from('sessions').update({
-        quiz_status: PHASES.QUESTION,
-        current_slide_index: nextIdx,
-        is_live: true,
-      }).eq('session_code', roomCode);
+    if (currentIndex < slides.length - 1) {
+      const nextIndex = currentIndex + 1;
+      setCurrentIndex(nextIndex);
       setPhase(PHASES.QUESTION);
-      setCurrentIndex(nextIdx);
-      setTimer(slides[nextIdx].timer || 20);
-      setTimeLeft(slides[nextIdx].timer || 20);
+      setAnswerStats([]);
+      setCorrectOption(null);
+      const slide = slides[nextIndex];
+      await supabase.from('sessions').update({
+        current_slide_index: slide.slide_index,
+        phase: PHASES.QUESTION
+      }).eq('code', roomCode);
+      console.log('[HOST] Updated session to next question:', slide.slide_index);
+    } else {
+      setPhase(PHASES.FINAL_LEADERBOARD);
+      await supabase.from('sessions').update({
+        phase: PHASES.FINAL_LEADERBOARD
+      }).eq('code', roomCode);
+      console.log('[HOST] Quiz ended, showing final leaderboard.');
     }
   };
 
@@ -191,23 +203,37 @@ const PresentQuizPage = () => {
       setError('No slides found for this quiz.');
       return;
     }
-    // Set live_quiz_state to first question
-    await supabase.from('live_quiz_state').upsert({
-      quiz_room_id: roomCode,
-      timer_value: slides[0].timer || 20,
-      current_slide_index: 0,
-      quiz_status: PHASES.QUESTION,
+    await supabase
+      .from('sessions')
+      .update({ is_live: true, quiz_status: 'question' })
+      .eq('code', roomCode);
+    handleSendQuestion(0);
+  };
+
+  const handleSendQuestion = async (slideIdx) => {
+    const slide = slides[slideIdx];
+    await supabase
+      .from('sessions')
+      .update({
+        current_slide_index: slide.slide_index,
+        timer_start: new Date().toISOString(),
+        timer_end: new Date(Date.now() + slide.timer * 1000).toISOString()
+      })
+      .eq('code', roomCode);
+    safeSend({
+      type: 'broadcast',
+      event: 'new_question',
+      payload: {
+        question: slide.question,
+        options: slide.options,
+        slide_index: slide.slide_index,
+        timer: slide.timer
+      }
     });
-    // Set session to live
-    await supabase.from('sessions').update({
-      quiz_status: PHASES.QUESTION,
-      current_slide_index: 0,
-      is_live: true,
-    }).eq('session_code', roomCode);
+    setCurrentIndex(slideIdx);
+    setTimer(slide.timer);
+    setTimeLeft(slide.timer);
     setPhase(PHASES.QUESTION);
-    setCurrentIndex(0);
-    setTimer(slides[0].timer || 20);
-    setTimeLeft(slides[0].timer || 20);
   };
 
   // Auto-advance timer for host (only in question phase)
@@ -231,7 +257,7 @@ const PresentQuizPage = () => {
     await supabase.from('sessions').update({
       quiz_status: 'ended',
       timer_end: null,
-    }).eq('session_code', roomCode);
+    }).eq('code', roomCode);
     setStatus('ended');
   };
 
@@ -319,7 +345,7 @@ const PresentQuizPage = () => {
 
   const handleFinishQuiz = async () => {
     if (!liveQuiz) return;
-    await supabase.from('sessions').update({ phase: 'ended' }).eq('session_code', roomCode);
+    await supabase.from('sessions').update({ phase: 'ended' }).eq('code', roomCode);
     setPhase('ended');
   };
 
@@ -328,7 +354,7 @@ const PresentQuizPage = () => {
     if (status !== 'live' || !liveQuiz || !slides.length) return;
     if (phase === 'leaderboard') {
       const timeout = setTimeout(async () => {
-        await supabase.from('sessions').update({ phase: 'transition' }).eq('session_code', roomCode);
+        await supabase.from('sessions').update({ phase: 'transition' }).eq('code', roomCode);
         setPhase('transition');
       }, 3500);
       return () => clearTimeout(timeout);
@@ -344,7 +370,7 @@ const PresentQuizPage = () => {
             current_slide_index: next,
             timer_end: timerEnd,
             phase: 'question',
-          }).eq('session_code', roomCode);
+          }).eq('code', roomCode);
           setPhase('question');
         } else {
           setShowFinishQuiz(true);
@@ -410,7 +436,7 @@ const PresentQuizPage = () => {
     if (!roomCode) return;
     const channel = supabase
       .channel('live_responses_' + roomCode)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_responses', filter: `session_code=eq.${roomCode}` }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'session_participant_answers', filter: `session_code=eq.${roomCode}` }, () => {
         // Optionally fetch live responses or update UI
       })
       .subscribe();
@@ -429,6 +455,50 @@ const PresentQuizPage = () => {
   const handleShowFinalLeaderboard = () => {
     setPhase(PHASES.FINAL_LEADERBOARD);
   };
+
+  const handleShowLeaderboard = async () => {
+    const { data: scores } = await supabase
+      .from('session_participant_answers')
+      .select('participant_id, sum(points) as score')
+      .eq('session_code', roomCode)
+      .group('participant_id')
+      .order('score', { ascending: false });
+    for (const row of scores || []) {
+      await supabase
+        .from('session_participants')
+        .update({ score: row.score })
+        .eq('id', row.participant_id);
+    }
+    safeSend({
+      type: 'broadcast',
+      event: 'show_leaderboard',
+      payload: { scores }
+    });
+    setPhase(PHASES.FINAL_LEADERBOARD);
+  };
+
+  // Send event to channel with error handling
+  const safeSend = (eventObj) => {
+    try {
+      channel.send(eventObj);
+    } catch (err) {
+      setError('Failed to send event: ' + err.message);
+    }
+  };
+
+  // Timer expiration: auto-lock answers
+  useEffect(() => {
+    if (phase !== PHASES.QUESTION || !timer) return;
+    const timeout = setTimeout(() => {
+      handleLockAnswers();
+    }, timer * 1000);
+    return () => clearTimeout(timeout);
+  }, [phase, timer]);
+
+  // Add debug output for all state changes
+  useEffect(() => {
+    console.log('[HOST] Phase:', phase, 'Current Index:', currentIndex, 'Room:', roomCode);
+  }, [phase, currentIndex, roomCode]);
 
   if (status === 'ended') {
     return (
@@ -566,9 +636,9 @@ const PresentQuizPage = () => {
                 <div style={{ margin: '18px 0', background: '#e0e7ff', borderRadius: 12, padding: '14px 0', fontWeight: 800, fontSize: 22, color: '#2563eb', textAlign: 'center', boxShadow: '0 2px 8px rgba(60,60,100,0.07)', width: '100%' }}>
                   Time Left: {timeLeft}s
                 </div>
-                <button onClick={handleNext} style={{ padding: '12px 32px', borderRadius: 10, background: '#2563eb', color: '#fff', border: 'none', fontWeight: 700, fontSize: 18, marginTop: 8, width: '100%' }}>
-                  Next
-                </button>
+                {phase === PHASES.QUESTION && slides[currentIndex] && (
+                  <button onClick={handleLockAnswers} style={{ marginTop: 24, padding: '12px 32px', borderRadius: 10, background: '#f59e42', color: '#fff', border: 'none', fontWeight: 700, fontSize: 18 }}>Lock Answers</button>
+                )}
               </div>
             );
           } else if (phase === PHASES.LEADERBOARD) {
@@ -606,6 +676,50 @@ const PresentQuizPage = () => {
                   @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
                   @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
                 `}</style>
+              </div>
+            );
+          } else if (phase === PHASES.ANSWER_REVEAL && slides[currentIndex]) {
+            return (
+              <div style={{
+                background: '#fff',
+                borderRadius: 18,
+                boxShadow: '0 8px 32px rgba(60,60,100,0.10)',
+                padding: '32px 24px',
+                minWidth: 320,
+                maxWidth: 520,
+                width: '100%',
+                margin: '0 0 18px 0',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                position: 'relative',
+                transition: 'box-shadow 0.2s',
+                border: '2px solid #e0e7ff',
+              }}>
+                <div style={{ fontWeight: 800, fontSize: 24, color: '#2563eb', marginBottom: 10 }}>Q{currentIndex + 1} / {slides.length}</div>
+                <div style={{ color: '#23272f', fontWeight: 700, fontSize: 22, margin: '0 0 18px 0', textAlign: 'center', letterSpacing: '-0.5px' }}>{slides[currentIndex]?.question}</div>
+                <div style={{ width: '100%', marginTop: 8 }}>
+                  {(slides[currentIndex]?.options || []).map((opt, idx) => (
+                    <div key={idx} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      margin: '10px 0',
+                      padding: '16px 0',
+                      borderRadius: 12,
+                      background: idx === correctOption ? '#bbf7d0' : '#f3f4f6',
+                      color: '#23272f',
+                      border: idx === correctOption ? '2.5px solid #059669' : '2px solid #e0e0e0',
+                      fontWeight: 700,
+                      fontSize: 19,
+                      width: '100%',
+                      justifyContent: 'space-between',
+                    }}>
+                      <span>{opt}</span>
+                      <span style={{ color: '#2563eb', fontWeight: 800 }}>{answerStats[idx] || 0} votes</span>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={handleNext} style={{ marginTop: 24, padding: '12px 32px', borderRadius: 10, background: '#2563eb', color: '#fff', border: 'none', fontWeight: 700, fontSize: 18 }}>Next</button>
               </div>
             );
           }

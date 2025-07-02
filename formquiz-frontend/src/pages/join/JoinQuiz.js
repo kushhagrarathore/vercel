@@ -34,10 +34,16 @@ const JoinQuiz = () => {
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [answerSubmitted, setAnswerSubmitted] = useState(false);
   const [joinAttempted, setJoinAttempted] = useState(false);
+  const [availableRooms, setAvailableRooms] = useState([]);
+  const [answerStats, setAnswerStats] = useState([]);
+  const [correctOption, setCorrectOption] = useState(null);
+
+  console.log('[PARTICIPANT DEBUG] roomCode:', roomCode);
 
   // Subscribe to sessions for this room (always keep in sync)
   useEffect(() => {
     if (!roomCode) return;
+    let channel;
     const subscribe = async () => {
       const { data, error } = await supabase
         .from('sessions')
@@ -51,18 +57,22 @@ const JoinQuiz = () => {
       }
       setLiveQuiz(data);
       setPhase(data?.phase || 'question');
-      if (channelRef.current) supabase.removeChannel(channelRef.current);
-      channelRef.current = supabase
+      if (channel) supabase.removeChannel(channel);
+      channel = supabase
         .channel('live-quiz-' + roomCode)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `code=eq.${roomCode}` }, (payload) => {
           setLiveQuiz(payload.new);
           setPhase(payload.new?.phase || 'question');
+          console.log('[PARTICIPANT] Session updated:', payload.new);
+          if (payload.new?.current_slide_index != null) {
+            fetchQuestion(payload.new.current_slide_index);
+          }
         })
         .subscribe();
     };
     subscribe();
     return () => {
-      if (channelRef.current) supabase.removeChannel(channelRef.current);
+      if (channel) supabase.removeChannel(channel);
     };
   }, [roomCode]);
 
@@ -95,7 +105,7 @@ const JoinQuiz = () => {
   useEffect(() => {
     if (!liveQuiz?.quiz_id) return;
     const fetchSlides = async () => {
-      const { data, error } = await supabase.from('slides').select('*').eq('quiz_id', liveQuiz.quiz_id).order('slide_index');
+      const { data, error } = await supabase.from('live_quiz_slides').select('*').eq('quiz_id', liveQuiz.quiz_id).order('slide_index');
       if (!error) setSlides(data || []);
     };
     fetchSlides();
@@ -184,6 +194,12 @@ const JoinQuiz = () => {
     }
   };
 
+  // Fetch available room codes for debugging if join fails
+  const fetchAvailableRooms = async () => {
+    const { data, error } = await supabase.from('sessions').select('code').order('created_at', { ascending: false });
+    if (!error && data) setAvailableRooms(data.map(r => r.code));
+  };
+
   const handleJoin = async () => {
     setJoinAttempted(true);
     setError(null);
@@ -196,16 +212,19 @@ const JoinQuiz = () => {
       return;
     }
     setJoining(true);
-    // Use the correct column for room code
+    // Debug: log the code being checked
+    console.log('Attempting to join room code:', roomCode);
     const { data, error } = await supabase
       .from('sessions')
       .select('*')
-      .eq('session_code', roomCode)
+      .eq('code', roomCode)
       .single();
+    console.log('Supabase query result:', data, error);
     if (error || !data) {
       setError('Invalid room code.');
       setLiveQuiz(null);
       setJoining(false);
+      fetchAvailableRooms(); // Show available rooms for debugging
       return;
     }
     // Register participant immediately, even if quiz not started
@@ -218,21 +237,37 @@ const JoinQuiz = () => {
     setLiveQuiz(data);
     setJoined(true);
     setJoining(false);
+    // Always fetch the current question for this session (sync with host)
+    if (data.current_slide_index != null) {
+      fetchQuestion(data.current_slide_index);
+    }
   };
 
   const handleAnswer = async (optionIdx) => {
     if (answerSubmitted) return;
     setSelectedOption(optionIdx);
-    // Submit answer to backend (adjust table/columns as needed)
-    await supabase.from('session_participant_answers').insert([
-      {
-        session_code: roomCode,
-        participant_id: participantId,
-        question_id: currentQuestion.id,
-        answer: optionIdx,
-      },
-    ]);
-    setAnswerSubmitted(true);
+    // Submit answer to backend (use UUIDs for participant_id and question_id)
+    try {
+      console.log('[SUBMIT] session_code:', roomCode, 'participant_id:', participantId, 'question_id:', currentQuestion.id, 'answer:', optionIdx);
+      const { data, error } = await supabase.from('session_participant_answers').insert([
+        {
+          session_code: roomCode,
+          participant_id: participantId, // UUID
+          question_id: currentQuestion.id, // UUID
+          answer: optionIdx,
+        },
+      ]);
+      if (error) {
+        setError('Failed to submit answer: ' + error.message);
+        console.error('Supabase insert error:', error);
+      } else {
+        console.log('Answer submitted:', data);
+        setAnswerSubmitted(true);
+      }
+    } catch (err) {
+      setError('Unexpected error submitting answer.');
+      console.error(err);
+    }
   };
 
   // Subscribe to own participant row for status updates
@@ -270,66 +305,103 @@ const JoinQuiz = () => {
     }
   }, [liveQuiz, roomCode]);
 
-  // Subscribe to quiz state after joining
-  let quizStateChannel = null;
+  // Add a subscription to the 'sessions' table for the current room code
   useEffect(() => {
     if (!joined || !liveQuiz) return;
-    quizStateChannel = supabase
-      .channel('live_quiz_state_' + roomCode)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_quiz_state', filter: `quiz_room_id=eq.${roomCode}` }, (payload) => {
-        const { phase, current_question_id } = payload.new;
-        setQuizPhase(phase);
-        if (phase === 'question') {
-          fetchQuestion(current_question_id);
+    const sessionChannel = supabase
+      .channel('session-phase-' + roomCode)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `code=eq.${roomCode}` }, (payload) => {
+        const { phase, quiz_status, current_slide_index } = payload.new;
+        console.log('[PARTICIPANT DEBUG] sessions update:', payload.new);
+        const effectivePhase = (quiz_status === 'running') ? 'question' : (phase || quiz_status);
+        setQuizPhase(effectivePhase);
+        if (effectivePhase === 'question') {
+          fetchQuestion(current_slide_index);
         }
       })
       .subscribe();
     // Initial fetch
-    fetchQuizState();
-    return () => {
-      if (quizStateChannel) supabase.removeChannel(quizStateChannel);
-    };
-  }, [joined, liveQuiz]);
-
-  const fetchQuizState = async () => {
-    const { data } = await supabase
-      .from('live_quiz_state')
-      .select('*')
-      .eq('quiz_room_id', roomCode)
-      .single();
-    console.log('[fetchQuizState] data:', data);
-    if (data) {
-      setQuizPhase(data.phase);
-      if (data.phase === 'question') {
-        fetchQuestion(data.current_question_id);
+    const fetchSessionPhase = async () => {
+      const { data } = await supabase.from('sessions').select('*').eq('code', roomCode).single();
+      if (data) {
+        setQuizPhase(data.phase || data.quiz_status);
+        if ((data.phase || data.quiz_status) === 'question') {
+          fetchQuestion(data.current_slide_index);
+        }
       }
-    }
-  };
+    };
+    fetchSessionPhase();
+    return () => {
+      supabase.removeChannel(sessionChannel);
+    };
+  }, [joined, liveQuiz, roomCode]);
 
   const fetchQuestion = async (questionIdOrIndex) => {
     console.log('[fetchQuestion] called with:', questionIdOrIndex, 'liveQuiz:', liveQuiz);
-    // Try to fetch by id first
+    if (typeof questionIdOrIndex === 'number' && liveQuiz?.quiz_id != null) {
+      const { data, error } = await supabase
+        .from('live_quiz_slides')
+        .select('*')
+        .eq('quiz_id', liveQuiz.quiz_id)
+        .eq('slide_index', questionIdOrIndex)
+        .single();
+      console.log('[fetchQuestion] by slide_index result:', data, error, 'slide_index type:', typeof questionIdOrIndex);
+      if (data) {
+        setCurrentQuestion(data);
+        return;
+      } else {
+        // Fallback: fetch all slides and log them
+        const { data: allSlides } = await supabase
+          .from('live_quiz_slides')
+          .select('*')
+          .eq('quiz_id', liveQuiz.quiz_id);
+        console.log('[fetchQuestion] all slides for quiz:', allSlides);
+        if (allSlides && allSlides.length > 0) {
+          allSlides.forEach(s => console.log('slide_index:', s.slide_index, 'type:', typeof s.slide_index, 'id:', s.id));
+        }
+      }
+    }
+    // Otherwise, try to fetch by id
     let { data } = await supabase
       .from('live_quiz_slides')
       .select('*')
       .eq('id', questionIdOrIndex)
       .single();
-    console.log('[fetchQuestion] by id result:', data);
-    // If not found, try by index (slide_index)
-    if (!data && liveQuiz?.quiz_id != null) {
-      const { data: slides } = await supabase
-        .from('live_quiz_slides')
-        .select('*')
-        .eq('quiz_id', liveQuiz.quiz_id)
-        .order('slide_index');
-      console.log('[fetchQuestion] slides by quiz_id:', slides);
-      if (slides && slides.length > 0 && typeof questionIdOrIndex === 'number' && slides[questionIdOrIndex]) {
-        data = slides[questionIdOrIndex];
-      }
-    }
     setCurrentQuestion(data);
-    console.log('[fetchQuestion] setCurrentQuestion:', data);
+    console.log('[fetchQuestion] by id result:', data);
   };
+
+  // Fetch answer stats and correct answer during answer_reveal phase
+  useEffect(() => {
+    if (quizPhase === 'answer_reveal' && currentQuestion) {
+      const fetchStats = async () => {
+        const { data: answers } = await supabase
+          .from('session_participant_answers')
+          .select('answer')
+          .eq('session_code', roomCode)
+          .eq('question_id', currentQuestion.id);
+        const stats = Array(currentQuestion.options.length).fill(0);
+        (answers || []).forEach(a => {
+          if (typeof a.answer === 'number' && stats[a.answer] !== undefined) stats[a.answer]++;
+        });
+        setAnswerStats(stats);
+        setCorrectOption(currentQuestion.correct_option);
+      };
+      fetchStats();
+    }
+  }, [quizPhase, currentQuestion, roomCode]);
+
+  // Add debug output for all state changes
+  useEffect(() => {
+    console.log('[PARTICIPANT] Phase:', quizPhase, 'Current Index:', currentIndex, 'Room:', roomCode, 'Submitted:', answerSubmitted, 'Locked:', isLocked);
+  }, [quizPhase, currentIndex, roomCode, answerSubmitted, isLocked]);
+
+  // Always fetch the current question when current_slide_index changes
+  useEffect(() => {
+    if (liveQuiz && liveQuiz.current_slide_index != null) {
+      fetchQuestion(liveQuiz.current_slide_index);
+    }
+  }, [liveQuiz?.current_slide_index]);
 
   if (joining) {
     return (
@@ -364,10 +436,22 @@ const JoinQuiz = () => {
             maxLength={32}
           />
           <button onClick={handleJoin} style={{ padding: '12px 0', fontSize: 17, borderRadius: 8, background: '#2563eb', color: '#fff', border: 'none', fontWeight: 700, width: '100%', marginBottom: 8, cursor: 'pointer', boxShadow: '0 2px 8px #e0e7ff' }}>Join</button>
-          {joinAttempted && error && <div style={{ color: 'red', marginTop: 8, fontSize: 15 }}>{error}</div>}
+          {joinAttempted && error && <div style={{ color: 'red', marginTop: 8, fontSize: 15 }}>{error}
+            {availableRooms.length > 0 && (
+              <div style={{ color: '#888', fontSize: 13, marginTop: 8 }}>
+                <div>Available room codes:</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {availableRooms.map(code => <span key={code} style={{ background: '#e0e7ff', borderRadius: 6, padding: '2px 8px', margin: 2 }}>{code}</span>)}
+                </div>
+              </div>
+            )}
+          </div>}
         </div>
       </div>
     );
+  }
+  if (!liveQuiz?.is_live || liveQuiz.phase === 'lobby') {
+    return <div style={{ padding: 32, color: '#888', fontWeight: 600 }}>Waiting for host to start the quiz...</div>;
   }
   if (quizPhase === 'waiting') {
     return (
@@ -376,7 +460,7 @@ const JoinQuiz = () => {
       </div>
     );
   }
-  if (quizPhase === 'question' && currentQuestion) {
+  if ((quizPhase === 'question' || quizPhase === 'running') && currentQuestion) {
     return (
       <div style={{ maxWidth: 400, margin: '40px auto', padding: 24, background: 'white', borderRadius: 12, boxShadow: '0 2px 12px #eee' }}>
         <div style={{ fontWeight: 600, fontSize: 20, marginBottom: 16 }}>{currentQuestion.question_text || currentQuestion.question}</div>
@@ -384,20 +468,67 @@ const JoinQuiz = () => {
           {currentQuestion.options && currentQuestion.options.map((opt, idx) => (
             <button
               key={idx}
-              style={{ padding: 12, borderRadius: 8, border: '1px solid #ddd', background: selectedOption === idx ? '#dbeafe' : '#f9f9f9', cursor: answerSubmitted ? 'not-allowed' : 'pointer' }}
-              disabled={answerSubmitted}
-              onClick={() => handleAnswer(idx)}
+              style={{
+                padding: 12,
+                borderRadius: 8,
+                border: '1px solid #ddd',
+                background: selectedOption === idx ? '#dbeafe' : '#f9f9f9',
+                cursor: isLocked || answerSubmitted ? 'not-allowed' : 'pointer',
+                fontWeight: selectedOption === idx ? 700 : 500,
+                color: selectedOption === idx ? '#2563eb' : '#23272f',
+                outline: selectedOption === idx ? '2px solid #2563eb' : 'none',
+                transition: 'all 0.18s',
+              }}
+              disabled={isLocked || answerSubmitted}
+              onClick={() => setSelectedOption(idx)}
             >
               {opt}
             </button>
           ))}
         </div>
-        {answerSubmitted && <div style={{ marginTop: 18, color: '#2563eb', fontWeight: 600 }}>Answer submitted! Waiting for next question...</div>}
+        <button
+          onClick={() => handleAnswer(selectedOption)}
+          disabled={isLocked || answerSubmitted || selectedOption == null}
+          style={{ marginTop: 24, padding: '13px 34px', borderRadius: 10, background: '#2563eb', color: '#fff', border: 'none', fontWeight: 800, fontSize: 18, width: '100%' }}
+        >
+          Submit Answer
+        </button>
+        {answerSubmitted && (
+          <div style={{ marginTop: 18, color: '#2563eb', fontWeight: 700, fontSize: 18 }}>
+            Waiting for host to move to the next question...
+          </div>
+        )}
+        {error && <div style={{ color: 'red', marginTop: 10 }}>{error}</div>}
+      </div>
+    );
+  }
+  if (quizPhase === 'answer_reveal' && currentQuestion) {
+    return (
+      <div style={{ maxWidth: 400, margin: '40px auto', padding: 24, background: 'white', borderRadius: 12, boxShadow: '0 2px 12px #eee' }}>
+        <div style={{ fontWeight: 600, fontSize: 20, marginBottom: 16 }}>{currentQuestion.question_text || currentQuestion.question}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {currentQuestion.options && currentQuestion.options.map((opt, idx) => (
+            <div key={idx} style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: 12,
+              borderRadius: 8,
+              background: idx === correctOption ? '#bbf7d0' : '#f9f9f9',
+              border: idx === correctOption ? '2.5px solid #059669' : '1px solid #ddd',
+              fontWeight: 700,
+              fontSize: 17,
+              justifyContent: 'space-between',
+            }}>
+              <span>{opt}</span>
+              <span style={{ color: '#2563eb', fontWeight: 800 }}>{answerStats[idx] || 0} votes</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ marginTop: 18, color: '#2563eb', fontWeight: 600 }}>Waiting for host to move to the next question...</div>
       </div>
     );
   }
   if (finished) return <Leaderboard players={leaderboard} roomCode={roomCode} />;
-  if (!liveQuiz?.is_live) return <div style={{ padding: 32, color: '#888', fontWeight: 600 }}>Waiting for host to start the quiz...</div>;
   if (!slides[currentIndex]) return <div style={{ padding: 32 }}>Loading question...</div>;
 
   // Show different UI based on phase
@@ -467,6 +598,22 @@ const JoinQuiz = () => {
         </div>
       );
     }
+  }
+
+  // Add debug output and fallback UI at the end of the render
+  if (true) {
+    // If no other UI matched, show debug info
+    return (
+      <div style={{ padding: 32, color: '#e11d48', fontWeight: 700 }}>
+        <div>Nothing to display for current state.</div>
+        <div style={{ marginTop: 16, color: '#23272f', fontWeight: 400, fontSize: 15 }}>
+          <div><b>quizPhase:</b> {String(quizPhase)}</div>
+          <div><b>joined:</b> {String(joined)}</div>
+          <div><b>currentQuestion:</b> {currentQuestion ? JSON.stringify(currentQuestion) : 'null'}</div>
+          <div><b>liveQuiz:</b> {liveQuiz ? JSON.stringify(liveQuiz) : 'null'}</div>
+        </div>
+      </div>
+    );
   }
 };
 
