@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase/client';
 import { useQuiz } from './QuizContext';
-import { useNavigate, useParams } from 'react-router-dom';
 
 export default function AdminPage() {
   const {
@@ -13,8 +12,6 @@ export default function AdminPage() {
     setParticipants,
     quizPhase,
     setQuizPhase,
-    quiz,
-    setQuiz,
   } = useQuiz();
 
   const [questions, setQuestions] = useState([]);
@@ -23,23 +20,12 @@ export default function AdminPage() {
   const [error, setError] = useState(null);
   const [quizzes, setQuizzes] = useState([]);
   const [selectedQuizId, setSelectedQuizId] = useState("");
-  const navigate = useNavigate();
-  const { quizId } = useParams();
 
   useEffect(() => {
     fetchQuestions();
     fetchQuizzes();
-    const cleanup = setupRealtimeSubscriptions();
-    if (!quiz && quizId) {
-      supabase.from('quizzes').select('*').eq('id', quizId).single().then(({ data }) => {
-        if (data) setQuiz(data);
-      });
-    }
-
-    return () => {
-      cleanup?.();
-    };
-  }, [quiz, quizId, setQuiz]);
+    setupRealtimeSubscriptions();
+  }, []);
 
   async function fetchQuestions() {
     try {
@@ -81,7 +67,7 @@ export default function AdminPage() {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'session_participants' },
-        () => {
+        (payload) => {
           fetchParticipants();
         }
       )
@@ -94,7 +80,7 @@ export default function AdminPage() {
 
   async function fetchParticipants() {
     if (!session?.id) return;
-
+    
     const { data, error } = await supabase
       .from('session_participants')
       .select('*')
@@ -213,20 +199,6 @@ export default function AdminPage() {
   return (
     <div className="max-w-4xl mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">Quiz Admin</h1>
-      {quiz && <div className="mb-4">Quiz: <span className="font-semibold">{quiz.title}</span></div>}
-      {quizId && (
-        <div className="mb-4">
-          <span style={{ fontWeight: 600 }}>Quiz Page Link: </span>
-          <a
-            href={`/quiz/${quizId}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: '#2563eb', textDecoration: 'underline', fontWeight: 500 }}
-          >
-            {window.location.origin + `/quiz/${quizId}`}
-          </a>
-        </div>
-      )}
 
       {!session ? (
         <div>
@@ -238,9 +210,7 @@ export default function AdminPage() {
           >
             {quizzes.length === 0 && <option value="">No quizzes available</option>}
             {quizzes.map(quiz => (
-              <option key={quiz.id} value={quiz.id}>
-                {quiz.title}
-              </option>
+              <option key={quiz.id} value={quiz.id}>{quiz.title}</option>
             ))}
           </select>
           <button
@@ -254,13 +224,9 @@ export default function AdminPage() {
       ) : (
         <div className="space-y-6">
           <div className="bg-gray-100 p-4 rounded">
-            <h2 className="text-lg font-bold">
-              Session Code: {session.code}
-            </h2>
+            <h2 className="text-lg font-bold">Session Code: {session.code}</h2>
             <p>Status: {quizPhase}</p>
-            <p>
-              Question: {currentQuestionIndex + 1} / {questions.length}
-            </p>
+            <p>Question: {currentQuestionIndex + 1} / {questions.length}</p>
           </div>
 
           <div className="bg-white p-4 rounded border">
@@ -272,11 +238,7 @@ export default function AdminPage() {
                   {currentQuestion.options.map((option, index) => (
                     <li
                       key={index}
-                      className={
-                        index === currentQuestion.correct_answer_index
-                          ? 'text-green-600'
-                          : ''
-                      }
+                      className={index === currentQuestion.correct_answer_index ? 'text-green-600' : ''}
                     >
                       {option}
                       {index === currentQuestion.correct_answer_index && ' ✓'}
@@ -313,9 +275,7 @@ export default function AdminPage() {
           </div>
 
           <div>
-            <h3 className="font-bold mb-2">
-              Participants ({participants.length})
-            </h3>
+            <h3 className="font-bold mb-2">Participants ({participants.length})</h3>
             <div className="space-y-2">
               {participants.map((participant) => (
                 <div
@@ -334,8 +294,23 @@ export default function AdminPage() {
               ))}
             </div>
           </div>
+
+          {/* Add visible Quiz Page link for copying and opening in new tab */}
+          {selectedQuizId && (
+            <div className="mb-4">
+              <span style={{ fontWeight: 600 }}>Quiz Page Link: </span>
+              <a
+                href={`/quiz/${selectedQuizId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#2563eb', textDecoration: 'underline', fontWeight: 500 }}
+              >
+                {window.location.origin + `/quiz/${selectedQuizId}`}
+              </a>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
-}
+} 

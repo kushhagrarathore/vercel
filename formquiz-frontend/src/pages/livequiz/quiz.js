@@ -10,6 +10,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { QRCodeCanvas } from "qrcode.react";
+import { FiArrowLeft } from "react-icons/fi";
 
 import { Card } from '../../components/card';
 import { Button } from '../../components/buttonquiz';
@@ -250,7 +251,15 @@ export default function Quiz() {
       {/* Top Bar */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate(-1)}>← Back</Button>
+          <Button
+            variant="outline"
+            className="flex items-center gap-2 rounded-full px-5 py-2 font-medium text-base shadow-sm border hover:bg-gray-100"
+            style={{ background: 'var(--card)', color: 'var(--text)', borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
+            onClick={() => navigate('/dashboard')}
+          >
+            <FiArrowLeft className="text-lg" />
+            Back
+          </Button>
           <Input
             className="text-2xl font-semibold border-none shadow-none focus:ring-0 focus:outline-none w-auto"
             value={title}

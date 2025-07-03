@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase/client';
 import { useQuiz } from './QuizContext';
-import { useParams } from 'react-router-dom';
 
 export default function QuizPage() {
-  const { session, setSession, quiz, setQuiz } = useQuiz();
-  const { quizId } = useParams();
+  const { session, setSession } = useQuiz();
   const [username, setUsername] = useState('');
   const [sessionCode, setSessionCode] = useState('');
   const [participant, setParticipant] = useState(null);
@@ -16,14 +14,6 @@ export default function QuizPage() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [timerWarning, setTimerWarning] = useState(false);
-
-  useEffect(() => {
-    if (!quiz && quizId) {
-      supabase.from('quizzes').select('*').eq('id', quizId).single().then(({ data }) => {
-        if (data) setQuiz(data);
-      });
-    }
-  }, [quiz, quizId, setQuiz]);
 
   useEffect(() => {
     if (!participant?.id) return;
@@ -186,7 +176,7 @@ export default function QuizPage() {
   if (!participant) {
     return (
       <div className="max-w-md mx-auto p-4">
-        {quiz && <h1 className="text-2xl font-bold mb-4">{quiz.title}</h1>}
+        <h1 className="text-2xl font-bold mb-4">Join Quiz</h1>
         {error && <div className="text-red-500 mb-4">{error}</div>}
         <form onSubmit={joinQuiz} className="space-y-4">
           <div>
