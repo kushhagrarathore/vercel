@@ -580,3 +580,5 @@ export default function LiveQuizUser() {
     </div>
   );
 }
+
+// Vercel note: If you want to allow warnings in build, set CI=false in your Vercel project environment variables.
