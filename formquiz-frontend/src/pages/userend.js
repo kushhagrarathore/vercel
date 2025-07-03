@@ -65,7 +65,7 @@ export default function LiveQuizUser() {
   const navigate = useNavigate();
   const containerRef = useRef(null);
   const [allResponses, setAllResponses] = useState([]);
-  const [userScores, setUserScores] = useState([]);
+  const [userScores, _setUserScores] = useState([]);
   const [username, setUsername] = useState("");
   const [hasEnteredName, setHasEnteredName] = useState(false);
   const [showUserPrompt, setShowUserPrompt] = useState(false);
@@ -81,12 +81,12 @@ export default function LiveQuizUser() {
         return;
       }
       // Fetch quiz record for customization
-      const { data: quizData, error: quizError } = await supabase
+      const { data: quizData, error: _quizError } = await supabase
         .from('quizzes')
         .select('*')
         .eq('id', id)
         .single();
-      if (quizError || !quizData) {
+      if (_quizError || !quizData) {
         setError('Quiz not found.');
         setLoading(false);
         return;
@@ -104,12 +104,12 @@ export default function LiveQuizUser() {
         setCustomization(custom);
       }
       // Fetch slides
-      const { data: slidesData, error: slidesError } = await supabase
+      const { data: slidesData, error: _slidesError } = await supabase
         .from('slides')
         .select('*')
         .eq('quiz_id', id)
         .order('slide_index');
-      if (slidesError || !slidesData || slidesData.length === 0) {
+      if (_slidesError || !slidesData || slidesData.length === 0) {
         setError('No slides found for this quiz.');
         setLoading(false);
         return;
