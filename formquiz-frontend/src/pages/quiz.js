@@ -23,24 +23,66 @@ import "./quiz.css";
 // 🔲 Modal for sharing
 const Modal = ({ show, onClose, url }) => {
   if (!show) return null;
-  const handleCopy = () => {
-    navigator.clipboard.writeText(url);
+  
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      // Show success feedback
+      const button = document.querySelector('.copy-button');
+      if (button) {
+        const originalText = button.textContent;
+        button.textContent = 'Copied!';
+        button.style.background = '#10b981';
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.style.background = '#3b82f6';
+        }, 2000);
+      }
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = url;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
   };
+  
   const handleOpen = () => {
     window.open(url, '_blank');
   };
+  
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-96 relative">
+        <button 
+          onClick={onClose} 
+          className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-xl font-bold"
+          title="Close"
+        >
+          ×
+        </button>
         <h2 className="text-lg font-semibold mb-4">Share Quiz</h2>
         <div className="flex justify-center items-center h-full w-full mb-4">
           <QRCodeCanvas value={url} />
         </div>
         <div className="flex justify-center gap-4 mb-4">
-          <Button onClick={handleCopy} className="px-4 py-2 rounded bg-blue-500 text-white font-semibold">Copy Link</Button>
-          <Button onClick={handleOpen} className="px-4 py-2 rounded bg-green-500 text-white font-semibold">Open Link</Button>
+          <Button 
+            onClick={handleCopy} 
+            className="copy-button px-4 py-2 rounded bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-colors"
+          >
+            Copy Link
+          </Button>
+          <Button 
+            onClick={handleOpen} 
+            className="px-4 py-2 rounded bg-green-500 text-white font-semibold hover:bg-green-600 transition-colors"
+          >
+            Open Link
+          </Button>
         </div>
-        <p className="text-sm break-all text-center mb-2">{url}</p>
+        <p className="text-sm break-all text-center mb-2 bg-gray-50 p-2 rounded border">{url}</p>
         <Button className="mt-2 w-full" onClick={onClose}>Close</Button>
       </div>
     </div>
@@ -242,6 +284,80 @@ export default function Quiz() {
     }
   }, [activeTab, publishedQuizId, quizId]);
 
+  // Handle AI-generated questions from navigation state
+  useEffect(() => {
+    if (location.state?.aiGenerated && location.state?.questions) {
+      const aiQuestions = location.state.questions;
+      const formattedSlides = aiQuestions.map((q, index) => ({
+        id: q.id || Date.now() + index,
+        name: q.question || `Question ${index + 1}`,
+        type: 'multiple',
+        question: q.question || '',
+        options: q.options || ['', '', '', ''],
+        correctAnswers: [q.correct_answer || 0],
+        background: '#ffffff',
+        textColor: '#000000',
+        fontFamily: textStyles[0].value,
+      }));
+      
+      setSlides(formattedSlides);
+      setTitle(location.state.topic || 'AI Generated Quiz');
+      setPublishedQuizId(location.state.sessionCode); // Set the AI-generated quiz ID
+      setSelectedSlide(0);
+      setHasUnsavedChanges(true);
+      
+      // Clear the navigation state to prevent re-applying on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
+  // Handle AI-generated quiz loading from URL (for direct access)
+  useEffect(() => {
+    if (quizId && quizId.startsWith('ai_')) {
+      // This is an AI-generated quiz, fetch from database
+      const fetchAIGeneratedQuiz = async () => {
+        try {
+          const { data: quizData, error: quizError } = await supabase
+            .from('quizzes')
+            .select('*')
+            .eq('id', quizId)
+            .single();
+          
+          if (quizData) {
+            setTitle(quizData.title || 'AI Generated Quiz');
+            setPublishedQuizId(quizId);
+            
+            // Fetch slides for this AI-generated quiz
+            const { data: slidesData, error: slidesError } = await supabase
+              .from('slides')
+              .select('*')
+              .eq('quiz_id', quizId)
+              .order('slide_index');
+            
+            if (slidesData && slidesData.length > 0) {
+              setSlides(slidesData.map(s => ({
+                id: s.id,
+                name: s.question || s.name || '',
+                type: s.type || 'multiple',
+                question: s.question || '',
+                options: s.options || ["", ""],
+                correctAnswers: s.correct_answers || [],
+                background: s.background || '#ffffff',
+                textColor: s.text_color || '#000000',
+                fontFamily: s.font_family || textStyles[0].value,
+              })));
+              setSelectedSlide(0);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading AI-generated quiz:', error);
+        }
+      };
+      
+      fetchAIGeneratedQuiz();
+    }
+  }, [quizId]);
+
   // Fetch quiz and slides if quizId is present
   useEffect(() => {
     async function fetchQuizAndSlides() {
@@ -393,7 +509,17 @@ export default function Quiz() {
   };
 
   const currentSlide = slides[selectedSlide];
-  const shareURL = `${window.location.origin}/userend?quizId=${publishedQuizId || quizId}`;
+  // Generate share URL that works with Vercel deployment
+  const shareURL = (() => {
+    const quizIdToUse = publishedQuizId || quizId;
+    if (!quizIdToUse) return '';
+    
+    // Use window.location.origin for production, fallback for development
+    const baseUrl = window.location.origin || 
+                   (process.env.NODE_ENV === 'production' ? 'https://your-vercel-domain.vercel.app' : 'http://localhost:3000');
+    
+    return `${baseUrl}/userend?quizId=${quizIdToUse}`;
+  })();
 
   const handlePublishOrSave = async () => {
     const { data: user, error: userError } = await supabase.auth.getUser();
