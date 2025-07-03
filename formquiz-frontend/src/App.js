@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 import { ToastProvider } from './components/Toast';
 import { LiveQuizProvider } from './components/livequiz/LiveQuizContext';
 import { QuizProvider } from './pages/livequiz/QuizContext';
@@ -21,6 +22,8 @@ import ViewResponses from './pages/forms/ViewResponses';
 =======
 =======
 >>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
 import { ToastProvider } from './context/ToastContext';
 import { LiveQuizProvider } from './context/LiveQuizContext';
 
@@ -35,6 +38,9 @@ import PreviewQuizPage from './pages/PreviewQuizPage';
 import ResponsePage from './pages/ResponsePage';
 import ViewResponses from './pages/ViewResponses';
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -44,6 +50,10 @@ import Leaderboard from './pages/live/Leaderboard';
 import QuizFillPage from './pages/QuizFillPage';
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+=======
+import LiveQuiz from './pages/live/LiveQuiz';
+>>>>>>> Stashed changes
 =======
 import LiveQuiz from './pages/live/LiveQuiz';
 >>>>>>> Stashed changes
@@ -70,11 +80,15 @@ function App() {
             <Route path="/preview" element={<UserEnd />} /> {/* Preview for quiz/test form */}
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 
 
 =======
 >>>>>>> Stashed changes
 
+=======
+
+>>>>>>> Stashed changes
 =======
 
 >>>>>>> Stashed changes
@@ -89,6 +103,7 @@ function App() {
 
             {/* User-end quiz preview */}
             <Route path="/userend" element={<UserEnd />} />
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
 
           {/* Results */}
@@ -112,6 +127,8 @@ function App() {
 =======
             {/* Response Page */}
             <Route path="/respond/:formId" element={<ResponsePage />} />
+=======
+>>>>>>> Stashed changes
 
 =======
 
@@ -121,6 +138,9 @@ function App() {
             {/* Response Page */}
             <Route path="/respond/:formId" element={<ResponsePage />} />
 
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
             {/* View responses */}
             <Route path="/view-responses" element={<ViewResponses />} />
@@ -131,10 +151,13 @@ function App() {
 
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
             {/* New live quiz routes */}
             <Route path="/join/:quizId" element={<JoinQuiz />} />
             <Route path="/live/leaderboard/:quizId" element={<Leaderboard />} />
 =======
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
             {/* Live Quiz */}
@@ -147,6 +170,9 @@ function App() {
             {/* <Route path="/edit/:id" element={<EditForm />} /> */}
             {/* <Route path="/view/:id" element={<ViewForm />} /> */}
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
