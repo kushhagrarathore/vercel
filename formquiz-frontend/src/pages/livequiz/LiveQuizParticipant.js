@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { supabase } from '../../supabase';
-import Leaderboard from '../../components/quiz/Leaderboard';
+import Leaderboard from './Leaderboard';
 
 const LiveQuizParticipant = () => {
   const { roomCode, participantId } = useParams();

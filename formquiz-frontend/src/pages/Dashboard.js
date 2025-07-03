@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Navbar from '../components/navbar';
-import FormCreationBar from '../components/FormCreationBar';
-import FormCardRow from '../components/FormCardRow';
-import QuizCreationBar from '../components/QuizCreationBar';
+import FormCreationBar from '../components/forms/FormCreationBar';
+import FormCardRow from '../components/forms/FormCardRow';
+import QuizCreationBar from '../components/quiz/QuizCreationBar';
 import './Dashboard.css';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabase';

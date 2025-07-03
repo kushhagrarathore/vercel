@@ -1,7 +1,7 @@
 // pages/ParticipantLiveView.jsx
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '../supabase';
+import { supabase } from '../../supabase';
 
 const ParticipantLiveView = () => {
   const { quizId } = useParams();

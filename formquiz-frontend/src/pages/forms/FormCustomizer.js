@@ -1,4 +1,5 @@
 import React from "react";
+import './FormCustomizer.css';
 
 const fontOptions = [
   { label: "Inter", value: "Inter" },

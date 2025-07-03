@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import QuizArenaLayout from '../components/quiz/QuizArenaLayout';
-import Spinner from '../components/Spinner';
-import { supabase } from '../supabase';
+import QuizArenaLayout from '../../components/quiz/QuizArenaLayout';
+import Spinner from '../../components/Spinner';
+import Skeleton from '../../components/Skeleton';
+import { useToast } from '../../components/Toast';
+import { supabase } from '../../supabase';
 
 const PreviewQuizPage = () => {
   const { quizId } = useParams();

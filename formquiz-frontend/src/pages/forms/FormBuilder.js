@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { supabase } from '../supabase';
+import { supabase } from '../../supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { QRCodeSVG } from 'qrcode.react';
 import { ChromePicker } from 'react-color';
 import './FormBuilder.css';
-import Spinner from '../components/Spinner';
-import Skeleton from '../components/Skeleton';
-import { useToast } from '../components/Toast';
+import Spinner from '../../components/Spinner';
+import Skeleton from '../../components/Skeleton';
+import { useToast } from '../../components/Toast';
 
 // Question components
-import LongTextQuestion from '../components/LongTextQuestion';
-import ShortTextQuestion from '../components/ShortTextQuestion';
-import MultipleChoiceQuestion from '../components/MultipleChoiceQuestion';
-import PictureChoiceQuestion from '../components/PictureChoiceQuestion';
-import CustomizationPanel from '../components/CustomizationPanel';
+import LongTextQuestion from '../../components/quiz/LongTextQuestion';
+import ShortTextQuestion from '../../components/quiz/ShortTextQuestion';
+import MultipleChoiceQuestion from '../../components/quiz/MultipleChoiceQuestion';
+import PictureChoiceQuestion from '../../components/quiz/PictureChoiceQuestion';
+import CustomizationPanel from '../../components/forms/CustomizationPanel';
 
 const FormBuilder = () => {
   const [title, setTitle] = useState('Untitled Form');

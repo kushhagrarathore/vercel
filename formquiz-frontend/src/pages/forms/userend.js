@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Button } from "../components/buttonquiz";
-import { Card, CardContent } from "../components/card";
+import { Button } from '../../components/buttonquiz';
+import { Card } from '../../components/card';
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
 import { CheckCircle } from "lucide-react";
@@ -178,7 +178,7 @@ export default function LiveQuizUser() {
       </div>
 
       <Card className="max-w-xl mx-auto mb-4 shadow-lg">
-        <CardContent className="space-y-4">
+        <div className="space-y-4">
           <div className="text-sm text-right text-gray-600">
             Question {questionIndex + 1} of {slides.length}
           </div>
@@ -211,7 +211,7 @@ export default function LiveQuizUser() {
               );
             })}
           </div>
-        </CardContent>
+        </div>
       </Card>
     </div>
   );

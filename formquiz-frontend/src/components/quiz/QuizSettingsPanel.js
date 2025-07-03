@@ -1,6 +1,6 @@
 import React from 'react';
 import { FaFont, FaPalette, FaClock } from 'react-icons/fa';
-import './CustomizationPanel.css';
+import '../forms/CustomizationPanel.css';
 
 const fonts = [
   { name: 'Inter', style: { fontFamily: 'Inter, sans-serif' } },

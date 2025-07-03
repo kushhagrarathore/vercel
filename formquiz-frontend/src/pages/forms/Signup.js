@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../supabase'; // Adjust path as needed
+import { supabase } from '../../supabase';
 import './Signup.css';
-import signupImage from './signup.jpg' // Update with your image name
+import signupImage from '../../pages/signup.jpg';
 
 const SignUp = () => {
   const navigate = useNavigate();

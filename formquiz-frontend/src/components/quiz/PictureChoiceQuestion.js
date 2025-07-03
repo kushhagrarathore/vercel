@@ -1,6 +1,6 @@
 // src/components/PictureChoiceQuestion.js
 import React, { useState } from 'react';
-import './PictureChoiceQuestion.css';
+import '../PictureChoiceQuestion.css';
 
 const PictureChoiceQuestion = ({ question, questionIndex, onRemove, onQuestionTextChange, customization }) => { // Added customization prop
   const [imageOptions, setImageOptions] = useState([

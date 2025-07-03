@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import QuizArenaLayout from '../../components/quiz/QuizArenaLayout';
 
 const QuizPreviewPage = ({ quiz, slides }) => {
   const [current, setCurrent] = useState(0);

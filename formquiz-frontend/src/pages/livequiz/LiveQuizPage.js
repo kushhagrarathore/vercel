@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '../supabase';
-import { useLiveQuiz } from '../context/LiveQuizContext';
-import QuestionTimer from '../components/quiz/QuestionTimer';
-import AnswerFeedback from '../components/quiz/AnswerFeedback';
-import Leaderboard from './live/Leaderboard';
+import { supabase } from '../../supabase';
+import { useLiveQuiz } from '../../components/livequiz/LiveQuizContext';
+import QuestionTimer from '../../components/quiz/QuestionTimer';
+import AnswerFeedback from '../../components/quiz/AnswerFeedback';
+import Leaderboard from './Leaderboard';
 
 const LiveQuizPage = () => {
   const { quizId } = useParams();

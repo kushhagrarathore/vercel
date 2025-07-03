@@ -11,16 +11,16 @@ import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { QRCodeCanvas } from "qrcode.react";
 
-import { Card, CardContent } from "../components/card";
-import { Button } from "../components/buttonquiz";
-import { Input } from "../components/input";
-import { Tabs, TabsList, TabsTrigger } from "../components/tabs";
+import { Card } from '../../components/card';
+import { Button } from '../../components/buttonquiz';
+import { Input } from '../../components/input';
+import { Tabs, TabsList, TabsTrigger } from '../../components/tabs';
 
-import { supabase } from "../supabase";
+import { supabase } from '../../supabase';
 import "./quiz.css";
-import Spinner from '../components/Spinner';
-import Skeleton from '../components/Skeleton';
-import { useToast } from '../components/Toast';
+import Spinner from '../../components/Spinner';
+import Skeleton from '../../components/Skeleton';
+import { useToast } from '../../components/Toast';
 
 // 🔲 Modal for sharing
 const Modal = ({ show, onClose, url }) => {
@@ -332,7 +332,7 @@ export default function Quiz() {
           {/* Center Panel */}
           <div className="col-span-3 space-y-6">
             <Card className="rounded-2xl shadow-xl border border-gray-200" style={{ backgroundColor: currentSlide.background }}>
-              <CardContent className="p-4 space-y-4">
+              <div className="p-4 space-y-4">
                 <Input
                   placeholder="Ask a Question Here..."
                   value={currentSlide.question}
@@ -377,14 +377,14 @@ export default function Quiz() {
                     <div className="text-sm text-red-500">Maximum 4 options allowed</div>
                   )}
                 </div>
-              </CardContent>
+              </div>
             </Card>
           </div>
 
           {/* Right Panel */}
           <div className="col-span-1 space-y-4">
             <Card>
-              <CardContent className="space-y-4 p-4">
+              <div className="space-y-4 p-4">
   {/* Background Color */}
   <div>
     <label className="block mb-1 text-sm font-medium">Background Color</label>
@@ -453,7 +453,7 @@ export default function Quiz() {
   >
     Apply All Settings to All Slides
   </Button>
-</CardContent>
+</div>
 
             </Card>
           </div>

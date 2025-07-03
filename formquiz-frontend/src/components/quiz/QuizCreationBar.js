@@ -2,38 +2,44 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaRegListAlt, FaBroadcastTower, FaCheckSquare, FaPoll, FaStar } from 'react-icons/fa';
 import { motion } from 'framer-motion';
-import './FormCreationBar.css';
+import '../forms/FormCreationBar.css';
 
 const quizTemplates = [
   {
     title: 'Blank Quiz',
     desc: 'Start from scratch and build your own quiz.',
     icon: <FaRegListAlt size={28} color="#4a6bff" />,
-    onClick: (navigate) => navigate('/quiz/create'),
+    onClick: (navigate) => navigate('/livequiz/create'),
   },
   {
     title: 'Live Quiz',
     desc: 'Host a live, interactive quiz session.',
     icon: <FaBroadcastTower size={28} color="#4a6bff" />,
-    onClick: (navigate) => navigate('/quiz/create?type=live'),
+    onClick: (navigate) => navigate('/livequiz/create?type=live'),
   },
   {
     title: 'MCQ Quiz',
     desc: 'Multiple choice quiz template.',
     icon: <FaCheckSquare size={28} color="#4a6bff" />,
-    onClick: (navigate) => navigate('/quiz/create?type=mcq'),
+    onClick: (navigate) => navigate('/livequiz/create?type=mcq'),
   },
   {
     title: 'Poll',
     desc: 'Quick poll for instant feedback.',
     icon: <FaPoll size={28} color="#4a6bff" />,
-    onClick: (navigate) => navigate('/quiz/create?type=poll'),
+    onClick: (navigate) => navigate('/livequiz/create?type=poll'),
   },
   {
     title: 'Trivia',
     desc: 'Fun trivia quiz template.',
     icon: <FaStar size={28} color="#4a6bff" />,
-    onClick: (navigate) => navigate('/quiz/create?type=trivia'),
+    onClick: (navigate) => navigate('/livequiz/create?type=trivia'),
+  },
+  {
+    title: 'Live Quiz (New Flow)',
+    desc: 'Try the new live quiz experience!',
+    icon: <FaBroadcastTower size={28} color="#22c55e" />,
+    onClick: (navigate) => navigate('/quiz/create'),
   },
 ];
 

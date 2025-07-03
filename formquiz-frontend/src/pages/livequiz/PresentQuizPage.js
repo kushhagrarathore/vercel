@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../supabase';
-import { generateLiveLink } from '../utils/generateLiveLink';
-import Leaderboard from '../components/quiz/Leaderboard';
+import { supabase } from '../../supabase';
+import { generateLiveLink } from '../../utils/generateLiveLink';
+import Leaderboard from '../livequiz/Leaderboard';
 import { QRCodeCanvas } from 'qrcode.react';
 // TODO: Import TimerBar, Leaderboard, LiveAudienceView, etc.
 

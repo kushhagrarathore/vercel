@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import QuizSlideList from '../components/QuizSlideList';
-import QuizSlideEditor from '../components/QuizSlideEditor';
-import QuizSettingsPanel from '../components/QuizSettingsPanel';
+import QuizSlideList from '../../components/quiz/QuizSlideList';
+import QuizSlideEditor from '../../components/quiz/QuizSlideEditor';
+import QuizSettingsPanel from '../../components/quiz/QuizSettingsPanel';
 import { FaChevronLeft, FaEye, FaCloudUploadAlt, FaMoon, FaSun } from 'react-icons/fa';
-import { supabase } from '../supabase';
-import { generateLiveLink } from '../utils/generateLiveLink';
-import ShareModal from '../components/quiz/ShareModal';
+import { supabase } from '../../supabase';
+import { generateLiveLink } from '../../utils/generateLiveLink';
+import ShareModal from '../../components/quiz/ShareModal';
+import { useQuiz } from './QuizContext';
 
 const defaultSettings = {
   font: 'Inter',
@@ -25,6 +26,7 @@ const defaultSlides = [
 const CreateQuizPage = () => {
   const navigate = useNavigate();
   const { quizId } = useParams();
+  const { setQuiz } = useQuiz();
   const [slides, setSlides] = useState(defaultSlides);
   const [current, setCurrent] = useState(0);
   const [quizTitle, setQuizTitle] = useState('Untitled Presentation');
@@ -176,6 +178,7 @@ const CreateQuizPage = () => {
   const handlePublish = async () => {
     setPublishing(true);
     try {
+      console.log('Publishing quiz:', { quizTitle, slides });
       if (!quizTitle.trim()) throw new Error('Quiz title is required');
       if (!slides.length) throw new Error('At least one slide is required');
       for (const s of slides) {
@@ -185,6 +188,7 @@ const CreateQuizPage = () => {
       if (!user) throw new Error('Not logged in');
       let quizIdToUse = quizId;
       let publicLink = '';
+      let quizData = null;
       if (quizId) {
         publicLink = generateLiveLink(quizId);
         const { error: quizError } = await supabase.from('quizzes').update({
@@ -198,72 +202,30 @@ const CreateQuizPage = () => {
         }).eq('id', quizId);
         if (quizError) throw new Error(quizError.message || JSON.stringify(quizError));
         await supabase.from('live_quiz_slides').delete().eq('quiz_id', quizId);
-        // Save slides before navigating
-        const slidesToInsert = slides.map((slide, idx) => ({
-          quiz_id: quizId,
-          slide_index: idx,
-          question: slide.question,
-          options: slide.options,
-          correct_answer_index: slide.correctAnswer ?? 0,
-          background: slide.settings?.backgroundColor || '',
-          text_color: slide.settings?.textColor || '',
-          font_size: slide.settings?.fontSize || 20,
-          timer: slide.settings?.timer || 20,
-        }));
-        if (slidesToInsert.length) {
-          const { error: slideError } = await supabase.from('live_quiz_slides').insert(slidesToInsert);
-          if (slideError) throw new Error(slideError.message || JSON.stringify(slideError));
-        }
-        navigate(`/quiz/present/${quizId}`);
-        setPublishing(false);
-        return;
+        // Fetch updated quiz
+        const { data } = await supabase.from('quizzes').select('*').eq('id', quizId).single();
+        quizData = data;
       } else {
-        const { data: quizData, error: quizError } = await supabase.from('quizzes').insert([
-          {
-            user_id: user.id,
-            title: quizTitle,
-            description: '',
-            customization_settings: globalSettings,
-            is_active: true,
-            is_shared: false,
-            is_published: true,
-            form_url: '', // temp, will update after getting id
-            created_by: user.email,
-            created_at: new Date().toISOString(),
-          }
-        ]).select('id').single();
-        if (quizError) throw new Error(quizError.message || JSON.stringify(quizError));
-        quizIdToUse = quizData.id;
-        publicLink = generateLiveLink(quizIdToUse);
-        await supabase.from('quizzes').update({ form_url: publicLink }).eq('id', quizIdToUse);
-        // Save slides before navigating
-        const slidesToInsert = slides.map((slide, idx) => ({
-          quiz_id: quizIdToUse,
-          slide_index: idx,
-          question: slide.question,
-          options: slide.options,
-          correct_answer_index: slide.correctAnswer ?? 0,
-          background: slide.settings?.backgroundColor || '',
-          text_color: slide.settings?.textColor || '',
-          font_size: slide.settings?.fontSize || 20,
-          timer: slide.settings?.timer || 20,
-        }));
-        if (slidesToInsert.length) {
-          const { error: slideError } = await supabase.from('live_quiz_slides').insert(slidesToInsert);
-          if (slideError) throw new Error(slideError.message || JSON.stringify(slideError));
-        }
-        navigate(`/quiz/present/${quizIdToUse}`);
-        setPublishing(false);
-        return;
+        // Insert new quiz
+        const { data, error } = await supabase.from('quizzes').insert({
+          title: quizTitle,
+          customization_settings: globalSettings,
+          is_active: true,
+          is_shared: false,
+          is_published: true,
+          created_by: user.email,
+        }).select().single();
+        if (error) throw new Error(error.message || JSON.stringify(error));
+        quizIdToUse = data.id;
+        quizData = data;
       }
-      setShareQuizId(quizIdToUse);
-      setShareQuizLink(`/quiz/fill/${quizIdToUse}`);
-      setShowShareModal(true);
-      setPublishing(false);
-      setDirty(false);
-      localStorage.removeItem('quizDraft');
+      setQuiz(quizData); // Store in context
+      console.log('Navigating to admin page for quiz:', quizIdToUse);
+      navigate(`/admin/${quizIdToUse}`);
     } catch (err) {
-      alert(err.message || 'Failed to publish quiz');
+      alert(err.message);
+      console.error('Publish error:', err);
+    } finally {
       setPublishing(false);
     }
   };
