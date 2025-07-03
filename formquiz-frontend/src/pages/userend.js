@@ -4,6 +4,16 @@ import { supabase } from "../supabase";
 import { CheckCircle } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
+// Fisher-Yates shuffle algorithm
+function shuffleArray(array) {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 function useQuery() {
   return new URLSearchParams(useLocation().search);
 }
@@ -104,8 +114,10 @@ export default function LiveQuizUser() {
         setLoading(false);
         return;
       }
-      setSlides(slidesData);
-      setAnswers(slidesData.map(q => {
+      // Shuffle the slides for random order
+      const shuffledSlides = shuffleArray(slidesData);
+      setSlides(shuffledSlides);
+      setAnswers(shuffledSlides.map(q => {
         if (q.type === 'multiple') return { type: 'multiple', selectedIndex: null };
         if (q.type === 'true_false') return { type: 'true_false', selectedIndex: null };
         if (q.type === 'one_word') return { type: 'one_word', text: '' };
