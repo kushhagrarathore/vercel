@@ -1,39 +1,31 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaRegListAlt, FaBroadcastTower, FaCheckSquare, FaPoll, FaStar } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import './FormCreationBar.css';
-import { supabase } from '../supabase';
 
 const quizTemplates = [
   {
     title: 'Blank Quiz',
     desc: 'Start from scratch and build your own quiz.',
-    icon: <FaRegListAlt size={28} color="#4a6bff" />,
-    onClick: (navigate) => navigate('/quiz'),
-  },
-  {
-    title: 'Live Quiz',
-    desc: 'Host a live, interactive quiz session.',
-    icon: <FaBroadcastTower size={28} color="#4a6bff" />,
-    onClick: (navigate) => navigate('/quiz/create'),
-  },
-  {
-    title: 'MCQ Quiz',
-    desc: 'Multiple choice quiz template.',
-    icon: <FaCheckSquare size={28} color="#4a6bff" />,
-    onClick: (navigate) => navigate('/quiz/create'),
-  },
-  {
-    title: 'Poll',
-    desc: 'Quick poll for instant feedback.',
-    icon: <FaPoll size={28} color="#4a6bff" />,
-    onClick: (navigate) => navigate('/quiz/create'),
-  },
-  {
-    title: 'Trivia',
-    desc: 'Fun trivia quiz template.',
-    icon: <FaStar size={28} color="#4a6bff" />,
+    icon: (
+      <span style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 44,
+        height: 44,
+        borderRadius: 12,
+        background: '#f3f4f8',
+        marginBottom: 0,
+      }}>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4a6bff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="4" y="4" width="16" height="20" rx="4" fill="#f3f4f8"/>
+          <rect x="7" y="7" width="10" height="14" rx="2" fill="#fff"/>
+          <rect x="9" y="10" width="6" height="2" rx="1" fill="#e0e7ff"/>
+          <rect x="9" y="14" width="6" height="2" rx="1" fill="#e0e7ff"/>
+        </svg>
+      </span>
+    ),
     onClick: (navigate) => navigate('/quiz/create'),
   },
 ];
@@ -42,7 +34,7 @@ const QuizCreationBar = () => {
   const navigate = useNavigate();
   return (
     <div className="template-section">
-      {quizTemplates.map((tpl, idx) => (
+      {quizTemplates.map((tpl) => (
         <motion.div
           className="template-card"
           key={tpl.title}
@@ -54,11 +46,11 @@ const QuizCreationBar = () => {
         >
           <div className="file-icon" style={{ marginBottom: 8 }}>{tpl.icon}</div>
           <div className="template-label" style={{ fontWeight: 700, fontSize: 17 }}>{tpl.title}</div>
-          <div style={{ color: '#666', fontSize: 14, marginTop: 4 }}>{tpl.desc}</div>
+          <div className="template-desc">{tpl.desc}</div>
         </motion.div>
       ))}
     </div>
   );
 };
 
-export default QuizCreationBar; 
+export default QuizCreationBar;

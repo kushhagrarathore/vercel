@@ -4,15 +4,79 @@ import Navbar from '../components/navbar';
 import FormCreationBar from '../components/FormCreationBar';
 import FormCardRow from '../components/FormCardRow';
 import QuizCreationBar from '../components/QuizCreationBar';
-import './Dashboard.css';
+import Skeleton from '../components/Skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabase';
-import Skeleton from '../components/Skeleton';
 import { useToast } from '../components/Toast';
+import './Dashboard.css';
+
+const LiveQuizTemplateCard = ({ onClick }) => (
+  <div className="template-section">
+    <div
+      className="template-card"
+      onClick={onClick}
+      style={{ cursor: 'pointer' }}
+    >
+      <div
+        className="file-icon"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 44,
+          height: 44,
+          borderRadius: 12,
+          background: '#ffeaea',
+          marginBottom: 0,
+        }}
+      >
+        <svg
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#ff6b81"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="12" cy="12" r="6" fill="#fff0f3" />
+          <path
+            d="M12 8v4l3 2"
+            stroke="#ff6b81"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <circle
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="#ff6b81"
+            strokeWidth="1.5"
+            fill="none"
+          />
+        </svg>
+      </div>
+      <div
+        className="template-label"
+        style={{ fontWeight: 700, fontSize: 17 }}
+      >
+        Live Quiz
+      </div>
+      <div className="template-desc">
+        Host a live, interactive quiz session.
+      </div>
+    </div>
+  </div>
+);
 
 const Dashboard = () => {
   const location = useLocation();
-  const initialTab = localStorage.getItem('dashboardTab') || location.state?.activeTab || 'forms';
+  const initialTab =
+    localStorage.getItem('dashboardTab') ||
+    location.state?.activeTab ||
+    'forms';
 
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -21,8 +85,10 @@ const Dashboard = () => {
   const [forms, setForms] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
   const [activeTab, setActiveTab] = useState(initialTab);
-  const toast = useToast();
   const [loading, setLoading] = useState(true);
+  const [liveQuizzes, setLiveQuizzes] = useState([]);
+
+  const toast = useToast();
 
   useEffect(() => {
     localStorage.setItem('dashboardTab', activeTab);
@@ -32,7 +98,10 @@ const Dashboard = () => {
     const savedTheme = localStorage.getItem('theme');
     const isDark = savedTheme === 'dark';
     setIsDarkMode(isDark);
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    document.documentElement.setAttribute(
+      'data-theme',
+      isDark ? 'dark' : 'light'
+    );
   }, []);
 
   useEffect(() => {
@@ -65,6 +134,12 @@ const Dashboard = () => {
             .eq('created_by', user.email)
             .order('created_at', { ascending: false });
           if (quizData) setQuizzes(quizData);
+
+          const { data: liveQuizData } = await supabase
+            .from('live_quizzes')
+            .select('*')
+            .eq('is_live', true);
+          if (liveQuizData) setLiveQuizzes(liveQuizData);
         } else {
           toast('User not logged in', 'error');
           console.error('User not logged in:', userError);
@@ -86,20 +161,37 @@ const Dashboard = () => {
     quiz.title?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const currentData = activeTab === 'forms' ? filteredForms : filteredQuizzes;
+  let currentData;
+  if (activeTab === 'forms') {
+    currentData = filteredForms;
+  } else if (activeTab === 'livequiz') {
+    const liveQuizIds = new Set(liveQuizzes.map((lq) => lq.quiz_id));
+    currentData = quizzes.filter((q) => liveQuizIds.has(q.id));
+  } else {
+    currentData = filteredQuizzes;
+  }
 
   const handlePublishToggle = async (formId, newStatus) => {
-    await supabase.from('forms').update({ is_published: newStatus }).eq('id', formId);
-    setForms((prev) => prev.map(f => f.id === formId ? { ...f, is_published: newStatus } : f));
+    await supabase
+      .from('forms')
+      .update({ is_published: newStatus })
+      .eq('id', formId);
+    setForms((prev) =>
+      prev.map((f) =>
+        f.id === formId ? { ...f, is_published: newStatus } : f
+      )
+    );
   };
 
   const handleDeleteForm = (formId) => {
-    setForms((prev) => prev.filter(f => f.id !== formId));
+    setForms((prev) => prev.filter((f) => f.id !== formId));
   };
 
   const handleDeleteQuiz = async (quizId) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const { error } = await supabase
         .from('quizzes')
         .delete()
@@ -109,7 +201,7 @@ const Dashboard = () => {
         toast('Failed to delete quiz', 'error');
         return;
       }
-      setQuizzes((prev) => prev.filter(q => q.id !== quizId));
+      setQuizzes((prev) => prev.filter((q) => q.id !== quizId));
       toast('Quiz deleted!', 'success');
     } catch (err) {
       toast('Failed to delete quiz', 'error');
@@ -117,8 +209,15 @@ const Dashboard = () => {
   };
 
   const handleQuizPublishToggle = async (quizId, newStatus) => {
-    await supabase.from('quizzes').update({ is_published: newStatus }).eq('id', quizId);
-    setQuizzes((prev) => prev.map(q => q.id === quizId ? { ...q, is_published: newStatus } : q));
+    await supabase
+      .from('quizzes')
+      .update({ is_published: newStatus })
+      .eq('id', quizId);
+    setQuizzes((prev) =>
+      prev.map((q) =>
+        q.id === quizId ? { ...q, is_published: newStatus } : q
+      )
+    );
   };
 
   const handleTabToggle = (tab) => {
@@ -126,88 +225,148 @@ const Dashboard = () => {
   };
 
   return (
-    <>
+    <div className="dashboard-animated-layout">
       <Navbar activeTab={activeTab} onToggle={handleTabToggle} />
 
-      <div className="dashboard-container">
-        <div className="dashboard-top">
-          <h3 className="section-title text-accent">
-            {activeTab === 'forms' ? 'Form Templates' : 'Quiz Templates'}
-          </h3>
-          {activeTab === 'forms' ? (
-            <FormCreationBar />
-          ) : (
-            <QuizCreationBar />
-          )}
-        </div>
+      <div className="dashboard-animated-content">
+        {/* Header */}
+        <motion.h2
+          className="dashboard-animated-title"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, type: 'spring' }}
+        >
+          {activeTab === 'forms'
+            ? 'Form Templates'
+            : activeTab === 'livequiz'
+            ? 'Live Quizzes'
+            : 'Quiz Templates'}
+        </motion.h2>
 
-        <div className="dashboard-bottom">
-          <div className="dashboard-controls-row">
-            <div className="view-toggle">
-              {['grid', 'list'].map((mode) => (
-                <button
-                  key={mode}
-                  className={`toggle-button ${viewMode === mode ? 'active' : ''}`}
-                  onClick={() => setViewMode(mode)}
-                >
-                  {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                </button>
-              ))}
-            </div>
-
-            <input
-              className="search-bar"
-              type="text"
-              placeholder="Filter and search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+        {/* Creation bar */}
+        <motion.div
+          className="dashboard-creation-bar"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.2, type: 'spring' }}
+        >
+          {activeTab === 'forms' && <FormCreationBar />}
+          {activeTab === 'quizzes' && <QuizCreationBar />}
+          {activeTab === 'livequiz' && (
+            <LiveQuizTemplateCard
+              onClick={() => (window.location.href = '/live-quiz')}
             />
+          )}
+        </motion.div>
+
+        {/* Search and View toggle */}
+        <div className="dashboard-controls-bar">
+          <input
+            className="dashboard-search"
+            type="text"
+            placeholder="Search..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          <div className="dashboard-view-toggle">
+            <button
+              className={`dashboard-view-btn${
+                viewMode === 'grid' ? ' active' : ''
+              }`}
+              onClick={() => setViewMode('grid')}
+            >
+              Grid
+            </button>
+            <button
+              className={`dashboard-view-btn${
+                viewMode === 'list' ? ' active' : ''
+              }`}
+              onClick={() => setViewMode('list')}
+            >
+              List
+            </button>
           </div>
-
-          <h4 style={{ fontWeight: 700, fontSize: '1.2em', margin: '18px 0 8px 0' }}>
-            {activeTab === 'forms' ? 'Your Forms' : 'Your Quizzes'}
-          </h4>
-
-          <motion.div layout className={`table-body ${viewMode}`}>
-            <AnimatePresence>
-              {loading ? (
-                <Skeleton count={4} height={60} />
-              ) : currentData.length > 0 ? (
-                currentData.map((item, idx) => (
-                  <motion.div
-                    key={item.id || idx}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <FormCardRow
-                      view={viewMode}
-                      name={item.title}
-                      timestamp={new Date(item.created_at).toLocaleString()}
-                      sharedWith={item.shared_with || []}
-                      link={activeTab === 'forms'
-                        ? `/form/${item.id}`
-                        : (item.is_published ? `${window.location.origin}/userend?quizId=${item.id}` : '')}
-                      creator={username}
-                      formId={item.id}
-                      isForm={activeTab === 'forms'}
-                      onDelete={activeTab === 'forms' ? handleDeleteForm : handleDeleteQuiz}
-                      isPublished={item.is_published}
-                      onPublishToggle={activeTab === 'forms' ? handlePublishToggle : handleQuizPublishToggle}
-                    />
-                  </motion.div>
-                ))
-              ) : (
-                <div style={{ padding: 32, color: '#888', textAlign: 'center' }}>
-                  {activeTab === 'forms' ? 'No forms found.' : 'No quizzes found.'}
-                </div>
-              )}
-            </AnimatePresence>
-          </motion.div>
         </div>
+
+        {/* Cards grid/list */}
+        <section
+          className={`dashboard-animated-section ${viewMode}`}
+        >
+          <AnimatePresence>
+            {loading ? (
+              <Skeleton count={4} height={60} />
+            ) : currentData.length > 0 ? (
+              currentData.map((item, idx) => (
+                <motion.div
+                  key={item.id || idx}
+                  initial={{ opacity: 0, scale: 0.96, y: 18 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 18 }}
+                  transition={{
+                    duration: 0.32,
+                    type: 'spring',
+                  }}
+                  className="dashboard-animated-card"
+                >
+                  <FormCardRow
+                    view={viewMode}
+                    name={item.title}
+                    timestamp={new Date(
+                      item.created_at
+                    ).toLocaleString()}
+                    sharedWith={item.shared_with || []}
+                    link={
+                      activeTab === 'forms'
+                        ? `/form/${item.id}`
+                        : item.is_published
+                        ? `${window.location.origin}/join/${item.id}`
+                        : ''
+                    }
+                    creator={username}
+                    formId={item.id}
+                    isForm={activeTab === 'forms'}
+                    onDelete={
+                      activeTab === 'forms'
+                        ? handleDeleteForm
+                        : handleDeleteQuiz
+                    }
+                    isPublished={item.is_published}
+                    onPublishToggle={
+                      activeTab === 'forms'
+                        ? handlePublishToggle
+                        : handleQuizPublishToggle
+                    }
+                    quizType={
+                      activeTab === 'quizzes'
+                        ? item.type || 'blank'
+                        : undefined
+                    }
+                    formType={
+                      activeTab === 'forms'
+                        ? item.type || 'Forms'
+                        : undefined
+                    }
+                  />
+                </motion.div>
+              ))
+            ) : (
+              <motion.div
+                className="dashboard-empty-message"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                {activeTab === 'forms'
+                  ? 'No forms found.'
+                  : activeTab === 'livequiz'
+                  ? 'No live quizzes found.'
+                  : 'No quizzes found.'}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
       </div>
-    </>
+    </div>
   );
 };
 

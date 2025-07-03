@@ -3,7 +3,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ToastProvider } from './components/Toast';
 import { LiveQuizProvider } from './context/LiveQuizContext';
-import ResponsePage from './pages/ResponsePage';
+
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import FormBuilder from './pages/FormBuilder';
@@ -17,15 +17,14 @@ import PresentQuizPage from './pages/PresentQuizPage';
 import PreviewQuizPage from './pages/PreviewQuizPage';
 import ViewResponses from './pages/ViewResponses';
 import Profile from './pages/Profile';
-import JoinQuiz from './pages/join/JoinQuiz';
-import Leaderboard from './pages/live/Leaderboard';
-import QuizFillPage from './pages/QuizFillPage';
+import LiveQuiz from './pages/live/LiveQuiz';
+import ResponsePage from './pages/ResponsePage';
 
 function App() {
   return (
     <ToastProvider>
-      <BrowserRouter>
-        <LiveQuizProvider>
+      <LiveQuizProvider>
+        <BrowserRouter>
           <Routes>
             {/* Auth */}
             <Route path="/" element={<Login />} />
@@ -41,13 +40,16 @@ function App() {
 
             {/* Form Views */}
             <Route path="/preview/:formId" element={<FormView />} /> {/* Internal preview */}
-            <Route path="/form/:formId" element={<FormView />} /> {/* Public preview (published) */}
-            <Route path="/public/:formId" element={<FormView />} /> {/* Public preview (pre-published) */}
+            <Route path="/form/:formId" element={<FormView />} /> {/* Public preview */}
+            <Route path="/public/:formId" element={<FormView />} /> {/* Pre-published public preview */}
 
             {/* Quiz Mode */}
             <Route path="/quiz" element={<Quiz />} />
             <Route path="/quiz/:quizId" element={<Quiz />} />
-            <Route path="/preview" element={<UserEnd />} /> {/* Preview for quiz/test form */}
+            <Route path="/quiz/create" element={<CreateQuizPage />} />
+            <Route path="/quiz/present/:quizId" element={<PresentQuizPage />} />
+            <Route path="/quiz/preview/:quizId" element={<PreviewQuizPage />} />
+            <Route path="/quiz/results/:quizId" element={<ResultsPage />} />
 
             {/* Response Page */}
             <Route path="/respond/:formId" element={<ResponsePage />} />
@@ -55,30 +57,21 @@ function App() {
             {/* Results */}
             <Route path="/results/:formId" element={<ResultsPage />} />
 
-            {/* Future Features - Uncomment when ready */}
-            {/* <Route path="/create" element={<CreateForm />} /> */}
-            {/* <Route path="/edit/:id" element={<EditForm />} /> */}
-            {/* <Route path="/view/:id" element={<ViewForm />} /> */}
+            {/* Live Quiz */}
+            <Route path="/live-quiz" element={<LiveQuiz />} />
 
-            <Route path="/quiz/create" element={<CreateQuizPage />} />
-            <Route path="/quiz/create/:quizId" element={<CreateQuizPage />} />
-            <Route path="/quiz/present/:quizId" element={<PresentQuizPage />} />
-            <Route path="/quiz/preview/:quizId" element={<PreviewQuizPage />} />
-            <Route path="/quiz/results/:quizId" element={<ResultsPage />} />
-            <Route path="/quiz/fill/:quizId" element={<QuizFillPage />} />
-
-            {/* User-end preview route */}
+            {/* User-end preview */}
+            <Route path="/preview" element={<UserEnd />} />
             <Route path="/userend" element={<UserEnd />} />
 
-            {/* Profile/Settings */}
-            <Route path="/profile" element={<Profile />} />
+            {/* View responses (optional future feature) */}
+            <Route path="/view-responses" element={<ViewResponses />} />
 
-            {/* New live quiz routes */}
-            <Route path="/join/:quizId" element={<JoinQuiz />} />
-            <Route path="/live/leaderboard/:quizId" element={<Leaderboard />} />
+            {/* Profile */}
+            <Route path="/profile" element={<Profile />} />
           </Routes>
-        </LiveQuizProvider>
-      </BrowserRouter>
+        </BrowserRouter>
+      </LiveQuizProvider>
     </ToastProvider>
   );
 }

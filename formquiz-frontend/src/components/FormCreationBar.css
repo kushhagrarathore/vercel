@@ -7,8 +7,10 @@
 }
 
 .template-card {
-  width: 150px;
-  height: 180px;
+  min-width: 150px;
+  max-width: 180px;
+  min-height: 180px;
+  max-height: 260px;
   background: white;
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
@@ -17,6 +19,7 @@
   align-items: center;
   padding: 10px 8px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
 }
 
 .template-card:hover {
@@ -69,4 +72,35 @@
   font-size: 13px;
   text-align: center;
   font-weight: 500;
+}
+
+.template-desc {
+  font-size: 14px;
+  color: #222;
+  text-align: center;
+  margin-top: 4px;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+  max-width: 95%;
+  max-height: 3.5em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+@media (max-width: 600px) {
+  .template-card {
+    min-width: 120px;
+    max-width: 98vw;
+    min-height: 150px;
+    max-height: 220px;
+    padding: 8px 4px;
+  }
+  .template-desc {
+    font-size: 13px;
+    max-width: 98%;
+    -webkit-line-clamp: 4;
+  }
 }

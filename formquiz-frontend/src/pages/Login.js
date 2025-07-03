@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import './Login.css';
 import { useNavigate } from 'react-router-dom';
-import customLoginImage from './login.png';
 import Spinner from '../components/Spinner';
 import { useToast } from '../components/Toast';
 
@@ -109,97 +108,50 @@ export default function Login() {
   };
 
   return (
-    <div className="login-page">
-      <header className="admin-header">INQUIZO</header>
-
-      <div className="login-container">
-        {/* Left Side */}
-        <div className="login-image-section">
-          <img src={customLoginImage} alt="Login Visual" />
+    <div className="login-framer-bg">
+      <div className="framer-bg-animated"></div>
+      {/* Logo removed as requested */}
+      <div className="framer-login-card">
+        <div className="framer-login-title">Welcome to Inquizo</div>
+        <button
+          className="framer-login-btn google"
+          onClick={() => handleOAuthLogin('google')}
+          disabled={loading}
+        >
+          <span className="google-icon">G</span> Continue with Google
+        </button>
+        <div className="framer-or-divider">or</div>
+        <form className="framer-login-form" onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={loading}
+            className="framer-login-input"
+          />
+          <input
+            type={showPassword ? 'text' : 'password'}
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            disabled={loading}
+            className="framer-login-input"
+          />
+          <button type="submit" className="framer-login-btn email" disabled={loading}>
+            {loading ? <Spinner size={22} /> : 'Continue with email'}
+          </button>
+        </form>
+        <div className="framer-login-footer">
+          <a href="#" className="framer-forgot" onClick={handleForgotPassword}>Forgot Password?</a>
+          <button type="button" className="framer-signup" onClick={handleNewUser} disabled={loading}>
+            New User? Sign Up
+          </button>
         </div>
-
-        {/* Right Side */}
-        <div className="login-form-section">
-          <div className="form-brand">
-            <span className="brand-logo">INQUIZO</span>
-            <span className="brand-text">Build Forms, Collect Data</span>
-            <div className="brand-underline"></div>
-          </div>
-
-          <h2 className="login-title">
-            LOGIN
-            
-          </h2>
-
-          <p className="welcome-message">Welcome back! Please enter your details.</p>
-
-          <form className="login-form" onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
-            <div className="form-group">
-              <input
-                type="email"
-                placeholder={loginAs === 'applicant' ? "Applicant Email" : "Recruiter Email"}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading}
-              />
-            </div>
-            <div className="form-group">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-              />
-            </div>
-
-            <div className="form-options">
-              <label className="show-password-label">
-                <input
-                  type="checkbox"
-                  checked={showPassword}
-                  onChange={() => setShowPassword(!showPassword)}
-                  disabled={loading}
-                />
-                Show Password
-              </label>
-              <a href="#" className="forgot-password-link" onClick={handleForgotPassword}>
-                Forgot Password?
-              </a>
-            </div>
-
-            <button type="submit" className="login-button" disabled={loading}>
-              {loading ? <Spinner size={22} /> : 'Login'}
-            </button>
-            <button type="button" className="login-button new-user-button" onClick={handleNewUser} disabled={loading}>
-              New User? Sign Up
-            </button>
-          </form>
-
-          <div className="oauth-divider">or continue with</div>
-
-          <div className="oauth-buttons">
-            <button
-              className="oauth-button google-button"
-              onClick={() => handleOAuthLogin('google')}
-              disabled={loading}
-            >
-              Continue with Google
-            </button>
-            <button
-              className="oauth-button github-button"
-              onClick={() => handleOAuthLogin('github')}
-              disabled={loading}
-            >
-              Continue with GitHub
-            </button>
-          </div>
-
-          {error && <p className="auth-error">{error}</p>}
-          {message && <p className="auth-message">{message}</p>}
-        </div>
+        {error && <p className="auth-error">{error}</p>}
+        {message && <p className="auth-message">{message}</p>}
       </div>
     </div>
   );

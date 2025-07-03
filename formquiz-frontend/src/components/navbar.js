@@ -68,36 +68,35 @@ const Navbar = ({ activeTab, onToggle }) => {
       </div>
 
       <div className="navbar-right">
-        <div className="toggle-theme-section">
-          <button className="theme-toggle" onClick={toggleTheme} style={{ fontWeight: 400 }}>
-            {isDarkMode ? '☀️' : '🌙'}
+        <div className="form-quiz-toggle modern-tabs">
+          <button
+            className={`tab-btn${activeTab === 'forms' ? ' active' : ''}`}
+            onClick={() => onToggle && onToggle('forms')}
+            aria-label="My Forms"
+            style={{ fontWeight: activeTab === 'forms' ? 500 : 400, color: activeTab === 'forms' ? '#7c3aed' : '#7c3aed99', letterSpacing: '-0.2px' }}
+          >
+            <FaWpforms style={{ marginRight: 6, fontSize: 18, color: activeTab === 'forms' ? '#7c3aed' : '#7c3aed77' }} />
+            My Forms
           </button>
-
-          <div className="form-quiz-toggle modern-tabs">
-            <button
-              className={`tab-btn${activeTab === 'forms' ? ' active' : ''}`}
-              onClick={() => onToggle && onToggle('forms')}
-              aria-label="My Forms"
-              style={{ fontWeight: activeTab === 'forms' ? 500 : 400, color: activeTab === 'forms' ? '#7c3aed' : '#7c3aed99', letterSpacing: '-0.2px' }}
-            >
-              <FaWpforms style={{ marginRight: 6, fontSize: 18, color: activeTab === 'forms' ? '#7c3aed' : '#7c3aed77' }} />
-              My Forms
-            </button>
-            <button
-              className={`tab-btn${activeTab === 'quizzes' ? ' active' : ''}`}
-              onClick={() => onToggle && onToggle('quizzes')}
-              aria-label="My Quizzes"
-              style={{ fontWeight: activeTab === 'quizzes' ? 500 : 400, color: activeTab === 'quizzes' ? '#7c3aed' : '#7c3aed99', letterSpacing: '-0.2px' }}
-            >
-              <FaQuestionCircle style={{ marginRight: 6, fontSize: 18, color: activeTab === 'quizzes' ? '#7c3aed' : '#7c3aed77' }} />
-              My Quizzes
-            </button>
-          </div>
+          <button
+            className={`tab-btn livequiz-switch${activeTab === 'livequiz' ? ' active' : ''}`}
+            onClick={() => onToggle && onToggle('livequiz')}
+            aria-label="My Livequiz"
+            style={{ fontWeight: activeTab === 'livequiz' ? 500 : 400, color: activeTab === 'livequiz' ? '#ef4444' : '#ef444499', letterSpacing: '-0.2px' }}
+          >
+            <span style={{ marginRight: 6, fontSize: 18, color: activeTab === 'livequiz' ? '#ef4444' : '#ef444477' }}>🔴</span>
+            My Livequiz
+          </button>
+          <button
+            className={`tab-btn myquizzes${activeTab === 'quizzes' ? ' active' : ''}`}
+            onClick={() => onToggle && onToggle('quizzes')}
+            aria-label="My Quizzes"
+            style={{ fontWeight: activeTab === 'quizzes' ? 500 : 400, color: activeTab === 'quizzes' ? '#7c3aed' : '#7c3aed99', letterSpacing: '-0.2px' }}
+          >
+            <FaQuestionCircle style={{ marginRight: 6, fontSize: 18, color: activeTab === 'quizzes' ? '#7c3aed' : '#7c3aed77' }} />
+            My Quizzes
+          </button>
         </div>
-
-        <button className="view-plans-btn" onClick={handleViewPlans} style={{ fontWeight: 400, color: '#7c3aed99' }}>
-          View Plans
-        </button>
 
         <div className="profile-wrapper" ref={dropdownRef}>
           <div className="profile-section" onClick={() => setDropdownOpen(!dropdownOpen)}>
@@ -116,6 +115,10 @@ const Navbar = ({ activeTab, onToggle }) => {
           {dropdownOpen && (
             <div className="dropdown-menu">
               <div className="dropdown-item" onClick={handleProfile} style={{ fontWeight: 400 }}>Profile</div>
+              <div className="dropdown-item" onClick={toggleTheme} style={{ fontWeight: 400 }}>
+                {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+              </div>
+              <div className="dropdown-item" onClick={handleViewPlans} style={{ fontWeight: 400 }}>View Plans</div>
               <div className="dropdown-item" onClick={handleLogout} style={{ fontWeight: 400 }}>Logout</div>
             </div>
           )}
