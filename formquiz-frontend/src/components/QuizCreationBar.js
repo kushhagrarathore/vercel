@@ -26,7 +26,7 @@ const quizTemplates = [
         </svg>
       </span>
     ),
-    onClick: (navigate) => navigate('/quiz/create'),
+    onClick: (navigate) => navigate('/quiz'),
   },
 ];
 

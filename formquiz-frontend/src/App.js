@@ -43,12 +43,17 @@ function App() {
             <Route path="/form/:formId" element={<FormView />} /> {/* Public preview */}
             <Route path="/public/:formId" element={<FormView />} /> {/* Pre-published public preview */}
 
-            {/* Quiz Mode */}
+            {/* Quiz Builder: Blank Quiz card starts here */}
             <Route path="/quiz" element={<Quiz />} />
+            {/* Quiz by ID (edit/view existing quiz) */}
             <Route path="/quiz/:quizId" element={<Quiz />} />
+            {/* Quiz creation (legacy or alternate flow) */}
             <Route path="/quiz/create" element={<CreateQuizPage />} />
+            {/* Present quiz (host view) */}
             <Route path="/quiz/present/:quizId" element={<PresentQuizPage />} />
+            {/* Preview quiz (admin preview) */}
             <Route path="/quiz/preview/:quizId" element={<PreviewQuizPage />} />
+            {/* Quiz results (admin view) */}
             <Route path="/quiz/results/:quizId" element={<ResultsPage />} />
 
             {/* Response Page */}
@@ -60,8 +65,7 @@ function App() {
             {/* Live Quiz */}
             <Route path="/live-quiz" element={<LiveQuiz />} />
 
-            {/* User-end preview */}
-            <Route path="/preview" element={<UserEnd />} />
+            {/* User-end preview (public quiz taking) */}
             <Route path="/userend" element={<UserEnd />} />
 
             {/* View responses (optional future feature) */}
