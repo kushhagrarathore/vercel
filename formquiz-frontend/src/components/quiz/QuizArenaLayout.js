@@ -41,26 +41,7 @@ const QuizArenaLayout = ({
 
   return (
     <div style={{ minHeight: '100vh', background, fontFamily: font, display: 'flex', flexDirection: 'column' }}>
-      {/* Top Bar */}
-      {showHeader && (
-        <div style={{
-          background: '#fff',
-          color: '#23263a',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '0 0',
-          height: 60,
-          borderBottom: '1.5px solid #ececec',
-          boxShadow: '0 2px 8px rgba(30,50,80,0.03)',
-          position: 'relative',
-        }}>
-          <div style={{ fontWeight: 800, fontSize: 22, color: quizTitleColor, letterSpacing: '-0.5px', textAlign: 'center' }}>{quizTitle} <span style={{ color: quizTitleColor, fontWeight: 700 }}>| QUIZ ARENA</span></div>
-          {topRightButton && (
-            <div style={{ position: 'absolute', right: 32, top: '50%', transform: 'translateY(-50%)' }}>{topRightButton}</div>
-          )}
-        </div>
-      )}
+      {/* No header bar or QUIZ ARENA text */}
       {/* Main Card */}
       <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '32px 8px' }}>
         <div style={{
@@ -79,6 +60,9 @@ const QuizArenaLayout = ({
           transition: 'box-shadow 0.18s, border 0.18s, background 0.18s',
         }}>
           <div style={{ fontWeight: 700, fontSize: 20, color: '#23263a', marginBottom: 18, textAlign: 'center' }}>Q{questionNumber} - <span style={{ fontWeight: 800 }}>{questionText}</span></div>
+          {topRightButton && (
+            <div style={{ position: 'absolute', right: 32, top: 32, zIndex: 10 }}>{topRightButton}</div>
+          )}
           <div style={{ width: '100%', marginTop: 8, marginBottom: 24, display: 'flex', flexDirection: 'column', gap: 18 }}>
             {options.map((opt, idx) => (
               <button

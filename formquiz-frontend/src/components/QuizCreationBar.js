@@ -1,6 +1,5 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaRegListAlt, FaBroadcastTower, FaCheckSquare, FaPoll, FaStar } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import './FormCreationBar.css';
 
@@ -19,7 +18,12 @@ const quizTemplates = [
         background: '#f3f4f8',
         marginBottom: 0,
       }}>
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4a6bff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="20" rx="4" fill="#f3f4f8"/><rect x="7" y="7" width="10" height="14" rx="2" fill="#fff"/><rect x="9" y="10" width="6" height="2" rx="1" fill="#e0e7ff"/><rect x="9" y="14" width="6" height="2" rx="1" fill="#e0e7ff"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#4a6bff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="4" y="4" width="16" height="20" rx="4" fill="#f3f4f8"/>
+          <rect x="7" y="7" width="10" height="14" rx="2" fill="#fff"/>
+          <rect x="9" y="10" width="6" height="2" rx="1" fill="#e0e7ff"/>
+          <rect x="9" y="14" width="6" height="2" rx="1" fill="#e0e7ff"/>
+        </svg>
       </span>
     ),
     onClick: (navigate) => navigate('/quiz/create'),
@@ -30,7 +34,7 @@ const QuizCreationBar = () => {
   const navigate = useNavigate();
   return (
     <div className="template-section">
-      {quizTemplates.map((tpl, idx) => (
+      {quizTemplates.map((tpl) => (
         <motion.div
           className="template-card"
           key={tpl.title}
@@ -49,4 +53,4 @@ const QuizCreationBar = () => {
   );
 };
 
-export default QuizCreationBar; 
+export default QuizCreationBar;
