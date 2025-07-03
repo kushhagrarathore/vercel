@@ -1,6 +1,6 @@
 // src/components/MultipleChoiceQuestion.js
 import React from 'react';
-import './MultipleChoiceQuestion.css';
+import '../MultipleChoiceQuestion.css';
 
 const MultipleChoiceQuestion = ({
   question,

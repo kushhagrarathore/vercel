@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../supabase';
+import { supabase } from '../../supabase';
+import Spinner from '../../components/Spinner';
+import Skeleton from '../../components/Skeleton';
+import { useToast } from '../../components/Toast';
 
 const QuizFillPage = () => {
   const { quizId } = useParams();
@@ -27,7 +30,7 @@ const QuizFillPage = () => {
         return;
       }
       setQuiz(quizData);
-      const { data: slidesData, error: slidesError } = await supabase.from('slides').select('*').eq('quiz_id', quizId).order('slide_index');
+      const { data: slidesData, error: slidesError } = await supabase.from('live_quiz_slides').select('*').eq('quiz_id', quizId).order('slide_index');
       if (slidesError || !Array.isArray(slidesData) || slidesData.length === 0) {
         setError('No slides found for this quiz.');
         setLoading(false);

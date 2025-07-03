@@ -1,6 +1,6 @@
 // src/components/LongTextQuestion.js
 import React from 'react';
-import './LongTextQuestion.css';
+import '../LongTextQuestion.css';
 
 const LongTextQuestion = ({
   question,

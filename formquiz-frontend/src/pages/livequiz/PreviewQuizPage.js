@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import QuizArenaLayout from '../components/quiz/QuizArenaLayout';
-import Spinner from '../components/Spinner';
+import QuizArenaLayout from '../../components/quiz/QuizArenaLayout';
+import Spinner from '../../components/Spinner';
+import Skeleton from '../../components/Skeleton';
+import { useToast } from '../../components/Toast';
+import { supabase } from '../../supabase';
 
 const PreviewQuizPage = () => {
   const { quizId } = useParams();
@@ -35,16 +38,22 @@ const PreviewQuizPage = () => {
       // Load from Supabase
       (async () => {
         try {
-          const { data: quizData, error: quizError } = await import('../supabase').then(m => m.supabase)
-            .then(supabase => supabase.from('quizzes').select('*').eq('id', quizId).single());
+          const { data: quizData, error: quizError } = await supabase
+            .from('quizzes')
+            .select('*')
+            .eq('id', quizId)
+            .single();
           if (quizError || !quizData) {
             setError('Quiz not found.');
             setLoading(false);
             return;
           }
           setQuiz(quizData);
-          const { data: slidesData, error: slidesError } = await import('../supabase').then(m => m.supabase)
-            .then(supabase => supabase.from('slides').select('*').eq('quiz_id', quizId).order('slide_index'));
+          const { data: slidesData, error: slidesError } = await supabase
+            .from('live_quiz_slides')
+            .select('*')
+            .eq('quiz_id', quizId)
+            .order('slide_index');
           if (slidesError || !Array.isArray(slidesData) || slidesData.length === 0) {
             setError('No slides found for this quiz.');
             setSlides([]);

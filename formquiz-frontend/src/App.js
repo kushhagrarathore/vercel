@@ -2,23 +2,26 @@ import './App.css';
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ToastProvider } from './components/Toast';
-import { LiveQuizProvider } from './context/LiveQuizContext';
+import { LiveQuizProvider } from './components/livequiz/LiveQuizContext';
+import { QuizProvider } from './pages/livequiz/QuizContext';
 
 import Login from './pages/Login';
-import Signup from './pages/Signup';
-import FormBuilder from './pages/FormBuilder';
+import Signup from './pages/forms/Signup';
+import FormBuilder from './pages/forms/FormBuilder';
 import Dashboard from './pages/Dashboard';
-import FormView from './pages/FormView';
-import ResultsPage from './pages/ResultsPage';
-import Quiz from './pages/quiz';
-import UserEnd from './pages/userend';
-import CreateQuizPage from './pages/CreateQuizPage';
-import PresentQuizPage from './pages/PresentQuizPage';
-import PreviewQuizPage from './pages/PreviewQuizPage';
-import ViewResponses from './pages/ViewResponses';
+import FormView from './pages/forms/FormView';
+import ResultsPage from './pages/livequiz/ResultsPage';
+import Quiz from './pages/livequiz/quiz';
+import UserEnd from './pages/forms/userend';
+import ResponsePage from './pages/livequiz/ResponsePage';
+import CreateQuizPage from './pages/livequiz/CreateQuizPage';
+import PresentQuizPage from './pages/livequiz/PresentQuizPage';
+import PreviewQuizPage from './pages/livequiz/PreviewQuizPage';
+import ViewResponses from './pages/forms/ViewResponses';
 import Profile from './pages/Profile';
-import LiveQuiz from './pages/live/LiveQuiz';
-import ResponsePage from './pages/ResponsePage';
+import JoinQuiz from './pages/join/JoinQuiz';
+import Leaderboard from './pages/live/Leaderboard';
+import QuizFillPage from './pages/QuizFillPage';
 
 function App() {
   return (
@@ -45,38 +48,52 @@ function App() {
 
             {/* Quiz Builder: Blank Quiz card starts here */}
             <Route path="/quiz" element={<Quiz />} />
-            {/* Quiz by ID (edit/view existing quiz) */}
-            <Route path="/quiz/:quizId" element={<Quiz />} />
-            {/* Quiz creation (legacy or alternate flow) */}
-            <Route path="/quiz/create" element={<CreateQuizPage />} />
-            {/* Present quiz (host view) */}
-            <Route path="/quiz/present/:quizId" element={<PresentQuizPage />} />
-            {/* Preview quiz (admin preview) */}
-            <Route path="/quiz/preview/:quizId" element={<PreviewQuizPage />} />
-            {/* Quiz results (admin view) */}
-            <Route path="/quiz/results/:quizId" element={<ResultsPage />} />
+            <Route path="/preview" element={<UserEnd />} /> {/* Preview for quiz/test form */}
+
+
 
             {/* Response Page */}
             <Route path="/respond/:formId" element={<ResponsePage />} />
 
-            {/* Results */}
-            <Route path="/results/:formId" element={<ResultsPage />} />
+          {/* Results */}
+          <Route path="/results/:formId" element={<ResultsPage />} />
 
-            {/* Live Quiz */}
-            <Route path="/live-quiz" element={<LiveQuiz />} />
+          
+ 
 
-            {/* User-end preview (public quiz taking) */}
-            <Route path="/userend" element={<UserEnd />} />
+            {/* Future Features - Uncomment when ready */}
+            {/* <Route path="/create" element={<CreateForm />} /> */}
+            {/* <Route path="/edit/:id" element={<EditForm />} /> */}
+            {/* <Route path="/view/:id" element={<ViewForm />} /> */}
 
-            {/* View responses (optional future feature) */}
-            <Route path="/view-responses" element={<ViewResponses />} />
+            <Route path="/quiz/create" element={<CreateQuizPage />} />
+            <Route path="/quiz/create/:quizId" element={<CreateQuizPage />} />
+            <Route path="/quiz/present/:quizId" element={<PresentQuizPage />} />
+            <Route path="/quiz/preview/:quizId" element={<PreviewQuizPage />} />
+            <Route path="/quiz/results/:quizId" element={<ResultsPage />} />
+            <Route path="/quiz/fill/:quizId" element={<QuizFillPage />} />
 
             {/* Profile */}
             <Route path="/profile" element={<Profile />} />
+
+            {/* New live quiz routes */}
+            <Route path="/join/:quizId" element={<JoinQuiz />} />
+            <Route path="/live/leaderboard/:quizId" element={<Leaderboard />} />
           </Routes>
         </BrowserRouter>
       </LiveQuizProvider>
     </ToastProvider>
+  );
+}
+
+// Helper component for quiz routes
+function QuizRoutes() {
+  return (
+    <Routes>
+      <Route path="/quiz/create/:quizId" element={<CreateQuizPage />} />
+      <Route path="/admin/:quizId" element={<AdminPage />} />
+      <Route path="/quiz/:quizId" element={<QuizPage />} />
+    </Routes>
   );
 }
 

@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '../supabase';
+import { supabase } from '../../supabase';
 import './FormPreview.css';
 import { v4 as uuidv4 } from 'uuid';
+import Spinner from '../../components/Spinner';
+import Skeleton from '../../components/Skeleton';
+import { useToast } from '../../components/Toast';
 
 const FormPreview = () => {
   const { formId } = useParams();

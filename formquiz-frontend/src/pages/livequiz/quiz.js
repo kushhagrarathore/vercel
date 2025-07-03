@@ -10,15 +10,25 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { QRCodeCanvas } from "qrcode.react";
+<<<<<<< HEAD:formquiz-frontend/src/pages/quiz.js
 import { FiArrowLeft, FiEye, FiUpload, FiSun, FiMoon, FiSave, FiShare2, FiPlay, FiEdit2, FiTrash2, FiBarChart2, FiBarChart } from "react-icons/fi";
+=======
+import { FiArrowLeft } from "react-icons/fi";
+>>>>>>> ATHARVA:formquiz-frontend/src/pages/livequiz/quiz.js
 
-import { Card, CardContent } from "../components/card";
-import { Button } from "../components/buttonquiz";
-import { Input } from "../components/input";
-import { Tabs, TabsList, TabsTrigger } from "../components/tabs";
+import { Card } from '../../components/card';
+import { Button } from '../../components/buttonquiz';
+import { Input } from '../../components/input';
+import { Tabs, TabsList, TabsTrigger } from '../../components/tabs';
 
-import { supabase } from "../supabase";
+import { supabase } from '../../supabase';
 import "./quiz.css";
+<<<<<<< HEAD:formquiz-frontend/src/pages/quiz.js
+=======
+import Spinner from '../../components/Spinner';
+import Skeleton from '../../components/Skeleton';
+import { useToast } from '../../components/Toast';
+>>>>>>> ATHARVA:formquiz-frontend/src/pages/livequiz/quiz.js
 
 // 🔲 Modal for sharing
 const Modal = ({ show, onClose, url }) => {
@@ -608,7 +618,11 @@ export default function Quiz() {
             variant="outline"
             className="flex items-center gap-2 rounded-full px-5 py-2 font-medium text-base shadow-sm border hover:bg-gray-100"
             style={{ background: 'var(--card)', color: 'var(--text)', borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
+<<<<<<< HEAD:formquiz-frontend/src/pages/quiz.js
             onClick={() => navigate(-1)}
+=======
+            onClick={() => navigate('/dashboard')}
+>>>>>>> ATHARVA:formquiz-frontend/src/pages/livequiz/quiz.js
           >
             <FiArrowLeft className="text-lg" />
             Back
@@ -770,6 +784,7 @@ export default function Quiz() {
             </div>
           </div>
 
+<<<<<<< HEAD:formquiz-frontend/src/pages/quiz.js
           {/* Center Panel: Slide Editor */}
           <div className="col-span-3 flex flex-col items-center">
             <div className="rounded-2xl shadow-xl border w-full max-w-2xl p-8" style={{ background: 'var(--card)', color: 'var(--text)', borderWidth: 2, borderColor: isDarkMode ? '#fff' : 'var(--border)' }}>
@@ -812,6 +827,20 @@ export default function Quiz() {
               {/* Render input UI based on type */}
               {currentSlide.type === 'multiple' && (
                 <div className="space-y-3">
+=======
+          {/* Center Panel */}
+          <div className="col-span-3 space-y-6">
+            <Card className="rounded-2xl shadow-xl border border-gray-200" style={{ backgroundColor: currentSlide.background }}>
+              <div className="p-4 space-y-4">
+                <Input
+                  placeholder="Ask a Question Here..."
+                  value={currentSlide.question}
+                  onChange={(e) => updateSlide("question", e.target.value)}
+                  className={`${currentSlide.fontSize} font-semibold w-full`}
+                  style={{ color: currentSlide.textColor }}
+                />
+                <div className="space-y-2">
+>>>>>>> ATHARVA:formquiz-frontend/src/pages/livequiz/quiz.js
                   {currentSlide.options.map((opt, i) => {
                     const isCorrect = currentSlide.correctAnswers.includes(i);
                     return (
@@ -850,6 +879,7 @@ export default function Quiz() {
                     }}>+ Add Option</Button>
                   ) : null}
                 </div>
+<<<<<<< HEAD:formquiz-frontend/src/pages/quiz.js
               )}
               {currentSlide.type === 'true_false' && (
                 <div className="space-y-3">
@@ -990,6 +1020,87 @@ export default function Quiz() {
                 </Button>
               </div>
             </div>
+=======
+              </div>
+            </Card>
+          </div>
+
+          {/* Right Panel */}
+          <div className="col-span-1 space-y-4">
+            <Card>
+              <div className="space-y-4 p-4">
+  {/* Background Color */}
+  <div>
+    <label className="block mb-1 text-sm font-medium">Background Color</label>
+    <Input
+      type="color"
+      value={currentSlide.background}
+      onChange={(e) => updateSlide("background", e.target.value)}
+    />
+  </div>
+
+  {/* Text Color */}
+  <div>
+    <label className="block mb-1 text-sm font-medium">Text Color</label>
+    <Input
+      type="color"
+      value={currentSlide.textColor}
+      onChange={(e) => updateSlide("textColor", e.target.value)}
+    />
+  </div>
+
+  {/* Font Size */}
+  <div>
+    <label className="block mb-1 text-sm font-medium">Font Size</label>
+    <select
+      className="w-full border rounded p-2"
+      value={currentSlide.fontSize}
+      onChange={(e) => updateSlide("fontSize", e.target.value)}
+    >
+      <option value="text-sm">Small</option>
+      <option value="text-base">Normal</option>
+      <option value="text-lg">Large</option>
+      <option value="text-xl">Extra Large</option>
+    </select>
+  </div>
+
+  {/* Timer */}
+  <div>
+    <label className="block mb-1 text-sm font-medium">Timer</label>
+    <select
+      className="w-full border rounded p-2"
+      value={currentSlide.timer}
+      onChange={(e) => updateSlide("timer", parseInt(e.target.value))}
+    >
+      {[5, 10, 15, 20, 25, 30, 45, 60, 120, 180, 240, 300].map((sec) => (
+        <option key={sec} value={sec}>
+          {sec < 60 ? `${sec}s` : `${sec / 60} min`}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  {/* Common Apply Button */}
+  <Button
+    className="w-full bg-purple-600 text-white mt-2"
+    onClick={() => {
+      setSlides((prev) =>
+        prev.map((s) => ({
+          ...s,
+          background: currentSlide.background,
+          textColor: currentSlide.textColor,
+          fontSize: currentSlide.fontSize,
+          timer: currentSlide.timer,
+        }))
+      );
+    }}
+  >
+    Apply All Settings to All Slides
+  </Button>
+</div>
+
+            </Card>
+>>>>>>> ATHARVA:formquiz-frontend/src/pages/livequiz/quiz.js
           </div>
         </div>
       ) : (

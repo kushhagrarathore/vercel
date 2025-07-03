@@ -1,6 +1,6 @@
 // src/components/ShortTextQuestion.js
 import React from 'react';
-import './ShortTextQuestion.css';
+import '../ShortTextQuestion.css';
 
 const ShortTextQuestion = ({
   question,
