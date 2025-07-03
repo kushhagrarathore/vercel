@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { useLiveQuiz } from '../context/LiveQuizContext';
 import QuestionTimer from '../components/quiz/QuestionTimer';
@@ -8,6 +8,7 @@ import Leaderboard from './live/Leaderboard';
 
 const LiveQuizPage = () => {
   const { quizId } = useParams();
+  const navigate = useNavigate();
   const { quizState, setQuizState } = useLiveQuiz();
   const [questions, setQuestions] = useState([]);
   const [currentQuestion, setCurrentQuestion] = useState(null);
@@ -137,6 +138,12 @@ const LiveQuizPage = () => {
 
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', padding: 24 }}>
+      <button
+        onClick={() => navigate('/dashboard')}
+        style={{ marginBottom: 18, padding: '8px 18px', borderRadius: 8, background: '#7c3aed', color: '#fff', border: 'none', fontWeight: 600, cursor: 'pointer', fontSize: 15 }}
+      >
+        ← Back to Dashboard
+      </button>
       <h2>Live Quiz</h2>
       <div style={{ marginBottom: 16 }}>
         <b>Question {quizState.currentQuestionIndex + 1}:</b> {currentQuestion.question}

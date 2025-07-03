@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Plus, Users, Trophy, Clock, Edit, Trash2, Copy, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Mock data for demonstration
 const mockQuizzes = [
@@ -53,6 +54,7 @@ const LiveQuizApp = () => {
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [quizzes, setQuizzes] = useState(mockQuizzes);
   const [sessions, setSessions] = useState(mockSessions);
+  const navigate = useNavigate();
 
   const renderView = () => {
     switch(currentView) {
@@ -60,6 +62,7 @@ const LiveQuizApp = () => {
         return <Dashboard 
           quizzes={quizzes} 
           sessions={sessions}
+          setCurrentView={setCurrentView}
           onCreateQuiz={() => setCurrentView('builder')}
           onEditQuiz={(quiz) => {
             setSelectedQuiz(quiz);
@@ -109,33 +112,14 @@ const LiveQuizApp = () => {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold">Q</span>
-                </div>
-                <h1 className="text-xl font-bold text-gray-900">QuizMaster Live</h1>
-              </div>
-              <div className="hidden md:flex space-x-6">
-                <button 
-                  onClick={() => setCurrentView('dashboard')}
-                  className={`px-3 py-2 rounded-md text-sm font-medium ${currentView === 'dashboard' ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:text-gray-900'}`}
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="ml-3 px-3 py-1 rounded-md bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors duration-150 text-sm font-medium border border-purple-200 flex items-center"
+                  style={{ marginLeft: 12 }}
                 >
-                  Dashboard
-                </button>
-                <button 
-                  onClick={() => setCurrentView('builder')}
-                  className={`px-3 py-2 rounded-md text-sm font-medium ${currentView === 'builder' ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:text-gray-900'}`}
-                >
-                  Quiz Builder
+                  <span style={{ fontSize: 18, marginRight: 6 }}>←</span> BACK TO DASHBOARD
                 </button>
               </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button 
-                onClick={() => setCurrentView('join')}
-                className="bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 font-medium"
-              >
-                Join Quiz
-              </button>
             </div>
           </div>
         </div>
@@ -149,7 +133,7 @@ const LiveQuizApp = () => {
 };
 
 // Dashboard Component
-const Dashboard = ({ quizzes, sessions, onCreateQuiz, onEditQuiz, onStartLive, onJoinQuiz }) => {
+const Dashboard = ({ quizzes, sessions, setCurrentView, onCreateQuiz, onEditQuiz, onStartLive, onJoinQuiz }) => {
   return (
     <div className="space-y-8">
       {/* Stats Cards */}
@@ -160,9 +144,9 @@ const Dashboard = ({ quizzes, sessions, onCreateQuiz, onEditQuiz, onStartLive, o
               <p className="text-sm font-medium text-gray-600">Total Quizzes</p>
               <p className="text-2xl font-bold text-gray-900">{quizzes.length}</p>
             </div>
-            <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
+            <button className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center hover:bg-blue-200 transition" onClick={() => onEditQuiz(null)} title="Go to Quiz Builder">
               <Edit className="h-6 w-6 text-blue-600" />
-            </div>
+            </button>
           </div>
         </div>
         
@@ -172,9 +156,9 @@ const Dashboard = ({ quizzes, sessions, onCreateQuiz, onEditQuiz, onStartLive, o
               <p className="text-sm font-medium text-gray-600">Active Sessions</p>
               <p className="text-2xl font-bold text-gray-900">{sessions.filter(s => s.status === 'active').length}</p>
             </div>
-            <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
+            <button className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center hover:bg-green-200 transition" onClick={() => onStartLive(null)} title="Go to Live Sessions">
               <Play className="h-6 w-6 text-green-600" />
-            </div>
+            </button>
           </div>
         </div>
         
@@ -184,9 +168,9 @@ const Dashboard = ({ quizzes, sessions, onCreateQuiz, onEditQuiz, onStartLive, o
               <p className="text-sm font-medium text-gray-600">Total Participants</p>
               <p className="text-2xl font-bold text-gray-900">{sessions.reduce((acc, s) => acc + s.participants, 0)}</p>
             </div>
-            <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
+            <button className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center hover:bg-purple-200 transition" onClick={() => setCurrentView('analytics')} title="View Participants/Analytics">
               <Users className="h-6 w-6 text-purple-600" />
-            </div>
+            </button>
           </div>
         </div>
         
@@ -196,9 +180,9 @@ const Dashboard = ({ quizzes, sessions, onCreateQuiz, onEditQuiz, onStartLive, o
               <p className="text-sm font-medium text-gray-600">Avg. Score</p>
               <p className="text-2xl font-bold text-gray-900">78%</p>
             </div>
-            <div className="h-12 w-12 bg-orange-100 rounded-lg flex items-center justify-center">
+            <button className="h-12 w-12 bg-orange-100 rounded-lg flex items-center justify-center hover:bg-orange-200 transition" onClick={() => setCurrentView('analytics')} title="View Score Analytics">
               <Trophy className="h-6 w-6 text-orange-600" />
-            </div>
+            </button>
           </div>
         </div>
       </div>
@@ -227,99 +211,6 @@ const Dashboard = ({ quizzes, sessions, onCreateQuiz, onEditQuiz, onStartLive, o
             <Trophy className="h-5 w-5" />
             <span className="font-medium">View Analytics</span>
           </button>
-        </div>
-      </div>
-
-      {/* My Quizzes */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">My Quizzes</h2>
-            <button 
-              onClick={onCreateQuiz}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center space-x-2"
-            >
-              <Plus className="h-4 w-4" />
-              <span>New Quiz</span>
-            </button>
-          </div>
-        </div>
-        
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {quizzes.map((quiz) => (
-              <div key={quiz.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1">{quiz.title}</h3>
-                    <p className="text-sm text-gray-600 mb-2">{quiz.description}</p>
-                    <div className="flex items-center space-x-4 text-xs text-gray-500">
-                      <span>{quiz.questions} questions</span>
-                      <span>{Math.floor(quiz.duration / 60)} min</span>
-                      <span className={`px-2 py-1 rounded-full ${quiz.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                        {quiz.status}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <button 
-                    onClick={() => onEditQuiz(quiz)}
-                    className="flex-1 px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200"
-                  >
-                    Edit
-                  </button>
-                  <button 
-                    onClick={() => onStartLive(quiz)}
-                    className="flex-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200"
-                  >
-                    Start Live
-                  </button>
-                  <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors duration-200">
-                    <Copy className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Live Sessions */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-        <div className="p-6 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">Live Sessions</h2>
-        </div>
-        
-        <div className="p-6">
-          <div className="space-y-4">
-            {sessions.map((session) => (
-              <div key={session.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                <div className="flex items-center space-x-4">
-                  <div className={`w-3 h-3 rounded-full ${session.status === 'active' ? 'bg-green-400' : 'bg-gray-400'}`}></div>
-                  <div>
-                    <h4 className="font-medium text-gray-900">{session.quiz_title}</h4>
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
-                      <span>{session.participants} participants</span>
-                      <span>Started at {session.started_at}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  {session.status === 'active' && (
-                    <button className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200">
-                      Monitor
-                    </button>
-                  )}
-                  <button className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200">
-                    Results
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>

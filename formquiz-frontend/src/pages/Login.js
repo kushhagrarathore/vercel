@@ -110,14 +110,7 @@ export default function Login() {
   return (
     <div className="login-framer-bg">
       <div className="framer-bg-animated"></div>
-      {/* Company name in top left with animation */}
-      <div className="company-name company-name-animated">INQUIZO</div>
-      {/* Main floating login image */}
-      <img
-        src={require('./login.png')}
-        alt="Login Visual"
-        className="login-main-image"
-      />
+      {/* Logo removed as requested */}
       <div className="framer-login-card">
         <div className="framer-login-title">Welcome to Inquizo</div>
         <button

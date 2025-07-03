@@ -68,6 +68,12 @@
   background: #eaf0ff;
   color: #3751e0;
 }
+.tab-btn.myquizzes {
+  color: #7c3aed !important;
+}
+.tab-btn.myquizzes.active {
+  color: #fff !important;
+}
 @media (max-width: 600px) {
   .modern-tabs {
     padding: 2px 2px;
@@ -86,8 +92,8 @@
   height: 54px;
   display: flex;
   align-items: center;
-  padding: 0 28px;
-  gap: 18px;
+  padding: 0 10px;
+  gap: 8px;
   z-index: 100;
   font-family: inherit;
 }
@@ -124,8 +130,8 @@
 @media (max-width: 900px) {
   .navbar {
     height: 44px;
-    padding: 0 10px;
-    gap: 10px;
+    padding: 0 4px;
+    gap: 4px;
   }
   .navbar-logo {
     font-size: 1em;
@@ -138,4 +144,43 @@
     font-size: 0.97em;
     padding: 5px 10px;
   }
+}
+
+[data-theme='dark'] .top-navbar,
+[data-theme='dark'] .logo,
+[data-theme='dark'] .tab-btn,
+[data-theme='dark'] .tab-btn.active,
+[data-theme='dark'] .username,
+[data-theme='dark'] .dropdown-item,
+[data-theme='dark'] .view-plans-btn {
+  color: #fff !important;
+}
+
+[data-theme='dark'] .tab-btn.active {
+  background: #222e4a;
+  color: #fff !important;
+}
+
+.livequiz-switch {
+  color: #ef4444 !important;
+  font-weight: 700;
+}
+.livequiz-switch.active {
+  background: #ef4444 !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(239,68,68,0.10);
+}
+.livequiz-switch:hover:not(.active) {
+  background: #fee2e2 !important;
+  color: #b91c1c !important;
+}
+
+.tab-btn.livequiz-switch {
+  color: #7c3aed !important;
+}
+.tab-btn.livequiz-switch.active,
+.livequiz-switch.active {
+  background: #7c3aed !important;
+  color: #fff !important;
+  box-shadow: 0 2px 8px rgba(124,58,237,0.18) !important;
 }
