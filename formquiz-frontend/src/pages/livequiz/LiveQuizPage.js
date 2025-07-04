@@ -1,19 +1,12 @@
-import React, { useEffect, useState } from 'react';
-<<<<<<< HEAD:formquiz-frontend/src/pages/LiveQuizPage.js
-import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '../supabase';
-import { useLiveQuiz } from '../context/LiveQuizContext';
-import QuestionTimer from '../components/quiz/QuestionTimer';
-import AnswerFeedback from '../components/quiz/AnswerFeedback';
-import Leaderboard from './live/Leaderboard';
-=======
+
+
 import { useParams } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import { useLiveQuiz } from '../../components/livequiz/LiveQuizContext';
 import QuestionTimer from '../../components/quiz/QuestionTimer';
 import AnswerFeedback from '../../components/quiz/AnswerFeedback';
 import Leaderboard from './Leaderboard';
->>>>>>> ATHARVA:formquiz-frontend/src/pages/livequiz/LiveQuizPage.js
+
 
 const LiveQuizPage = () => {
   const { quizId } = useParams();

@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-<<<<<<< HEAD:formquiz-frontend/src/pages/ResultsPage.js
-import { supabase } from '../supabase';
-=======
 import { supabase } from '../../supabase';
 import Leaderboard from '../livequiz/Leaderboard';
->>>>>>> ATHARVA:formquiz-frontend/src/pages/livequiz/ResultsPage.js
 import './ResultsPage.css';
 
 const ResultsPage = () => {

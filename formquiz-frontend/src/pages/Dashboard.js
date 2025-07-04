@@ -1,14 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../components/navbar';
-import FormCreationBar from '../components/FormCreationBar';
-import FormCardRow from '../components/FormCardRow';
-import QuizCreationBar from '../components/QuizCreationBar';
+import FormCreationBar from '../components/forms/FormCreationBar';
+import FormCardRow from '../components/forms/FormCardRow';
+import QuizCreationBar from '../components/quiz/QuizCreationBar';
 import Skeleton from '../components/Skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabase';
 import { useToast } from '../components/Toast';
 import './Dashboard.css';
+
+// Debounce hook
+function useDebounce(value, delay) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  useEffect(() => {
+    const handler = setTimeout(() => setDebouncedValue(value), delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
+
+const MemoFormCardRow = React.memo(FormCardRow);
 
 const LiveQuizTemplateCard = ({ onClick }) => (
   <div className="template-section">
@@ -73,6 +85,7 @@ const LiveQuizTemplateCard = ({ onClick }) => (
 
 const Dashboard = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const initialTab =
     localStorage.getItem('dashboardTab') ||
     location.state?.activeTab ||
@@ -80,6 +93,7 @@ const Dashboard = () => {
 
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 250);
   const [viewMode, setViewMode] = useState('grid');
   const [username, setUsername] = useState('');
   const [forms, setForms] = useState([]);
@@ -121,23 +135,24 @@ const Dashboard = () => {
             .single();
           if (profile?.name) setUsername(profile.name);
 
+          // Only fetch needed columns
           const { data: formData } = await supabase
             .from('forms')
-            .select('*')
+            .select('id, title, created_at, is_published, type, shared_with')
             .eq('created_by', user.email)
             .order('created_at', { ascending: false });
           if (formData) setForms(formData);
 
           const { data: quizData } = await supabase
             .from('quizzes')
-            .select('*')
+            .select('id, title, created_at, is_published, type, shared_with')
             .eq('created_by', user.email)
             .order('created_at', { ascending: false });
           if (quizData) setQuizzes(quizData);
 
           const { data: liveQuizData } = await supabase
             .from('live_quizzes')
-            .select('*')
+            .select('quiz_id, is_live')
             .eq('is_live', true);
           if (liveQuizData) setLiveQuizzes(liveQuizData);
         } else {
@@ -154,12 +169,15 @@ const Dashboard = () => {
     fetchUserData();
   }, [toast]);
 
-  const filteredForms = forms.filter((form) =>
-    form.title?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  const filteredQuizzes = quizzes.filter((quiz) =>
-    quiz.title?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Memoize filtered lists
+  const filteredForms = useMemo(() =>
+    forms.filter((form) =>
+      form.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+    ), [forms, debouncedSearchTerm]);
+  const filteredQuizzes = useMemo(() =>
+    quizzes.filter((quiz) =>
+      quiz.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+    ), [quizzes, debouncedSearchTerm]);
 
   let currentData;
   if (activeTab === 'forms') {
@@ -167,8 +185,10 @@ const Dashboard = () => {
   } else if (activeTab === 'livequiz') {
     const liveQuizIds = new Set(liveQuizzes.map((lq) => lq.quiz_id));
     currentData = quizzes.filter((q) => liveQuizIds.has(q.id));
-  } else {
+  } else if (activeTab === 'quizzes') {
     currentData = filteredQuizzes;
+  } else {
+    currentData = [];
   }
 
   const handlePublishToggle = async (formId, newStatus) => {
@@ -254,7 +274,7 @@ const Dashboard = () => {
           {activeTab === 'quizzes' && <QuizCreationBar />}
           {activeTab === 'livequiz' && (
             <LiveQuizTemplateCard
-              onClick={() => (window.location.href = '/live-quiz')}
+              onClick={() => navigate('/quiz/create')}
             />
           )}
         </motion.div>
@@ -308,7 +328,7 @@ const Dashboard = () => {
                   }}
                   className="dashboard-animated-card"
                 >
-                  <FormCardRow
+                  <MemoFormCardRow
                     view={viewMode}
                     name={item.title}
                     timestamp={new Date(

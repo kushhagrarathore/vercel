@@ -178,7 +178,6 @@ const CreateQuizPage = () => {
   const handlePublish = async () => {
     setPublishing(true);
     try {
-      console.log('Publishing quiz:', { quizTitle, slides });
       if (!quizTitle.trim()) throw new Error('Quiz title is required');
       if (!slides.length) throw new Error('At least one slide is required');
       for (const s of slides) {
@@ -219,9 +218,19 @@ const CreateQuizPage = () => {
         quizIdToUse = data.id;
         quizData = data;
       }
+      // --- Insert or update live_quizzes ---
+      if (quizIdToUse) {
+        // Check if already exists
+        const { data: existingLiveQuiz } = await supabase.from('live_quizzes').select('*').eq('quiz_id', quizIdToUse).single();
+        if (existingLiveQuiz) {
+          await supabase.from('live_quizzes').update({ is_live: true }).eq('quiz_id', quizIdToUse);
+        } else {
+          await supabase.from('live_quizzes').insert({ quiz_id: quizIdToUse, is_live: true });
+        }
+      }
       setQuiz(quizData); // Store in context
-      console.log('Navigating to admin page for quiz:', quizIdToUse);
-      navigate(`/admin/${quizIdToUse}`);
+      if (!quizIdToUse) throw new Error('Quiz ID not found after publish');
+      navigate(`/livequiz/admin/${quizIdToUse}`);
     } catch (err) {
       alert(err.message);
       console.error('Publish error:', err);

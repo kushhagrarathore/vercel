@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import './FormCreationBar.css';
+import '../forms/FormCreationBar.css';
 
 const quizTemplates = [
   {

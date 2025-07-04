@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '../supabase'; // Adjust path as needed
+import { supabase } from '../../supabase'; // Correct path for CombineBuild
 import './Signup.css';
 
 const SignUp = () => {

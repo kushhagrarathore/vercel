@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Button } from "../components/buttonquiz";
-import { supabase } from "../supabase";
+import { Button } from '../../components/buttonquiz';
+import { supabase } from '../../supabase';
 import { CheckCircle } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 
