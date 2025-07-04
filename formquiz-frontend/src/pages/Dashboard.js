@@ -127,34 +127,70 @@ const Dashboard = () => {
           error: userError,
         } = await supabase.auth.getUser();
 
+        console.log("Fetched current user:", user);
+
         if (user && user.email) {
-          const { data: profile } = await supabase
+          // Fetch profile name
+          const { data: profile, error: profileError } = await supabase
             .from('users')
             .select('name')
             .eq('id', user.id)
             .single();
-          if (profile?.name) setUsername(profile.name);
 
-          // Only fetch needed columns
-          const { data: formData } = await supabase
+          if (profileError) {
+            console.error("Error fetching profile:", profileError);
+          } else if (profile?.name) {
+            setUsername(profile.name);
+          }
+
+          // Fetch forms where created_by = email OR user_id = id
+          const { data: formData, error: formError } = await supabase
             .from('forms')
-            .select('id, title, created_at, is_published, type, shared_with')
-            .eq('created_by', user.email)
+            .select('*')
+            .or(
+              `created_by.eq.${user.email},user_id.eq.${user.id}`,
+              { foreignTable: undefined }
+            )
             .order('created_at', { ascending: false });
-          if (formData) setForms(formData);
 
-          const { data: quizData } = await supabase
+          if (formError) {
+            console.error("Error fetching forms:", formError);
+            toast('Error fetching forms', 'error');
+          } else {
+            console.log("Fetched forms:", formData);
+            setForms(formData || []);
+          }
+
+          // Fetch quizzes where created_by = email OR user_id = id
+          const { data: quizData, error: quizError } = await supabase
             .from('quizzes')
-            .select('id, title, created_at, is_published, type, shared_with')
-            .eq('created_by', user.email)
+            .select('*')
+            .or(
+              `created_by.eq.${user.email},user_id.eq.${user.id}`,
+              { foreignTable: undefined }
+            )
             .order('created_at', { ascending: false });
-          if (quizData) setQuizzes(quizData);
 
-          const { data: liveQuizData } = await supabase
+          if (quizError) {
+            console.error("Error fetching quizzes:", quizError);
+            toast('Error fetching quizzes', 'error');
+          } else {
+            console.log("Fetched quizzes:", quizData);
+            setQuizzes(quizData || []);
+          }
+
+          // Fetch live quizzes
+          const { data: liveQuizData, error: liveQuizError } = await supabase
             .from('live_quizzes')
             .select('quiz_id, is_live')
             .eq('is_live', true);
-          if (liveQuizData) setLiveQuizzes(liveQuizData);
+
+          if (liveQuizError) {
+            console.error("Error fetching live quizzes:", liveQuizError);
+          } else {
+            console.log("Fetched live quizzes:", liveQuizData);
+            setLiveQuizzes(liveQuizData || []);
+          }
         } else {
           toast('User not logged in', 'error');
           console.error('User not logged in:', userError);
@@ -166,14 +202,15 @@ const Dashboard = () => {
         setLoading(false);
       }
     };
+
     fetchUserData();
   }, [toast]);
 
-  // Memoize filtered lists
   const filteredForms = useMemo(() =>
     forms.filter((form) =>
       form.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
     ), [forms, debouncedSearchTerm]);
+
   const filteredQuizzes = useMemo(() =>
     quizzes.filter((quiz) =>
       quiz.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
@@ -212,11 +249,13 @@ const Dashboard = () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
       const { error } = await supabase
         .from('quizzes')
         .delete()
         .eq('id', quizId)
         .eq('user_id', user?.id);
+
       if (error) {
         toast('Failed to delete quiz', 'error');
         return;
@@ -225,6 +264,7 @@ const Dashboard = () => {
       toast('Quiz deleted!', 'success');
     } catch (err) {
       toast('Failed to delete quiz', 'error');
+      console.error(err);
     }
   };
 
@@ -249,7 +289,6 @@ const Dashboard = () => {
       <Navbar activeTab={activeTab} onToggle={handleTabToggle} />
 
       <div className="dashboard-animated-content">
-        {/* Header */}
         <motion.h2
           className="dashboard-animated-title"
           initial={{ opacity: 0, y: -20 }}
@@ -263,7 +302,6 @@ const Dashboard = () => {
             : 'Quiz Templates'}
         </motion.h2>
 
-        {/* Creation bar */}
         <motion.div
           className="dashboard-creation-bar"
           initial={{ opacity: 0, y: -10 }}
@@ -279,7 +317,6 @@ const Dashboard = () => {
           )}
         </motion.div>
 
-        {/* Search and View toggle */}
         <div className="dashboard-controls-bar">
           <input
             className="dashboard-search"
@@ -308,7 +345,6 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Cards grid/list */}
         <section
           className={`dashboard-animated-section ${viewMode}`}
         >
