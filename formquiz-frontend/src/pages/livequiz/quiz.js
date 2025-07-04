@@ -12,16 +12,13 @@ import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { QRCodeCanvas } from "qrcode.react";
 import { FiArrowLeft, FiEye, FiUpload, FiSun, FiMoon, FiSave, FiShare2, FiPlay, FiEdit2, FiTrash2, FiBarChart2, FiBarChart } from "react-icons/fi";
 
-import { Card } from '../../components/card';
-import { Button } from '../../components/buttonquiz';
-import { Input } from '../../components/input';
-import { Tabs, TabsList, TabsTrigger } from '../../components/tabs';
+import { Card, CardContent } from "../../components/card";
+import { Button } from "../../components/buttonquiz";
+import { Input } from "../../components/input";
+import { Tabs, TabsList, TabsTrigger } from "../../components/tabs";
 
-import { supabase } from '../../supabase';
+import { supabase } from "../../supabase";
 import "./quiz.css";
-import Spinner from '../../components/Spinner';
-import Skeleton from '../../components/Skeleton';
-import { useToast } from '../../components/Toast';
 
 // 🔲 Modal for sharing
 const Modal = ({ show, onClose, url }) => {
@@ -611,7 +608,7 @@ export default function Quiz() {
             variant="outline"
             className="flex items-center gap-2 rounded-full px-5 py-2 font-medium text-base shadow-sm border hover:bg-gray-100"
             style={{ background: 'var(--card)', color: 'var(--text)', borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate(-1)}
           >
             <FiArrowLeft className="text-lg" />
             Back
@@ -773,18 +770,48 @@ export default function Quiz() {
             </div>
           </div>
 
-          {/* Center Panel */}
-          <div className="col-span-3 space-y-6">
-            <Card className="rounded-2xl shadow-xl border border-gray-200" style={{ backgroundColor: currentSlide.background }}>
-              <div className="p-4 space-y-4">
-                <Input
-                  placeholder="Ask a Question Here..."
-                  value={currentSlide.question}
-                  onChange={(e) => updateSlide("question", e.target.value)}
-                  className={`${currentSlide.fontSize} font-semibold w-full`}
-                  style={{ color: currentSlide.textColor }}
-                />
-                <div className="space-y-2">
+          {/* Center Panel: Slide Editor */}
+          <div className="col-span-3 flex flex-col items-center">
+            <div className="rounded-2xl shadow-xl border w-full max-w-2xl p-8" style={{ background: 'var(--card)', color: 'var(--text)', borderWidth: 2, borderColor: isDarkMode ? '#fff' : 'var(--border)' }}>
+              <div className="font-semibold mb-2" style={{ color: 'var(--accent)' }}>Slide {selectedSlide + 1} of {slides.length}</div>
+              <div className="flex gap-3 mb-4">
+                {questionTypes.map(qt => (
+                  <button
+                    key={qt.value}
+                    className={`slide-type-btn${currentSlide.type === qt.value ? ' active' : ''}`}
+                    style={{ padding: '6px 14px', fontSize: 14, borderRadius: 8, border: 'none', fontWeight: 600, background: currentSlide.type === qt.value ? '#2563eb' : '#f7f8fa', color: currentSlide.type === qt.value ? '#fff' : '#2563eb' }}
+                    onClick={() => {
+                      if (qt.value === 'true_false') {
+                        updateSlide('type', 'true_false');
+                        updateSlide('options', ['True', 'False']);
+                        updateSlide('correctAnswers', []);
+                      } else if (qt.value === 'one_word') {
+                        updateSlide('type', 'one_word');
+                        updateSlide('options', []);
+                        updateSlide('correctAnswers', []);
+                      } else {
+                        updateSlide('type', 'multiple');
+                        if (!Array.isArray(currentSlide.options) || currentSlide.options.length < 2) {
+                          updateSlide('options', ['', '']);
+                        }
+                        updateSlide('correctAnswers', []);
+                      }
+                    }}
+                  >
+                    {qt.label}
+                  </button>
+                ))}
+              </div>
+              <Input
+                placeholder="Your first question?"
+                value={currentSlide.question}
+                onChange={(e) => updateSlide("question", e.target.value)}
+                className="text-lg font-semibold w-full mb-6 border rounded-lg px-4 py-3 focus:outline-none focus:ring-2"
+                style={{ color: currentSlide.textColor, background: 'var(--bg)', borderColor: 'var(--border)', fontFamily: currentSlide.fontFamily }}
+              />
+              {/* Render input UI based on type */}
+              {currentSlide.type === 'multiple' && (
+                <div className="space-y-3">
                   {currentSlide.options.map((opt, i) => {
                     const isCorrect = currentSlide.correctAnswers.includes(i);
                     return (
@@ -823,84 +850,146 @@ export default function Quiz() {
                     }}>+ Add Option</Button>
                   ) : null}
                 </div>
-              </div>
-            </Card>
+              )}
+              {currentSlide.type === 'true_false' && (
+                <div className="space-y-3">
+                  {['True', 'False'].map((opt, i) => {
+                    const isCorrect = currentSlide.correctAnswers.includes(i);
+                    return (
+                      <div key={i} className="flex items-center gap-2 rounded-lg px-4 py-2 border" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
+                        <input
+                          type="checkbox"
+                          name={`correct-answer-${selectedSlide}`}
+                          checked={isCorrect}
+                          onChange={() => {
+                            let newAnswers = currentSlide.correctAnswers.includes(i)
+                              ? currentSlide.correctAnswers.filter(idx => idx !== i)
+                              : [i];
+                            updateSlide('correctAnswers', newAnswers);
+                          }}
+                          className="accent-blue-600"
+                        />
+                        <input
+                          type="text"
+                          value={opt}
+                          disabled
+                          className="flex-1 bg-transparent border-none outline-none text-base px-2 text-gray-500"
+                          style={{ color: currentSlide.textColor, fontFamily: currentSlide.fontFamily }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {currentSlide.type === 'one_word' && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 rounded-lg px-4 py-2 border" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
+                    <span className="font-semibold mr-2">Correct Answer:</span>
+                    <input
+                      type="text"
+                      value={currentSlide.correctAnswers[0] || ''}
+                      onChange={e => updateSlide('correctAnswers', [e.target.value])}
+                      placeholder="Enter the correct answer"
+                      className="flex-1 bg-transparent border-none outline-none text-base px-2"
+                      style={{ color: currentSlide.textColor, fontFamily: currentSlide.fontFamily }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Right Panel */}
-          <div className="col-span-1 space-y-4">
-            <Card>
-              <div className="space-y-4 p-4">
-                {/* Background Color */}
-                <div>
-                  <label className="block mb-1 text-sm font-medium">Background Color</label>
-                  <Input
-                    type="color"
-                    value={currentSlide.background}
-                    onChange={(e) => updateSlide("background", e.target.value)}
-                  />
+          {/* Right Panel: Customization */}
+          <div className="col-span-1">
+            <div className="rounded-2xl shadow-xl border p-6 flex flex-col gap-6" style={{
+              background: isDarkMode ? 'linear-gradient(135deg, rgba(36,37,54,0.95) 60%, rgba(60,60,80,0.95) 100%)' : 'linear-gradient(135deg, #fff 60%, #f3f4f6 100%)',
+              color: 'var(--text)',
+              borderWidth: 2,
+              borderColor: isDarkMode ? '#fff' : 'var(--border)',
+              borderRadius: 20,
+              boxShadow: isDarkMode ? '0 4px 32px 0 rgba(0,0,0,0.35)' : '0 4px 24px 0 rgba(37,99,235,0.08)'
+            }}>
+              {/* Text Style Section */}
+              <div>
+                <div className="font-semibold mb-2" style={{ color: 'var(--text)' }}>Text Style</div>
+                <select
+                  className="w-full border rounded-lg p-3 mb-4 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                  style={{ background: isDarkMode ? '#232336' : '#f9fafb', color: 'var(--text)', borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
+                  value={currentSlide.fontFamily}
+                  onChange={e => updateSlide('fontFamily', e.target.value)}
+                >
+                  {textStyles.map(style => (
+                    <option key={style.value} value={style.value} style={{ fontFamily: style.value }}>{style.label}</option>
+                  ))}
+                </select>
+              </div>
+              {/* Color Section */}
+              <div>
+                <div className="font-semibold mb-2" style={{ color: 'var(--text)' }}>Colors</div>
+                <div className="flex items-end gap-6 mb-2">
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Text</span>
+                    <div
+                      className="w-8 h-8 rounded-full mb-1 border-2 shadow cursor-pointer"
+                      style={{ background: currentSlide.textColor, borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
+                      onClick={() => setOpenColorPicker(openColorPicker === 'text' ? null : 'text')}
+                    />
+                    {openColorPicker === 'text' && (
+                      <Input
+                        type="color"
+                        value={currentSlide.textColor}
+                        onChange={e => { updateSlide('textColor', e.target.value); setOpenColorPicker(null); }}
+                        className="w-10 h-10 p-0 border-2 rounded-lg bg-transparent cursor-pointer shadow-sm mt-1"
+                        style={{ background: 'none', borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
+                        autoFocus
+                        onBlur={() => setOpenColorPicker(null)}
+                      />
+                    )}
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>BG</span>
+                    <div
+                      className="w-8 h-8 rounded-full mb-1 border-2 shadow cursor-pointer"
+                      style={{ background: currentSlide.background, borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
+                      onClick={() => setOpenColorPicker(openColorPicker === 'bg' ? null : 'bg')}
+                    />
+                    {openColorPicker === 'bg' && (
+                      <Input
+                        type="color"
+                        value={currentSlide.background}
+                        onChange={e => { updateSlide('background', e.target.value); setOpenColorPicker(null); }}
+                        className="w-10 h-10 p-0 border-2 rounded-lg bg-transparent cursor-pointer shadow-sm mt-1"
+                        style={{ background: 'none', borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
+                        autoFocus
+                        onBlur={() => setOpenColorPicker(null)}
+                      />
+                    )}
+                  </div>
                 </div>
-
-                {/* Text Color */}
-                <div>
-                  <label className="block mb-1 text-sm font-medium">Text Color</label>
-                  <Input
-                    type="color"
-                    value={currentSlide.textColor}
-                    onChange={(e) => updateSlide("textColor", e.target.value)}
-                  />
-                </div>
-
-                {/* Font Size */}
-                <div>
-                  <label className="block mb-1 text-sm font-medium">Font Size</label>
-                  <select
-                    className="w-full border rounded p-2"
-                    value={currentSlide.fontSize}
-                    onChange={(e) => updateSlide("fontSize", e.target.value)}
-                  >
-                    <option value="text-sm">Small</option>
-                    <option value="text-base">Normal</option>
-                    <option value="text-lg">Large</option>
-                    <option value="text-xl">Extra Large</option>
-                  </select>
-                </div>
-
-                {/* Timer */}
-                <div>
-                  <label className="block mb-1 text-sm font-medium">Timer</label>
-                  <select
-                    className="w-full border rounded p-2"
-                    value={currentSlide.timer}
-                    onChange={(e) => updateSlide("timer", parseInt(e.target.value))}
-                  >
-                    {[5, 10, 15, 20, 25, 30, 45, 60, 120, 180, 240, 300].map((sec) => (
-                      <option key={sec} value={sec}>
-                        {sec < 60 ? `${sec}s` : `${sec / 60} min`}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Common Apply Button */}
+              </div>
+              <div className="flex items-center gap-2 mb-4">
                 <Button
-                  className="w-full bg-purple-600 text-white mt-2"
+                  className="px-3 py-1 rounded bg-blue-600 text-white text-sm font-semibold"
                   onClick={() => {
-                    setSlides((prev) =>
-                      prev.map((s) => ({
-                        ...s,
-                        background: currentSlide.background,
-                        textColor: currentSlide.textColor,
-                        fontSize: currentSlide.fontSize,
-                        timer: currentSlide.timer,
-                      }))
-                    );
+                    // Apply current style to all slides
+                    setSlides(slides.map(slide => ({
+                      ...slide,
+                      fontFamily: currentSlide.fontFamily,
+                      textColor: currentSlide.textColor,
+                      background: currentSlide.background,
+                    })));
+                    // Set as default for new slides
+                    setDefaultSlideStyle({
+                      fontFamily: currentSlide.fontFamily,
+                      textColor: currentSlide.textColor,
+                      background: currentSlide.background,
+                    });
                   }}
                 >
-                  Apply All Settings to All Slides
+                  Apply Style to All Slides
                 </Button>
               </div>
-            </Card>
+            </div>
           </div>
         </div>
       ) : (
