@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaRobot, FaSpinner, FaTimes } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from './Toast';
+import { generateQuestions } from '../utils/generateQuestions';
 
 const AIGenerationModal = ({ isOpen, onClose }) => {
   const [topic, setTopic] = useState('');
@@ -20,26 +21,35 @@ const AIGenerationModal = ({ isOpen, onClose }) => {
     try {
       const sessionCode = `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      // Use relative URL for local development, absolute URL for production
-      const apiUrl = process.env.NODE_ENV === 'production' 
-        ? `${window.location.origin}/api/generate`
-        : '/api/generate';
-        
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          topic: topic.trim(),
-          session_code: sessionCode,
-        }),
-      });
+      let result;
+      
+      if (process.env.NODE_ENV === 'production') {
+        // Use API route in production (Vercel)
+        const apiUrl = `${window.location.origin}/api/generate`;
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            topic: topic.trim(),
+            session_code: sessionCode,
+          }),
+        });
 
-      const result = await response.json();
+        result = await response.json();
 
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to generate questions');
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to generate questions');
+        }
+      } else {
+        // Call function directly in development
+        try {
+          const data = await generateQuestions(topic.trim(), sessionCode);
+          result = { success: true, data };
+        } catch (error) {
+          throw new Error(error.message || 'Failed to generate questions');
+        }
       }
 
       if (result.success) {

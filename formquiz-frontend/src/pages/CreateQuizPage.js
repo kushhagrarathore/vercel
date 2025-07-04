@@ -43,12 +43,12 @@ const CreateQuizPage = () => {
     const fetchQuiz = async () => {
       if (!quizId) return;
       setLoading(true);
-      const { data: quizData, error: quizError } = await supabase.from('quizzes').select('*').eq('id', quizId).single();
+      const { data: quizData } = await supabase.from('quizzes').select('*').eq('id', quizId).single();
       if (quizData) {
         setQuizTitle(quizData.title || 'Untitled Presentation');
         setGlobalSettings(quizData.customization_settings || defaultSettings);
       }
-      const { data: slidesData, error: slidesError } = await supabase.from('slides').select('*').eq('quiz_id', quizId).order('slide_index');
+      const { data: slidesData } = await supabase.from('slides').select('*').eq('quiz_id', quizId).order('slide_index');
       if (slidesData && slidesData.length > 0) {
         setSlides(slidesData.map(s => ({
           question: s.question,

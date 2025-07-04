@@ -82,7 +82,6 @@ const PreviewQuizPage = () => {
   }
   const slide = slides?.[current];
   if (!slide) return <div style={{ padding: 40, color: 'red' }}>No slide data available.</div>;
-  const options = Array.isArray(slide.options) ? slide.options : [];
   // Section grid: active for current, filled for previous, inactive for next
   const sectionGrid = slides.map((_, idx) => idx <= current);
 
@@ -125,7 +124,6 @@ const PreviewQuizPage = () => {
         quizTitle={quiz.title}
         questionNumber={current + 1}
         questionText={slide.question}
-        options={Array.isArray(slide.options) ? slide.options : []}
         selected={null}
         onSelect={null} // Disable answer selection
         showNextButton={!isLast}

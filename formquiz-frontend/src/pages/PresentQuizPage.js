@@ -6,8 +6,6 @@ import { generateLiveLink } from '../utils/generateLiveLink';
 
 const PresentQuizPage = () => {
   const { quizId } = useParams();
-  const [status, setStatus] = useState('idle'); // idle, starting, live, error
-  const [error, setError] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [slides, setSlides] = useState([]);
   const [isLive, setIsLive] = useState(false);
@@ -16,8 +14,11 @@ const PresentQuizPage = () => {
     // Fetch slides for this quiz
     const fetchSlides = async () => {
       const { data, error } = await supabase.from('slides').select('*').eq('quiz_id', quizId).order('slide_index');
-      if (error) setError('Failed to load slides');
-      else setSlides(data || []);
+      if (error) {
+        console.error('Failed to load slides');
+      } else {
+        setSlides(data || []);
+      }
     };
     fetchSlides();
   }, [quizId]);
@@ -29,15 +30,12 @@ const PresentQuizPage = () => {
       if (data && data.is_live) {
         setIsLive(true);
         setCurrentQuestion(data.current_question_index || 0);
-        setStatus('live');
       }
     };
     checkLive();
   }, [quizId]);
 
   const handleStart = async () => {
-    setStatus('starting');
-    setError(null);
     // Upsert live_quizzes row
     const { error } = await supabase.from('live_quizzes').upsert({
       quiz_id: quizId,
@@ -46,12 +44,10 @@ const PresentQuizPage = () => {
       started_at: new Date().toISOString(),
     });
     if (error) {
-      setError('Failed to start live quiz');
-      setStatus('error');
+      console.error('Failed to start live quiz');
     } else {
       setIsLive(true);
       setCurrentQuestion(0);
-      setStatus('live');
     }
   };
 
@@ -66,13 +62,11 @@ const PresentQuizPage = () => {
   const handleEnd = async () => {
     await supabase.from('live_quizzes').update({ is_live: false }).eq('quiz_id', quizId);
     setIsLive(false);
-    setStatus('idle');
   };
 
   return (
     <div className="present-quiz-layout" style={{ maxWidth: 600, margin: '0 auto', padding: 32 }}>
       <h1 style={{ fontWeight: 700, marginBottom: 16 }}>Live Quiz Host Panel</h1>
-      {error && <div style={{ color: 'red', marginBottom: 12 }}>{error}</div>}
       {!isLive ? (
         <button onClick={handleStart} style={{ padding: '12px 32px', fontSize: 18, borderRadius: 8, background: '#4a6bff', color: '#fff', border: 'none', fontWeight: 700, marginBottom: 24 }}>
           Start Live Quiz

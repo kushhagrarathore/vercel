@@ -14,7 +14,6 @@ const Dashboard = () => {
   const location = useLocation();
   const initialTab = localStorage.getItem('dashboardTab') || location.state?.activeTab || 'forms';
 
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   const [username, setUsername] = useState('');
@@ -27,13 +26,6 @@ const Dashboard = () => {
   useEffect(() => {
     localStorage.setItem('dashboardTab', activeTab);
   }, [activeTab]);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const isDark = savedTheme === 'dark';
-    setIsDarkMode(isDark);
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-  }, []);
 
   useEffect(() => {
     const fetchUserData = async () => {

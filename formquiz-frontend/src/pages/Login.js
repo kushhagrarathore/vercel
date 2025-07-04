@@ -13,7 +13,6 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [loginAs, setLoginAs] = useState('applicant');
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -137,7 +136,7 @@ export default function Login() {
             <div className="form-group">
               <input
                 type="email"
-                placeholder={loginAs === 'applicant' ? "Applicant Email" : "Recruiter Email"}
+                placeholder="Applicant Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

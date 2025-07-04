@@ -26,7 +26,7 @@ const SignUp = () => {
       setLoading(true);
       setError('');
 
-      const { data, error: signUpError } = await supabase.auth.signUp({
+      const { error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {

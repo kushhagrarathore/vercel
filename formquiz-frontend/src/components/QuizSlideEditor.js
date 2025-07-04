@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaRegCircle, FaRegSquare, FaPlus, FaCopy, FaTrash, FaCheckCircle } from 'react-icons/fa';
+import { FaRegCircle, FaPlus, FaCopy, FaTrash, FaCheckCircle } from 'react-icons/fa';
 
 const MAX_OPTIONS = 4;
 

@@ -65,7 +65,6 @@ export default function LiveQuizUser() {
   const navigate = useNavigate();
   const containerRef = useRef(null);
   const [allResponses, setAllResponses] = useState([]);
-  const [userScores, _setUserScores] = useState([]);
   const [username, setUsername] = useState("");
   const [hasEnteredName, setHasEnteredName] = useState(false);
   const [showUserPrompt, setShowUserPrompt] = useState(false);
@@ -336,7 +335,6 @@ export default function LiveQuizUser() {
       // Safeguard: Only map if both are arrays
       if (!Array.isArray(responsesData) || !Array.isArray(slidesData)) {
         setAllResponses([]);
-        setUserScores([]);
         return;
       }
 
@@ -383,7 +381,6 @@ export default function LiveQuizUser() {
         };
       });
       setAllResponses(responsesData);
-      setUserScores(scores);
     }
     fetchScores();
   }, [submitted, quizId]);

@@ -6,7 +6,6 @@ import { QRCodeSVG } from 'qrcode.react';
 import { ChromePicker } from 'react-color';
 import './FormBuilder.css';
 import Spinner from '../components/Spinner';
-import Skeleton from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 
 // Question components
@@ -223,28 +222,24 @@ const FormBuilder = () => {
 
   const testDatabaseConnection = async () => {
     try {
-      const { data: forms, error: formsError } = await supabase
+      const { error: formsError } = await supabase
         .from('forms')
         .select('*')
         .limit(1);
-        
       if (formsError) {
         console.error('Forms table error:', formsError);
         alert(`❌ Forms table error: ${formsError.message}`);
         return false;
       }
-      
-      const { data: questions, error: questionsError } = await supabase
+      const { error: questionsError } = await supabase
         .from('questions')
         .select('*')
         .limit(1);
-        
       if (questionsError) {
         console.error('Questions table error:', questionsError);
         alert(`❌ Questions table error: ${questionsError.message}`);
         return false;
       }
-      
       alert('✅ Database connection successful!');
       return true;
     } catch (error) {
@@ -360,7 +355,7 @@ const FormBuilder = () => {
         settings: typeof q.settings === 'object' && q.settings !== null ? q.settings : {},
       }));
 
-      const { data: insertedQuestions, error: questionsError } = await supabase
+      const { error: questionsError } = await supabase
         .from('questions')
         .insert(formattedQuestions)
         .select();

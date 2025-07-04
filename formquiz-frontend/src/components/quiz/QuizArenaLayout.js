@@ -25,7 +25,6 @@ const QuizArenaLayout = ({
 }) => {
   // Customization defaults
   const {
-    quizTitleColor = customization.quizTitleColor || '#2563eb',
     optionBorderColor = customization.optionBorderColor || '#e0e0e0',
     optionSelectedColor = customization.optionSelectedColor || '#2563eb',
     optionLetterBg = customization.optionLetterBg || '#2563eb',

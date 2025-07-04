@@ -8,14 +8,11 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { QRCodeCanvas } from "qrcode.react";
-import { FiArrowLeft, FiEye, FiUpload, FiSun, FiMoon, FiSave, FiShare2, FiPlay, FiEdit2, FiTrash2, FiBarChart2, FiBarChart } from "react-icons/fi";
+import { FiArrowLeft, FiEye, FiUpload, FiSun, FiMoon, FiSave, FiEdit2, FiTrash2, FiBarChart2 } from "react-icons/fi";
 
-import { Card, CardContent } from "../components/card";
 import { Button } from "../components/buttonquiz";
 import { Input } from "../components/input";
-import { Tabs, TabsList, TabsTrigger } from "../components/tabs";
 
 import { supabase } from "../supabase";
 import "./quiz.css";
@@ -88,41 +85,6 @@ const Modal = ({ show, onClose, url }) => {
     </div>
   );
 };
-
-// 🔲 Reorderable Slide Component
-function SortableSlide({ id, index, onClick, onDelete, isSelected, name, onNameChange }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    border: isSelected ? "2px solid #7e22ce" : "1px solid #ccc",
-    backgroundColor: "#fff",
-    borderRadius: "8px",
-    padding: "0.5rem",
-    cursor: "pointer",
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex justify-between items-center mb-2 bg-white hover:bg-purple-50 shadow-md rounded-lg px-3 py-2 transition"
-    >
-      <div onClick={onClick} className="flex-1">
-        <Input
-          type="text"
-          value={name}
-          onChange={(e) => onNameChange(e.target.value)}
-          className="w-full text-sm font-medium border-none focus:ring-0 bg-transparent"
-        />
-      </div>
-      <div className="flex gap-2 items-center">
-        <span {...attributes} {...listeners} className="cursor-grab text-gray-400 hover:text-gray-600" title="Drag">⠿</span>
-        <button className="text-lg text-red-500 hover:text-red-700" onClick={(e) => { e.stopPropagation(); onDelete(); }}>✕</button>
-      </div>
-    </div>
-  );
-}
 
 // Sortable Slide Item
 function SortableSlideItem({ id, children }) {
@@ -224,8 +186,6 @@ export default function Quiz() {
     fontFamily: textStyles[0].value,
   }]);
   const [selectedSlide, setSelectedSlide] = useState(0);
-  const [mode, setMode] = useState("create");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [editingName, setEditingName] = useState(null);
@@ -239,10 +199,7 @@ export default function Quiz() {
   const [notification, setNotification] = useState(null);
   const [activeTab, setActiveTab] = useState('edit');
   const [responses, setResponses] = useState([]);
-  const [addSlideDropdownOpen, setAddSlideDropdownOpen] = useState(false);
   const [addSlidePopupOpen, setAddSlidePopupOpen] = useState(false);
-  const [isTakingQuiz, setIsTakingQuiz] = useState(false);
-  const [userAnswers, setUserAnswers] = useState({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const pendingNavigationRef = useRef(null);
@@ -439,12 +396,7 @@ export default function Quiz() {
   };
   const handleCancel = () => setShowUnsavedModal(false);
 
-  // Quiz-taking answer handler
-  const handleUserAnswer = (slideId, value) => {
-    setUserAnswers((prev) => ({ ...prev, [slideId]: value }));
-  };
-
-  const addSlide = (type = currentSlide?.type || 'multiple') => {
+  const addSlide = (type = slides[selectedSlide]?.type || 'multiple') => {
     let newSlide = {
       name: `Slide ${slides.length + 1}`,
       type,
@@ -457,7 +409,6 @@ export default function Quiz() {
     };
     setSlides([...slides, newSlide]);
     setSelectedSlide(slides.length);
-    setDropdownOpen(false);
   };
 
   const deleteSlide = (index) => {
@@ -679,18 +630,6 @@ export default function Quiz() {
     setNotification('Quiz and slides saved to Supabase!');
     setShowModal(true);
     setTimeout(() => setNotification(null), 3000);
-  };
-
-  const handleSave = () => {
-    const formattedSlides = slides.map((slide) => ({
-      text: slide.question || "",
-      options: slide.options || [],
-      correctIndex: slide.correctAnswers.length > 0 ? slide.correctAnswers[0] : null,
-      fontFamily: slide.fontFamily || textStyles[0].value,
-      textColor: slide.textColor || "#000000",
-    }));
-    localStorage.setItem("quizData", JSON.stringify(formattedSlides));
-    alert("Slides saved successfully!");
   };
 
   return (

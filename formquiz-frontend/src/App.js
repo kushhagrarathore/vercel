@@ -15,7 +15,6 @@ import UserEnd from './pages/userend';
 import CreateQuizPage from './pages/CreateQuizPage';
 import PresentQuizPage from './pages/PresentQuizPage';
 import PreviewQuizPage from './pages/PreviewQuizPage';
-import ViewResponses from './pages/ViewResponses';
 import Profile from './pages/Profile';
 import JoinQuiz from './pages/join/JoinQuiz';
 import Leaderboard from './pages/live/Leaderboard';

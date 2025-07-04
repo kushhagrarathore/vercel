@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { FaRegListAlt, FaBroadcastTower, FaCheckSquare, FaPoll, FaStar, FaRobot } from 'react-icons/fa';
 import { motion } from 'framer-motion';
 import './FormCreationBar.css';
-import { supabase } from '../supabase';
 import AIGenerationModal from './AIGenerationModal';
 
 const quizTemplates = [
