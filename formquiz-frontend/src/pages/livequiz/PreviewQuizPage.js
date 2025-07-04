@@ -50,7 +50,7 @@ const PreviewQuizPage = () => {
           }
           setQuiz(quizData);
           const { data: slidesData, error: slidesError } = await supabase
-            .from('live_quiz_slides')
+            .from('slides')
             .select('*')
             .eq('quiz_id', quizId)
             .order('slide_index');
@@ -99,7 +99,7 @@ const PreviewQuizPage = () => {
   const TopRightButton = (
     <button
       onClick={() => {
-        navigate(`/quiz/${quizId}`);
+        navigate(`/quiz/edit/${quizId}`);
       }}
       style={{
         background: customization.nextButtonColor || '#2563eb',

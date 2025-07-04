@@ -60,6 +60,7 @@ function App() {
             <Route path="/quiz/preview/:quizId" element={<PreviewQuizPage />} />
             <Route path="/quiz/results/:quizId" element={<ResultsPage />} />
             <Route path="/quiz/fill/:quizId" element={<QuizFillPage />} />
+            <Route path="/quiz/edit/:quizId" element={<Quiz />} />
 
             {/* Live Quiz Routes */}
             <Route path="/join/:quizId" element={<JoinQuiz />} />

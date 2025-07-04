@@ -24,7 +24,7 @@ const FormCardRow = ({
     if (isForm) {
       navigate(`/builder/${formId}`);
     } else {
-      navigate(`/quiz/${formId}`);
+      navigate(`/quiz/edit/${formId}`);
     }
   };
 

@@ -313,13 +313,8 @@ export default function Quiz() {
   const handleLeave = () => {
     setShowUnsavedModal(false);
     setHasUnsavedChanges(false);
-    // Actually navigate (simulate browser back)
-    if (pendingNavigationRef.current) {
-      pendingNavigationRef.current();
-      pendingNavigationRef.current = null;
-    } else {
-      navigate(-1);
-    }
+    // Always navigate to dashboard
+    navigate('/dashboard');
   };
   const handleCancel = () => setShowUnsavedModal(false);
 
@@ -392,7 +387,8 @@ export default function Quiz() {
     }
   };
 
-  const currentSlide = slides[selectedSlide];
+  // Derive currentSlide safely
+  const currentSlide = slides && slides.length > 0 && selectedSlide >= 0 && selectedSlide < slides.length ? slides[selectedSlide] : null;
   const shareURL = `${window.location.origin}/userend?quizId=${publishedQuizId || quizId}`;
 
   const handlePublishOrSave = async () => {
@@ -404,9 +400,9 @@ export default function Quiz() {
     }
     const { id: user_id, email } = user.user;
     const customization_settings = JSON.stringify({
-      fontFamily: currentSlide.fontFamily,
-      textColor: currentSlide.textColor,
-      background: currentSlide.background,
+      fontFamily: currentSlide?.fontFamily || textStyles[0].value,
+      textColor: currentSlide?.textColor || '#000000',
+      background: currentSlide?.background || '#ffffff',
     });
     let quizIdToUse = publishedQuizId;
     let quiz;
@@ -608,7 +604,7 @@ export default function Quiz() {
             variant="outline"
             className="flex items-center gap-2 rounded-full px-5 py-2 font-medium text-base shadow-sm border hover:bg-gray-100"
             style={{ background: 'var(--card)', color: 'var(--text)', borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
-            onClick={() => navigate(-1)}
+            onClick={() => navigate('/dashboard')}
           >
             <FiArrowLeft className="text-lg" />
             Back
@@ -659,12 +655,21 @@ export default function Quiz() {
             className="rounded-full px-4 py-2 font-semibold flex items-center gap-2 shadow-md"
             style={{ background: 'var(--button)', color: '#fff' }}
             onClick={() => {
-              if (!publishedQuizId && !quizId) {
-                alert("Please publish or save the quiz before previewing.");
-                return;
+              if (!quizId) {
+                // Save draft to localStorage for preview
+                localStorage.setItem('quizDraft', JSON.stringify({
+                  slides,
+                  quizTitle: title,
+                  globalSettings: {
+                    fontFamily: currentSlide?.fontFamily || textStyles[0].value,
+                    textColor: currentSlide?.textColor || '#000000',
+                    background: currentSlide?.background || '#ffffff',
+                  }
+                }));
+                window.open('/quiz/preview/preview', '_blank');
+              } else {
+                window.open(`/quiz/preview/${quizId}`, '_blank');
               }
-              const idToUse = publishedQuizId || quizId;
-              window.open(`/quiz/preview/${idToUse}`, "_blank");
             }}
             title="Preview as Admin"
           >
@@ -778,8 +783,8 @@ export default function Quiz() {
                 {questionTypes.map(qt => (
                   <button
                     key={qt.value}
-                    className={`slide-type-btn${currentSlide.type === qt.value ? ' active' : ''}`}
-                    style={{ padding: '6px 14px', fontSize: 14, borderRadius: 8, border: 'none', fontWeight: 600, background: currentSlide.type === qt.value ? '#2563eb' : '#f7f8fa', color: currentSlide.type === qt.value ? '#fff' : '#2563eb' }}
+                    className={`slide-type-btn${currentSlide?.type === qt.value ? ' active' : ''}`}
+                    style={{ padding: '6px 14px', fontSize: 14, borderRadius: 8, border: 'none', fontWeight: 600, background: currentSlide?.type === qt.value ? '#2563eb' : '#f7f8fa', color: currentSlide?.type === qt.value ? '#fff' : '#2563eb' }}
                     onClick={() => {
                       if (qt.value === 'true_false') {
                         updateSlide('type', 'true_false');
@@ -791,7 +796,7 @@ export default function Quiz() {
                         updateSlide('correctAnswers', []);
                       } else {
                         updateSlide('type', 'multiple');
-                        if (!Array.isArray(currentSlide.options) || currentSlide.options.length < 2) {
+                        if (!Array.isArray(currentSlide?.options) || currentSlide?.options.length < 2) {
                           updateSlide('options', ['', '']);
                         }
                         updateSlide('correctAnswers', []);
@@ -804,16 +809,16 @@ export default function Quiz() {
               </div>
               <Input
                 placeholder="Your first question?"
-                value={currentSlide.question}
+                value={currentSlide?.question}
                 onChange={(e) => updateSlide("question", e.target.value)}
                 className="text-lg font-semibold w-full mb-6 border rounded-lg px-4 py-3 focus:outline-none focus:ring-2"
-                style={{ color: currentSlide.textColor, background: 'var(--bg)', borderColor: 'var(--border)', fontFamily: currentSlide.fontFamily }}
+                style={{ color: currentSlide?.textColor, background: 'var(--bg)', borderColor: 'var(--border)', fontFamily: currentSlide?.fontFamily || textStyles[0].value }}
               />
               {/* Render input UI based on type */}
-              {currentSlide.type === 'multiple' && (
+              {currentSlide?.type === 'multiple' && (
                 <div className="space-y-3">
-                  {currentSlide.options.map((opt, i) => {
-                    const isCorrect = currentSlide.correctAnswers.includes(i);
+                  {currentSlide?.options.map((opt, i) => {
+                    const isCorrect = currentSlide?.correctAnswers.includes(i);
                     return (
                       <div key={i} className="flex items-center gap-2 rounded-lg px-4 py-2 border" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
                         <input
@@ -821,8 +826,8 @@ export default function Quiz() {
                           name={`correct-answer-${selectedSlide}`}
                           checked={isCorrect}
                           onChange={() => {
-                            let newAnswers = currentSlide.correctAnswers.includes(i)
-                              ? currentSlide.correctAnswers.filter(idx => idx !== i)
+                            let newAnswers = currentSlide?.correctAnswers.includes(i)
+                              ? currentSlide?.correctAnswers.filter(idx => idx !== i)
                               : [i];
                             updateSlide('correctAnswers', newAnswers);
                           }}
@@ -834,15 +839,15 @@ export default function Quiz() {
                           onChange={(e) => updateOption(i, e.target.value)}
                           placeholder={`Option ${i + 1}`}
                           className="flex-1 bg-transparent border-none outline-none text-base px-2"
-                          style={{ color: currentSlide.textColor, fontFamily: currentSlide.fontFamily }}
+                          style={{ color: currentSlide?.textColor, fontFamily: currentSlide?.fontFamily || textStyles[0].value }}
                         />
-                        {currentSlide.options.length > 2 && (
+                        {currentSlide?.options.length > 2 && (
                           <button onClick={() => removeOption(i)} className="hover:text-red-600 px-2 py-1 text-lg" style={{ color: '#f87171' }} title="Delete option"><FiTrash2 /></button>
                         )}
                       </div>
                     );
                   })}
-                  {currentSlide.options.length < 4 ? (
+                  {currentSlide?.options.length < 4 ? (
                     <Button variant="outline" className="w-full mt-2 border-2 rounded-lg py-2" style={{ borderColor: 'var(--button)', color: 'var(--button)', background: 'var(--button-hover)' }} onClick={() => {
                       const updatedSlides = [...slides];
                       updatedSlides[selectedSlide].options.push("");
@@ -851,10 +856,10 @@ export default function Quiz() {
                   ) : null}
                 </div>
               )}
-              {currentSlide.type === 'true_false' && (
+              {currentSlide?.type === 'true_false' && (
                 <div className="space-y-3">
                   {['True', 'False'].map((opt, i) => {
-                    const isCorrect = currentSlide.correctAnswers.includes(i);
+                    const isCorrect = currentSlide?.correctAnswers.includes(i);
                     return (
                       <div key={i} className="flex items-center gap-2 rounded-lg px-4 py-2 border" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
                         <input
@@ -862,8 +867,8 @@ export default function Quiz() {
                           name={`correct-answer-${selectedSlide}`}
                           checked={isCorrect}
                           onChange={() => {
-                            let newAnswers = currentSlide.correctAnswers.includes(i)
-                              ? currentSlide.correctAnswers.filter(idx => idx !== i)
+                            let newAnswers = currentSlide?.correctAnswers.includes(i)
+                              ? currentSlide?.correctAnswers.filter(idx => idx !== i)
                               : [i];
                             updateSlide('correctAnswers', newAnswers);
                           }}
@@ -874,24 +879,24 @@ export default function Quiz() {
                           value={opt}
                           disabled
                           className="flex-1 bg-transparent border-none outline-none text-base px-2 text-gray-500"
-                          style={{ color: currentSlide.textColor, fontFamily: currentSlide.fontFamily }}
+                          style={{ color: currentSlide?.textColor, fontFamily: currentSlide?.fontFamily || textStyles[0].value }}
                         />
                       </div>
                     );
                   })}
                 </div>
               )}
-              {currentSlide.type === 'one_word' && (
+              {currentSlide?.type === 'one_word' && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 rounded-lg px-4 py-2 border" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
                     <span className="font-semibold mr-2">Correct Answer:</span>
                     <input
                       type="text"
-                      value={currentSlide.correctAnswers[0] || ''}
+                      value={currentSlide?.correctAnswers[0] || ''}
                       onChange={e => updateSlide('correctAnswers', [e.target.value])}
                       placeholder="Enter the correct answer"
                       className="flex-1 bg-transparent border-none outline-none text-base px-2"
-                      style={{ color: currentSlide.textColor, fontFamily: currentSlide.fontFamily }}
+                      style={{ color: currentSlide?.textColor, fontFamily: currentSlide?.fontFamily || textStyles[0].value }}
                     />
                   </div>
                 </div>
@@ -915,7 +920,7 @@ export default function Quiz() {
                 <select
                   className="w-full border rounded-lg p-3 mb-4 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                   style={{ background: isDarkMode ? '#232336' : '#f9fafb', color: 'var(--text)', borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
-                  value={currentSlide.fontFamily}
+                  value={currentSlide?.fontFamily || textStyles[0].value}
                   onChange={e => updateSlide('fontFamily', e.target.value)}
                 >
                   {textStyles.map(style => (
@@ -931,13 +936,13 @@ export default function Quiz() {
                     <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Text</span>
                     <div
                       className="w-8 h-8 rounded-full mb-1 border-2 shadow cursor-pointer"
-                      style={{ background: currentSlide.textColor, borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
+                      style={{ background: currentSlide?.textColor, borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
                       onClick={() => setOpenColorPicker(openColorPicker === 'text' ? null : 'text')}
                     />
                     {openColorPicker === 'text' && (
                       <Input
                         type="color"
-                        value={currentSlide.textColor}
+                        value={currentSlide?.textColor}
                         onChange={e => { updateSlide('textColor', e.target.value); setOpenColorPicker(null); }}
                         className="w-10 h-10 p-0 border-2 rounded-lg bg-transparent cursor-pointer shadow-sm mt-1"
                         style={{ background: 'none', borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
@@ -950,13 +955,13 @@ export default function Quiz() {
                     <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>BG</span>
                     <div
                       className="w-8 h-8 rounded-full mb-1 border-2 shadow cursor-pointer"
-                      style={{ background: currentSlide.background, borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
+                      style={{ background: currentSlide?.background, borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
                       onClick={() => setOpenColorPicker(openColorPicker === 'bg' ? null : 'bg')}
                     />
                     {openColorPicker === 'bg' && (
                       <Input
                         type="color"
-                        value={currentSlide.background}
+                        value={currentSlide?.background}
                         onChange={e => { updateSlide('background', e.target.value); setOpenColorPicker(null); }}
                         className="w-10 h-10 p-0 border-2 rounded-lg bg-transparent cursor-pointer shadow-sm mt-1"
                         style={{ background: 'none', borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
@@ -974,15 +979,15 @@ export default function Quiz() {
                     // Apply current style to all slides
                     setSlides(slides.map(slide => ({
                       ...slide,
-                      fontFamily: currentSlide.fontFamily,
-                      textColor: currentSlide.textColor,
-                      background: currentSlide.background,
+                      fontFamily: currentSlide?.fontFamily || textStyles[0].value,
+                      textColor: currentSlide?.textColor || '#000000',
+                      background: currentSlide?.background || '#ffffff',
                     })));
                     // Set as default for new slides
                     setDefaultSlideStyle({
-                      fontFamily: currentSlide.fontFamily,
-                      textColor: currentSlide.textColor,
-                      background: currentSlide.background,
+                      fontFamily: currentSlide?.fontFamily || textStyles[0].value,
+                      textColor: currentSlide?.textColor || '#000000',
+                      background: currentSlide?.background || '#ffffff',
                     });
                   }}
                 >
