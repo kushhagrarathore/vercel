@@ -39,7 +39,8 @@ const Navbar = ({ activeTab, onToggle }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     localStorage.clear();
     navigate('/login');
   };
