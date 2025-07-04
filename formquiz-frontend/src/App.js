@@ -39,12 +39,14 @@ function App() {
 
             {/* Dashboard + Forms */}
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/form-builder" element={<FormBuilder />} />
+            <Route path="/builder" element={<FormBuilder />} />
+            <Route path="/builder/:formId" element={<FormBuilder />} />
             <Route path="/preview/:formId" element={<FormView />} />
             <Route path="/form/:formId" element={<FormView />} />
             <Route path="/public/:formId" element={<FormView />} />
             <Route path="/respond/:formId" element={<ResponsePage />} />
             <Route path="/results/:formId" element={<ResultsPage />} />
+            <Route path="/form/:formId/results" element={<ViewResponses />} />
             <Route path="/view-responses" element={<ViewResponses />} />
             <Route path="/userend" element={<UserEnd />} />
 
