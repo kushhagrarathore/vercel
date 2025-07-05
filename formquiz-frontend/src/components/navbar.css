@@ -58,7 +58,7 @@
 }
 .tab-btn.active {
   background: #4a6bff;
-  color: #fff;
+  color: #fff !important;
   box-shadow: 0 2px 8px rgba(74,107,255,0.10);
 }
 .tab-btn:focus {

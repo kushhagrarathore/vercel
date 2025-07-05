@@ -74,9 +74,9 @@ const Navbar = ({ activeTab, onToggle }) => {
             className={`tab-btn${activeTab === 'forms' ? ' active' : ''}`}
             onClick={() => onToggle && onToggle('forms')}
             aria-label="My Forms"
-            style={{ fontWeight: activeTab === 'forms' ? 500 : 400, color: activeTab === 'forms' ? '#7c3aed' : '#7c3aed99', letterSpacing: '-0.2px' }}
+            style={{ fontWeight: activeTab === 'forms' ? 500 : 400, letterSpacing: '-0.2px' }}
           >
-            <FaWpforms style={{ marginRight: 6, fontSize: 18, color: activeTab === 'forms' ? '#7c3aed' : '#7c3aed77' }} />
+            <FaWpforms style={{ marginRight: 6, fontSize: 18, color: activeTab === 'forms' ? '#fff' : '#7c3aed77' }} />
             My Forms
           </button>
           <button

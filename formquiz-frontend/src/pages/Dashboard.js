@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Navbar from '../components/navbar';
 import FormCreationBar from '../components/forms/FormCreationBar';
 import FormCardRow from '../components/forms/FormCardRow';
-import QuizCreationBar from '../components/quiz/QuizCreationBar';
+import QuizCreationBar from '../components/QuizCreationBar';
 import Skeleton from '../components/Skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabase';

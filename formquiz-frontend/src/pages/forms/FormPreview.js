@@ -68,45 +68,61 @@ const FormPreview = () => {
 
   return (
     <div className="form-preview-wrapper">
-      <h2>{form.title}</h2>
-      {questions.map((q, i) => (
-        <div key={q.id} className="preview-question">
-          <h4>Q{i + 1}. {q.question_text}</h4>
-
-          {q.question_type === 'short-text' && (
-            <input
-              type="text"
-              onChange={(e) => handleChange(q.id, e.target.value)}
-            />
-          )}
-
-          {q.question_type === 'long-text' && (
-            <textarea
-              rows={4}
-              onChange={(e) => handleChange(q.id, e.target.value)}
-            />
-          )}
-
-          {q.question_type === 'multiple-choice' && (
-            <div>
-              {q.options.map((opt, idx) => (
-                <label key={idx}>
-                  <input
-                    type="radio"
-                    name={`q-${q.id}`}
-                    onChange={() => handleChange(q.id, opt)}
-                  />
-                  {opt}
-                </label>
-              ))}
-            </div>
-          )}
+      <div className="main-form-card">
+        <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
+          <div className="stat-box">
+            <div>Responses</div>
+            <div style={{ fontSize: 24, fontWeight: 700 }}>0</div>
+          </div>
+          <div className="stat-box">
+            <div>Average Time</div>
+            <div style={{ fontSize: 24, fontWeight: 700 }}>00:00</div>
+          </div>
+          <div className="stat-box">
+            <div>Duration</div>
+            <div style={{ fontSize: 24, fontWeight: 700 }}>0 Days</div>
+          </div>
         </div>
-      ))}
+        <h2>{form.title}</h2>
+        {questions.map((q, i) => (
+          <div key={q.id} className="preview-question">
+            <h4>Q{i + 1}. {q.question_text}</h4>
 
-      <button className="submit-button" onClick={handleSubmit}>
-        Submit
-      </button>
+            {q.question_type === 'short-text' && (
+              <input
+                type="text"
+                onChange={(e) => handleChange(q.id, e.target.value)}
+              />
+            )}
+
+            {q.question_type === 'long-text' && (
+              <textarea
+                rows={4}
+                onChange={(e) => handleChange(q.id, e.target.value)}
+              />
+            )}
+
+            {q.question_type === 'multiple-choice' && (
+              <div>
+                {q.options.map((opt, idx) => (
+                  <label key={idx}>
+                    <input
+                      type="radio"
+                      name={`q-${q.id}`}
+                      onChange={() => handleChange(q.id, opt)}
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+
+        <button className="share-btn" onClick={handleSubmit}>
+          Share to collect responses
+        </button>
+      </div>
     </div>
   );
 };

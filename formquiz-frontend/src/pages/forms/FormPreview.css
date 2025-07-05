@@ -1,10 +1,56 @@
+body {
+  background: linear-gradient(180deg, #fffbe6 0%, #ffe066 100%);
+  min-height: 100vh;
+  position: relative;
+}
+
+.main-form-card {
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 22px;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.10);
+  padding: 36px 32px;
+  max-width: 700px;
+  margin: 48px auto;
+  border: 1.5px solid #f7e9b6;
+}
+
+.stat-box {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(60,60,100,0.07);
+  padding: 18px 24px;
+  margin: 0 12px 24px 0;
+  display: inline-block;
+  min-width: 140px;
+  text-align: center;
+  border: 1px solid #f3e8b5;
+}
+
+.share-btn {
+  background: #e57373;
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 28px;
+  font-size: 1em;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(229,115,115,0.10);
+  cursor: pointer;
+  margin-top: 18px;
+  transition: background 0.18s;
+}
+.share-btn:hover {
+  background: #d32f2f;
+}
+
 .form-preview-wrapper {
-  max-width: 800px;
+  max-width: 700px;
   margin: 40px auto;
-  padding: 30px 40px;
-  background-color: #ffffff;
-  border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+  border: none;
   font-family: 'Segoe UI', sans-serif;
   color: #333;
 }
@@ -17,7 +63,12 @@
 }
 
 .preview-question {
-  margin-bottom: 30px;
+  background: rgba(255,255,255,0.85);
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(60,60,100,0.07);
+  padding: 18px 16px;
+  margin-bottom: 18px;
+  border: 1px solid #e3e8f0;
 }
 
 .preview-question h4 {
@@ -40,6 +91,7 @@
   outline: none;
   box-sizing: border-box;
   transition: border 0.2s ease;
+  background: rgba(255,255,255,0.7);
 }
 
 .preview-question input:focus,
@@ -65,28 +117,30 @@
 }
 
 .submit-button {
-  background-color: #4a6bff;
-  color: white;
-  padding: 14px 30px;
+  background: #2563eb;
+  color: #fff;
   border: none;
-  border-radius: 10px;
-  font-size: 16px;
+  border-radius: 12px;
+  padding: 12px 32px;
+  font-size: 1.1em;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.10);
   cursor: pointer;
+  transition: background 0.18s;
   display: block;
   margin: 40px auto 0;
-  transition: background-color 0.3s ease, transform 0.2s ease;
 }
-
 .submit-button:hover {
-  background-color: #3c58d0;
-  transform: translateY(-2px);
+  background: #1d4ed8;
 }
 
 @media (max-width: 600px) {
-  .form-preview-wrapper {
-    padding: 20px;
+  .main-form-card {
+    padding: 16px 4px;
   }
-
+  .form-preview-wrapper {
+    padding: 0;
+  }
   .submit-button {
     width: 100%;
   }

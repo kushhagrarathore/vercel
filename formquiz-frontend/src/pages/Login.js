@@ -107,54 +107,62 @@ export default function Login() {
   };
 
   return (
-    <div className="login-framer-bg">
-      <div className="framer-bg-animated"></div>
-      {/* Logo removed as requested */}
-      <div className="framer-login-card">
-        <div className="framer-login-title">Welcome to Inquizo</div>
+  <div className="login-framer-bg">
+    <div className="framer-bg-animated"></div>
+    <div className="framer-login-card">
+      <div className="framer-login-title">Welcome to Inquizo</div>
+      <button
+        className="framer-login-btn google"
+        onClick={() => handleOAuthLogin('google')}
+        disabled={loading}
+      >
+        <span className="google-icon">G</span> Continue with Google
+      </button>
+      <div className="framer-or-divider">or</div>
+      <form
+        className="framer-login-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleLogin();
+        }}
+      >
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          disabled={loading}
+          className="framer-login-input"
+        />
+        <input
+          type={showPassword ? 'text' : 'password'}
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          disabled={loading}
+          className="framer-login-input"
+        />
+        <button type="submit" className="framer-login-btn email" disabled={loading}>
+          {loading ? <Spinner size={22} /> : 'Continue with email'}
+        </button>
+      </form>
+      <div className="framer-login-footer">
+        <a href="#" className="framer-forgot" onClick={handleForgotPassword}>
+          Forgot Password?
+        </a>
         <button
-          className="framer-login-btn google"
-          onClick={() => handleOAuthLogin('google')}
+          type="button"
+          className="framer-signup"
+          onClick={handleNewUser}
           disabled={loading}
         >
-          <span className="google-icon">G</span> Continue with Google
+          New User? Sign Up
         </button>
-        <div className="framer-or-divider">or</div>
-        <form className="framer-login-form" onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            disabled={loading}
-            className="framer-login-input"
-          />
-          <input
-            type={showPassword ? 'text' : 'password'}
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            disabled={loading}
-            className="framer-login-input"
-          />
-          <button type="submit" className="framer-login-btn email" disabled={loading}>
-            {loading ? <Spinner size={22} /> : 'Continue with email'}
-          </button>
-        </form>
-        <div className="framer-login-footer">
-          <a href="#" className="framer-forgot" onClick={handleForgotPassword}>Forgot Password?</a>
-          <button type="button" className="framer-signup" onClick={handleNewUser} disabled={loading}>
-            New User? Sign Up
-          </button>
-        </div>
-        {error && <p className="auth-error">{error}</p>}
-        {message && <p className="auth-message">{message}</p>}
-        </div>
-        {error && <p className="auth-error">{error}</p>}
-        {message && <p className="auth-message">{message}</p>}
       </div>
+      {error && <p className="auth-error">{error}</p>}
+      {message && <p className="auth-message">{message}</p>}
     </div>
-  );
-}
+  </div>
+);}

@@ -1,4 +1,4 @@
-import { generateQuestions } from "../utils/generateQuestions";
+import { generateQuestions } from "../src/utils/generateQuestions";
 
 export default async function handler(req, res) {
   // Enable CORS for Vercel deployment

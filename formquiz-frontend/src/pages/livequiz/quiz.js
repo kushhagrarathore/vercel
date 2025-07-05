@@ -11,8 +11,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { QRCodeCanvas } from "qrcode.react";
 import { FiArrowLeft, FiEye, FiUpload, FiSun, FiMoon, FiSave, FiEdit2, FiTrash2, FiBarChart2 } from "react-icons/fi";
 
-import { Button } from "../components/buttonquiz";
-import { Input } from "../components/input";
+import { Button } from '../../components/buttonquiz';
+import { Input } from '../../components/input';
+
 
 import { supabase } from "../../supabase";
 import "./quiz.css";
