@@ -29,7 +29,7 @@ const LiveQuizPage = () => {
       setError(null);
       // Fetch live quiz state
       const { data: liveQuiz, error: liveQuizError } = await supabase
-        .from('live_quizzes')
+        .from('lq_quizzes')
         .select('*')
         .eq('quiz_id', quizId)
         .single();
@@ -70,7 +70,7 @@ const LiveQuizPage = () => {
     // Subscribe to real-time updates for live_quizzes
     const channel = supabase
       .channel('live-quiz-' + quizId)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_quizzes', filter: `quiz_id=eq.${quizId}` }, fetchQuiz)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'lq_quizzes', filter: `quiz_id=eq.${quizId}` }, fetchQuiz)
       .subscribe();
 
     return () => {

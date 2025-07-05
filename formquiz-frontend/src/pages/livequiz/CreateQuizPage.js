@@ -166,7 +166,7 @@ const CreateQuizPage = () => {
   };
 
   // Publish logic
-  const handlePublish = async () => {
+  const handlePublish = async (target = 'admin') => {
     setPublishing(true);
     try {
       if (!quizTitle.trim()) throw new Error('Quiz title is required');
@@ -211,17 +211,37 @@ const CreateQuizPage = () => {
       }
       // --- Insert or update live_quizzes ---
       if (quizIdToUse) {
-        // Check if already exists
-        const { data: existingLiveQuiz } = await supabase.from('live_quizzes').select('*').eq('quiz_id', quizIdToUse).single();
+        // Save to lq_quizzes as well
+        const lqQuizPayload = {
+          id: quizIdToUse, // Use the same ID for consistency
+          user_id: user.id,
+          title: quizTitle,
+          description: quizData?.description || '',
+          created_at: quizData?.created_at || new Date().toISOString(),
+          customization_settings: globalSettings,
+          is_active: true,
+          is_shared: false,
+          is_published: true,
+          created_by: user.email,
+        };
+        await supabase.from('lq_quizzes').upsert([lqQuizPayload], { onConflict: ['id'] });
+        // Check if already exists (legacy logic)
+        const { data: existingLiveQuiz } = await supabase.from('lq_quizzes').select('*').eq('quiz_id', quizIdToUse).single();
         if (existingLiveQuiz) {
-          await supabase.from('live_quizzes').update({ is_live: true }).eq('quiz_id', quizIdToUse);
+          await supabase.from('lq_quizzes').update({ is_live: true }).eq('quiz_id', quizIdToUse);
         } else {
-          await supabase.from('live_quizzes').insert({ quiz_id: quizIdToUse, is_live: true });
+          await supabase.from('lq_quizzes').insert({ quiz_id: quizIdToUse, is_live: true });
         }
       }
       setQuiz(quizData); // Store in context
       if (!quizIdToUse) throw new Error('Quiz ID not found after publish');
-      navigate(`/livequiz/admin/${quizIdToUse}`);
+      if (target === 'admin') {
+        navigate(`/livequiz/admin/${quizIdToUse}`);
+      } else if (target === 'quiz') {
+        navigate(`/livequiz/quiz/${quizIdToUse}`);
+      } else {
+        navigate(`/dashboard`);
+      }
     } catch (err) {
       alert(err.message);
       console.error('Publish error:', err);
@@ -289,7 +309,8 @@ const CreateQuizPage = () => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <button onClick={handlePreview} style={{ background: '#f3f4f6', color: '#2563eb', border: 'none', borderRadius: 999, padding: '10px 28px', fontWeight: 700, fontSize: 17, cursor: 'pointer', boxShadow: 'none', marginRight: 8, display: 'flex', alignItems: 'center', gap: 10 }}><FaEye /> Preview</button>
-          <button onClick={handlePublish} disabled={publishing} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 999, padding: '10px 28px', fontWeight: 700, fontSize: 17, cursor: 'pointer', boxShadow: '0 2px 8px rgba(37,99,235,0.10)', opacity: publishing ? 0.7 : 1, marginRight: 8, display: 'flex', alignItems: 'center', gap: 10 }}><FaCloudUploadAlt /> {publishing ? 'Publishing...' : 'Publish'}</button>
+          <button onClick={() => handlePublish('admin')} disabled={publishing} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 999, padding: '10px 28px', fontWeight: 700, fontSize: 17, cursor: 'pointer', boxShadow: '0 2px 8px rgba(37,99,235,0.10)', opacity: publishing ? 0.7 : 1, marginRight: 8, display: 'flex', alignItems: 'center', gap: 10 }}><FaCloudUploadAlt /> {publishing ? 'Publishing...' : 'Publish & Go to Admin'}</button>
+          <button onClick={() => handlePublish('quiz')} disabled={publishing} style={{ background: '#059669', color: '#fff', border: 'none', borderRadius: 999, padding: '10px 28px', fontWeight: 700, fontSize: 17, cursor: 'pointer', boxShadow: '0 2px 8px rgba(5,150,105,0.10)', opacity: publishing ? 0.7 : 1, marginRight: 8, display: 'flex', alignItems: 'center', gap: 10 }}><FaCloudUploadAlt /> {publishing ? 'Publishing...' : 'Publish & Go to Quiz'}</button>
           <button onClick={handleToggleDark} style={{ background: darkMode ? '#2563eb' : '#f3f4f6', color: darkMode ? '#fff' : '#2563eb', border: 'none', borderRadius: 999, padding: '10px 18px', fontWeight: 700, fontSize: 17, cursor: 'pointer', boxShadow: '0 2px 8px rgba(37,99,235,0.10)', display: 'flex', alignItems: 'center', gap: 8 }} title="Toggle dark mode">{darkMode ? <FaSun /> : <FaMoon />}</button>
         </div>
       </div>

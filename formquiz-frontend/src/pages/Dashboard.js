@@ -170,7 +170,7 @@ const Dashboard = () => {
 
           // Fetch live quizzes
           const { data: liveQuizData, error: liveQuizError } = await supabase
-            .from('live_quizzes')
+            .from('lq_quizzes')
             .select('quiz_id, is_live')
             .eq('is_live', true);
 
