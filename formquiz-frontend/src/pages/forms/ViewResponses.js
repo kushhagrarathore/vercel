@@ -14,25 +14,23 @@ const ViewResponses = () => {
   useEffect(() => {
     const fetchData = async () => {
       // Get responses
-      const { data: respData, error: respError } = await supabase
+      const { data: respData } = await supabase
         .from('responses')
         .select('*, users(email)')
         .eq('form_id', formId);
 
-      if (respError) {
-        console.error('Error fetching responses:', respError);
-        return;
+      if (respData) {
+        setResponses(respData);
       }
-      setResponses(respData);
 
       // Get form questions
-      const { data: formData, error: formError } = await supabase
+      const { data: formData } = await supabase
         .from('forms')
         .select('title')
         .eq('id', formId)
         .single();
 
-      const { data: qData, error: qError } = await supabase
+      const { data: qData } = await supabase
         .from('questions')
         .select('*')
         .eq('form_id', formId)

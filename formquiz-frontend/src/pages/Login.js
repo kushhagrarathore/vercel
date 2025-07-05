@@ -12,7 +12,6 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [loginAs, setLoginAs] = useState('applicant');
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -149,6 +148,9 @@ export default function Login() {
           <button type="button" className="framer-signup" onClick={handleNewUser} disabled={loading}>
             New User? Sign Up
           </button>
+        </div>
+        {error && <p className="auth-error">{error}</p>}
+        {message && <p className="auth-message">{message}</p>}
         </div>
         {error && <p className="auth-error">{error}</p>}
         {message && <p className="auth-message">{message}</p>}

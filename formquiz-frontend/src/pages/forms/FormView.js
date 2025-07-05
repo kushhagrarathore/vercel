@@ -61,7 +61,7 @@ const FormView = () => {
     }
 
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      const { data: { user } } = await supabase.auth.getUser();
 
       const { error } = await supabase.from('responses').insert([{
         form_id: formId,

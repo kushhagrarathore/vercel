@@ -91,7 +91,6 @@ const Dashboard = () => {
     location.state?.activeTab ||
     'forms';
 
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 250);
   const [viewMode, setViewMode] = useState('grid');
@@ -107,16 +106,6 @@ const Dashboard = () => {
   useEffect(() => {
     localStorage.setItem('dashboardTab', activeTab);
   }, [activeTab]);
-
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const isDark = savedTheme === 'dark';
-    setIsDarkMode(isDark);
-    document.documentElement.setAttribute(
-      'data-theme',
-      isDark ? 'dark' : 'light'
-    );
-  }, []);
 
   useEffect(() => {
     const fetchUserData = async () => {

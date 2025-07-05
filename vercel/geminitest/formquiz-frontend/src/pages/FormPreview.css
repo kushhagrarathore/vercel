@@ -1,0 +1,93 @@
+.form-preview-wrapper {
+  max-width: 800px;
+  margin: 40px auto;
+  padding: 30px 40px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+  font-family: 'Segoe UI', sans-serif;
+  color: #333;
+}
+
+.form-preview-wrapper h2 {
+  font-size: 28px;
+  margin-bottom: 25px;
+  text-align: center;
+  color: #2c3e50;
+}
+
+.preview-question {
+  margin-bottom: 30px;
+}
+
+.preview-question h4 {
+  font-size: 18px;
+  margin-bottom: 10px;
+  color: #34495e;
+}
+
+.preview-question input[type="text"],
+.preview-question input[type="email"],
+.preview-question input[type="number"],
+.preview-question input[type="date"],
+.preview-question textarea {
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin-top: 8px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border 0.2s ease;
+}
+
+.preview-question input:focus,
+.preview-question textarea:focus {
+  border-color: #4a6bff;
+}
+
+.preview-question textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.preview-question label {
+  display: block;
+  font-size: 15px;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+.preview-question input[type="radio"] {
+  margin-right: 8px;
+  accent-color: #4a6bff;
+}
+
+.submit-button {
+  background-color: #4a6bff;
+  color: white;
+  padding: 14px 30px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  display: block;
+  margin: 40px auto 0;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.submit-button:hover {
+  background-color: #3c58d0;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 600px) {
+  .form-preview-wrapper {
+    padding: 20px;
+  }
+
+  .submit-button {
+    width: 100%;
+  }
+}

@@ -1,0 +1,140 @@
+/* src/components/MultipleChoiceQuestion.css */
+
+.multiple-choice-question-block {
+  border-left: 5px solid #5c6bc0; /* A distinct color for multiple choice (indigo) */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  transition: all 0.3s ease;
+}
+
+.multiple-choice-question-block:hover {
+  box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+
+.options-container {
+  margin-top: 15px;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px; /* Increased space between options */
+  background-color: #fdfdff; /* Very light background for each option */
+  border: 1px solid #e9e9f2; /* Subtle border */
+  border-radius: 8px; /* Rounded corners for option items */
+  padding: 8px 12px; /* Padding inside option items */
+  transition: all 0.2s ease;
+}
+
+.option-item:hover {
+  background-color: #f5f5ff; /* Slight highlight on hover */
+  border-color: #c9c9e8;
+}
+
+.option-radio {
+  margin-right: 12px; /* More space from radio button */
+  width: 20px; /* Larger radio button */
+  height: 20px;
+  min-width: 20px; /* Ensure it doesn't shrink */
+  min-height: 20px;
+  border: 2px solid #a0a8d6; /* Blueish border */
+  border-radius: 50%;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-color: #f0f0f8;
+  cursor: default; /* Indicate it's not interactive for editing */
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+/* Inner dot for radio button placeholder */
+.option-radio::before {
+  content: '';
+  display: block;
+  width: 10px;
+  height: 10px;
+  background-color: #5c6bc0; /* Matching accent color */
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0); /* Start hidden */
+  transition: transform 0.2s ease;
+}
+
+/* Simulate checked state for disabled radio */
+.option-radio.checked::before {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+
+.option-input-field {
+  flex-grow: 1;
+  padding: 10px;
+  border: 1px solid #e0e0e0; /* Lighter border */
+  border-radius: 6px;
+  font-size: 1em;
+  background-color: #fff;
+  color: #333;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.option-input-field:focus {
+  border-color: #5c6bc0;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.05), 0 0 0 3px rgba(92, 107, 192, 0.2);
+  outline: none;
+}
+
+.remove-option-button {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 1.2em; /* Slightly larger remove button */
+  margin-left: 10px;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.remove-option-button:hover {
+  background-color: #f8d7da;
+  color: #dc3545;
+}
+
+.add-option-button {
+  background-color: #e6f7ff; /* Light blue background */
+  color: #007bff;
+  padding: 8px 15px;
+  border: 1px solid #a7d9ed; /* Matching border */
+  border-radius: 5px;
+  font-size: 0.9em;
+  margin-top: 15px; /* More space from options */
+  margin-right: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.add-option-button:hover {
+  background-color: #d0eeff;
+  border-color: #007bff;
+}
+
+.add-other-option {
+    background-color: #f0f0f0; /* Light grey background */
+    color: #555;
+    padding: 8px 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 0.9em;
+    margin-top: 15px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.add-other-option:hover {
+    background-color: #e0e0e0;
+    color: #333;
+}

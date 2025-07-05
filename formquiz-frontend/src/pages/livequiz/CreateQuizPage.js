@@ -42,43 +42,34 @@ const CreateQuizPage = () => {
 
   // Load quiz if editing
   useEffect(() => {
-    if (!quizId) {
-      // Clear localStorage draft and reset state for new form
-      localStorage.removeItem('quizDraft');
-      setSlides(defaultSlides);
-      setQuizTitle('Untitled Presentation');
-      setGlobalSettings(defaultSettings);
-      setCurrent(0);
-      setDirty(false);
-    } else {
-      const fetchQuiz = async () => {
-        setLoading(true);
-        const { data: quizData, error: quizError } = await supabase.from('quizzes').select('*').eq('id', quizId).single();
-        if (quizData) {
-          setQuizTitle(quizData.title || 'Untitled Presentation');
-          setGlobalSettings(quizData.customization_settings || defaultSettings);
-        }
-        const { data: slidesData, error: slidesError } = await supabase.from('live_quiz_slides').select('*').eq('quiz_id', quizId).order('slide_index');
-        if (slidesData && slidesData.length > 0) {
-          setSlides(slidesData.map(s => ({
-            question: s.question,
-            options: s.options,
-            correctAnswer: s.correct_answer_index,
-            type: s.type || 'single',
-            image: s.image || '',
-            settings: {
-              backgroundColor: s.background || defaultSettings.backgroundColor,
-              textColor: s.text_color || defaultSettings.textColor,
-              fontSize: s.font_size || defaultSettings.fontSize,
-              timer: s.timer || 20,
-              ...defaultSettings
-            }
-          })));
-        }
-        setLoading(false);
-      };
-      fetchQuiz();
-    }
+    const fetchQuiz = async () => {
+      if (!quizId) return;
+      setLoading(true);
+      const { data: quizData } = await supabase.from('quizzes').select('*').eq('id', quizId).single();
+      if (quizData) {
+        setQuizTitle(quizData.title || 'Untitled Presentation');
+        setGlobalSettings(quizData.customization_settings || defaultSettings);
+      }
+      const { data: slidesData } = await supabase.from('slides').select('*').eq('quiz_id', quizId).order('slide_index');
+      if (slidesData && slidesData.length > 0) {
+        setSlides(slidesData.map(s => ({
+          question: s.question,
+          options: s.options,
+          correctAnswer: s.correct_answer_index,
+          type: s.type,
+          image: s.image || '',
+          settings: {
+            backgroundColor: s.background || defaultSettings.backgroundColor,
+            textColor: s.text_color || defaultSettings.textColor,
+            fontSize: s.font_size || defaultSettings.fontSize,
+            ...defaultSettings
+          }
+        })));
+      }
+      setLoading(false);
+    };
+    fetchQuiz();
+    // eslint-disable-next-line
   }, [quizId]);
 
   // On mount, restore from localStorage if not editing

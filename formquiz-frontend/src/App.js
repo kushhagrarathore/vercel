@@ -19,7 +19,6 @@ import PresentQuizPage from './pages/livequiz/PresentQuizPage'; // CombineBuild
 import PreviewQuizPage from './pages/livequiz/PreviewQuizPage'; // CombineBuild
 import QuizFillPage from './pages/livequiz/QuizFillPage'; // CombineBuild
 import QuizPage from './pages/livequiz/QuizPage';
-
 import Profile from './pages/Profile';
 import JoinQuiz from './pages/livequiz/JoinQuiz'; // Atharva branch
 import Leaderboard from './pages/livequiz/Leaderboard'; // Atharva branch

@@ -8,14 +8,11 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { QRCodeCanvas } from "qrcode.react";
-import { FiArrowLeft, FiEye, FiUpload, FiSun, FiMoon, FiSave, FiShare2, FiPlay, FiEdit2, FiTrash2, FiBarChart2, FiBarChart } from "react-icons/fi";
+import { FiArrowLeft, FiEye, FiUpload, FiSun, FiMoon, FiSave, FiEdit2, FiTrash2, FiBarChart2 } from "react-icons/fi";
 
-import { Card, CardContent } from "../../components/card";
-import { Button } from "../../components/buttonquiz";
-import { Input } from "../../components/input";
-import { Tabs, TabsList, TabsTrigger } from "../../components/tabs";
+import { Button } from "../components/buttonquiz";
+import { Input } from "../components/input";
 
 import { supabase } from "../../supabase";
 import "./quiz.css";
@@ -23,64 +20,71 @@ import "./quiz.css";
 // 🔲 Modal for sharing
 const Modal = ({ show, onClose, url }) => {
   if (!show) return null;
-  const handleCopy = () => {
-    navigator.clipboard.writeText(url);
+  
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      // Show success feedback
+      const button = document.querySelector('.copy-button');
+      if (button) {
+        const originalText = button.textContent;
+        button.textContent = 'Copied!';
+        button.style.background = '#10b981';
+        setTimeout(() => {
+          button.textContent = originalText;
+          button.style.background = '#3b82f6';
+        }, 2000);
+      }
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = url;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
   };
+  
   const handleOpen = () => {
     window.open(url, '_blank');
   };
+  
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg p-6 w-96 relative">
+        <button 
+          onClick={onClose} 
+          className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-xl font-bold"
+          title="Close"
+        >
+          ×
+        </button>
         <h2 className="text-lg font-semibold mb-4">Share Quiz</h2>
         <div className="flex justify-center items-center h-full w-full mb-4">
           <QRCodeCanvas value={url} />
         </div>
         <div className="flex justify-center gap-4 mb-4">
-          <Button onClick={handleCopy} className="px-4 py-2 rounded bg-blue-500 text-white font-semibold">Copy Link</Button>
-          <Button onClick={handleOpen} className="px-4 py-2 rounded bg-green-500 text-white font-semibold">Open Link</Button>
+          <Button 
+            onClick={handleCopy} 
+            className="copy-button px-4 py-2 rounded bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-colors"
+          >
+            Copy Link
+          </Button>
+          <Button 
+            onClick={handleOpen} 
+            className="px-4 py-2 rounded bg-green-500 text-white font-semibold hover:bg-green-600 transition-colors"
+          >
+            Open Link
+          </Button>
         </div>
-        <p className="text-sm break-all text-center mb-2">{url}</p>
+        <p className="text-sm break-all text-center mb-2 bg-gray-50 p-2 rounded border">{url}</p>
         <Button className="mt-2 w-full" onClick={onClose}>Close</Button>
       </div>
     </div>
   );
 };
-
-// 🔲 Reorderable Slide Component
-function SortableSlide({ id, index, onClick, onDelete, isSelected, name, onNameChange }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id });
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    border: isSelected ? "2px solid #7e22ce" : "1px solid #ccc",
-    backgroundColor: "#fff",
-    borderRadius: "8px",
-    padding: "0.5rem",
-    cursor: "pointer",
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex justify-between items-center mb-2 bg-white hover:bg-purple-50 shadow-md rounded-lg px-3 py-2 transition"
-    >
-      <div onClick={onClick} className="flex-1">
-        <Input
-          type="text"
-          value={name}
-          onChange={(e) => onNameChange(e.target.value)}
-          className="w-full text-sm font-medium border-none focus:ring-0 bg-transparent"
-        />
-      </div>
-      <div className="flex gap-2 items-center">
-        <span {...attributes} {...listeners} className="cursor-grab text-gray-400 hover:text-gray-600" title="Drag">⠿</span>
-        <button className="text-lg text-red-500 hover:text-red-700" onClick={(e) => { e.stopPropagation(); onDelete(); }}>✕</button>
-      </div>
-    </div>
-  );
-}
 
 // Sortable Slide Item
 function SortableSlideItem({ id, children }) {
@@ -182,8 +186,6 @@ export default function Quiz() {
     fontFamily: textStyles[0].value,
   }]);
   const [selectedSlide, setSelectedSlide] = useState(0);
-  const [mode, setMode] = useState("create");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [editingName, setEditingName] = useState(null);
@@ -197,10 +199,7 @@ export default function Quiz() {
   const [notification, setNotification] = useState(null);
   const [activeTab, setActiveTab] = useState('edit');
   const [responses, setResponses] = useState([]);
-  const [addSlideDropdownOpen, setAddSlideDropdownOpen] = useState(false);
   const [addSlidePopupOpen, setAddSlidePopupOpen] = useState(false);
-  const [isTakingQuiz, setIsTakingQuiz] = useState(false);
-  const [userAnswers, setUserAnswers] = useState({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const pendingNavigationRef = useRef(null);
@@ -241,6 +240,80 @@ export default function Quiz() {
       })();
     }
   }, [activeTab, publishedQuizId, quizId]);
+
+  // Handle AI-generated questions from navigation state
+  useEffect(() => {
+    if (location.state?.aiGenerated && location.state?.questions) {
+      const aiQuestions = location.state.questions;
+      const formattedSlides = aiQuestions.map((q, index) => ({
+        id: q.id || Date.now() + index,
+        name: q.question || `Question ${index + 1}`,
+        type: 'multiple',
+        question: q.question || '',
+        options: q.options || ['', '', '', ''],
+        correctAnswers: [q.correct_answer || 0],
+        background: '#ffffff',
+        textColor: '#000000',
+        fontFamily: textStyles[0].value,
+      }));
+      
+      setSlides(formattedSlides);
+      setTitle(location.state.topic || 'AI Generated Quiz');
+      setPublishedQuizId(location.state.sessionCode); // Set the AI-generated quiz ID
+      setSelectedSlide(0);
+      setHasUnsavedChanges(true);
+      
+      // Clear the navigation state to prevent re-applying on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
+  // Handle AI-generated quiz loading from URL (for direct access)
+  useEffect(() => {
+    if (quizId && quizId.startsWith('ai_')) {
+      // This is an AI-generated quiz, fetch from database
+      const fetchAIGeneratedQuiz = async () => {
+        try {
+          const { data: quizData, error: quizError } = await supabase
+            .from('quizzes')
+            .select('*')
+            .eq('id', quizId)
+            .single();
+          
+          if (quizData) {
+            setTitle(quizData.title || 'AI Generated Quiz');
+            setPublishedQuizId(quizId);
+            
+            // Fetch slides for this AI-generated quiz
+            const { data: slidesData, error: slidesError } = await supabase
+              .from('slides')
+              .select('*')
+              .eq('quiz_id', quizId)
+              .order('slide_index');
+            
+            if (slidesData && slidesData.length > 0) {
+              setSlides(slidesData.map(s => ({
+                id: s.id,
+                name: s.question || s.name || '',
+                type: s.type || 'multiple',
+                question: s.question || '',
+                options: s.options || ["", ""],
+                correctAnswers: s.correct_answers || [],
+                background: s.background || '#ffffff',
+                textColor: s.text_color || '#000000',
+                fontFamily: s.font_family || textStyles[0].value,
+              })));
+              setSelectedSlide(0);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading AI-generated quiz:', error);
+        }
+      };
+      
+      fetchAIGeneratedQuiz();
+    }
+  }, [quizId]);
 
   // Fetch quiz and slides if quizId is present
   useEffect(() => {
@@ -318,12 +391,7 @@ export default function Quiz() {
   };
   const handleCancel = () => setShowUnsavedModal(false);
 
-  // Quiz-taking answer handler
-  const handleUserAnswer = (slideId, value) => {
-    setUserAnswers((prev) => ({ ...prev, [slideId]: value }));
-  };
-
-  const addSlide = (type = currentSlide?.type || 'multiple') => {
+  const addSlide = (type = slides[selectedSlide]?.type || 'multiple') => {
     let newSlide = {
       name: `Slide ${slides.length + 1}`,
       type,
@@ -336,7 +404,6 @@ export default function Quiz() {
     };
     setSlides([...slides, newSlide]);
     setSelectedSlide(slides.length);
-    setDropdownOpen(false);
   };
 
   const deleteSlide = (index) => {
@@ -387,9 +454,18 @@ export default function Quiz() {
     }
   };
 
-  // Derive currentSlide safely
-  const currentSlide = slides && slides.length > 0 && selectedSlide >= 0 && selectedSlide < slides.length ? slides[selectedSlide] : null;
-  const shareURL = `${window.location.origin}/userend?quizId=${publishedQuizId || quizId}`;
+  const currentSlide = slides[selectedSlide];
+  // Generate share URL that works with Vercel deployment
+  const shareURL = (() => {
+    const quizIdToUse = publishedQuizId || quizId;
+    if (!quizIdToUse) return '';
+    
+    // Use window.location.origin for production, fallback for development
+    const baseUrl = window.location.origin || 
+                   (process.env.NODE_ENV === 'production' ? 'https://your-vercel-domain.vercel.app' : 'http://localhost:3000');
+    
+    return `${baseUrl}/userend?quizId=${quizIdToUse}`;
+  })();
 
   const handlePublishOrSave = async () => {
     const { data: user, error: userError } = await supabase.auth.getUser();
@@ -549,18 +625,6 @@ export default function Quiz() {
     setNotification('Quiz and slides saved to Supabase!');
     setShowModal(true);
     setTimeout(() => setNotification(null), 3000);
-  };
-
-  const handleSave = () => {
-    const formattedSlides = slides.map((slide) => ({
-      text: slide.question || "",
-      options: slide.options || [],
-      correctIndex: slide.correctAnswers.length > 0 ? slide.correctAnswers[0] : null,
-      fontFamily: slide.fontFamily || textStyles[0].value,
-      textColor: slide.textColor || "#000000",
-    }));
-    localStorage.setItem("quizData", JSON.stringify(formattedSlides));
-    alert("Slides saved successfully!");
   };
 
   return (
