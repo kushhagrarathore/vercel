@@ -26,7 +26,7 @@ const PresentQuizPage = () => {
   // Check live status
   useEffect(() => {
     const checkLive = async () => {
-      const { data, error } = await supabase.from('live_quizzes').select('*').eq('quiz_id', quizId).single();
+      const { data, error } = await supabase.from('lq_quizzes').select('*').eq('quiz_id', quizId).single();
       if (data && data.is_live) {
         setIsLive(true);
         setCurrentQuestion(data.current_question_index || 0);
@@ -37,7 +37,7 @@ const PresentQuizPage = () => {
 
   const handleStart = async () => {
     // Upsert live_quizzes row
-    const { error } = await supabase.from('live_quizzes').upsert({
+    const { error } = await supabase.from('lq_quizzes').upsert({
       quiz_id: quizId,
       is_live: true,
       current_question_index: 0,
@@ -55,12 +55,12 @@ const PresentQuizPage = () => {
     if (currentQuestion < slides.length - 1) {
       const next = currentQuestion + 1;
       setCurrentQuestion(next);
-      await supabase.from('live_quizzes').update({ current_question_index: next }).eq('quiz_id', quizId);
+      await supabase.from('lq_quizzes').update({ current_question_index: next }).eq('quiz_id', quizId);
     }
   };
 
   const handleEnd = async () => {
-    await supabase.from('live_quizzes').update({ is_live: false }).eq('quiz_id', quizId);
+    await supabase.from('lq_quizzes').update({ is_live: false }).eq('quiz_id', quizId);
     setIsLive(false);
   };
 
