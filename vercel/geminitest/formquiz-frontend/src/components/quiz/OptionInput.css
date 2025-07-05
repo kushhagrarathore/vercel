@@ -1,0 +1,32 @@
+.option-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.option-text-input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1.5px solid #e0e0e0;
+  font-size: 1em;
+  background: #f7f8fa;
+  transition: border 0.2s;
+}
+.option-text-input:focus {
+  border: 1.5px solid #4a6bff;
+  outline: none;
+}
+.remove-option-btn {
+  background: transparent;
+  border: none;
+  color: #c00;
+  font-size: 1.1em;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+.remove-option-btn:hover {
+  opacity: 1;
+  color: #e00;
+} 

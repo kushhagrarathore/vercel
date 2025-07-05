@@ -1,0 +1,107 @@
+body {
+  background: linear-gradient(135deg, #f7fafc 0%, #e3e9f7 100%);
+  min-height: 100vh;
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+}
+
+.form-container {
+  max-width: 800px;
+  margin: 60px auto 0 auto;
+  padding: 36px 32px 32px 32px;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(44, 62, 80, 0.13);
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+  position: relative;
+}
+
+.form-container h2 {
+  margin-bottom: 24px;
+  font-size: 2.1rem;
+  color: #2d3a4a;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: -1px;
+}
+
+.form-description {
+  text-align: center;
+  color: #6b7280;
+  margin-bottom: 24px;
+  font-size: 1.08rem;
+}
+
+.form-question {
+  margin-bottom: 28px;
+}
+
+.form-question label {
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: block;
+  color: #374151;
+  font-size: 1.08rem;
+}
+
+.form-question input[type="text"],
+.form-question textarea {
+  width: 100%;
+  padding: 13px 14px;
+  border: 1.5px solid #d0d7de;
+  border-radius: 8px;
+  font-size: 1.08rem;
+  box-sizing: border-box;
+  background: #f7fafd;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  margin-top: 4px;
+}
+
+.form-question input[type="text"]:focus,
+.form-question textarea:focus {
+  border-color: #4a6bff;
+  box-shadow: 0 0 0 2px #4a6bff22;
+  outline: none;
+}
+
+.form-question textarea {
+  resize: vertical;
+  min-height: 80px;
+  max-height: 220px;
+}
+
+.form-question input[type="radio"] {
+  accent-color: #4a6bff;
+  margin-right: 8px;
+  transform: scale(1.15);
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 15px 0;
+  font-size: 1.18rem;
+  background: linear-gradient(90deg, #4a6bff 0%, #6b8cff 100%);
+  color: white;
+  border: none;
+  border-radius: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(44, 62, 80, 0.08);
+  margin-top: 10px;
+  letter-spacing: 0.5px;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.submit-btn:hover {
+  background: linear-gradient(90deg, #3a5be0 0%, #4a6bff 100%);
+  box-shadow: 0 4px 16px rgba(44, 62, 80, 0.13);
+}
+
+@media (max-width: 600px) {
+  .form-container {
+    padding: 18px 6vw 24px 6vw;
+    max-width: 98vw;
+  }
+  .form-container h2 {
+    font-size: 1.3rem;
+  }
+}
