@@ -140,6 +140,13 @@ const FormView = () => {
 
   // ✅ UI states
   if (!form) return <p>Loading...</p>;
+  if (form.is_published === false) {
+    return (
+      <div style={{ textAlign: 'center', marginTop: 80, fontSize: 22, color: '#e53935', fontWeight: 700 }}>
+        <span role="img" aria-label="closed">🚫</span> This form is closed.
+      </div>
+    );
+  }
   if (submitted) {
     return (
       <div style={{ textAlign: 'center', marginTop: 60, fontSize: 22, color: '#219150', fontWeight: 600 }}>
