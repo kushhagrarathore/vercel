@@ -3,6 +3,7 @@ import './FormsCardRow.css';
 import { useNavigate } from 'react-router-dom';
 import { FaEye, FaChartBar, FaTimes, FaCopy, FaLink } from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
+import ReactDOM from 'react-dom';
 
 const FormCardRow = ({
   view,
@@ -21,6 +22,10 @@ const FormCardRow = ({
 }) => {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const toggleRef = React.useRef(null);
+  const [popoverStyle, setPopoverStyle] = useState({});
+  const [popoverCoords, setPopoverCoords] = useState({ top: 0, left: 0 });
 
   const handleEdit = (e) => {
     if (e) e.stopPropagation();
@@ -58,7 +63,20 @@ const FormCardRow = ({
   const handleToggle = (e) => {
     e.stopPropagation();
     if (onPublishToggle) onPublishToggle(formId, !isPublished);
-    setExpandedCardId(!isPublished ? formId : null);
+    if (!isPublished) {
+      setTimeout(() => {
+        if (toggleRef.current) {
+          const rect = toggleRef.current.getBoundingClientRect();
+          setPopoverCoords({
+            top: rect.bottom + 8,
+            left: rect.left + rect.width / 2 - 160 // center popover horizontally
+          });
+        }
+        setPopoverOpen(true);
+      }, 100);
+    } else {
+      setPopoverOpen(false);
+    }
   };
 
   const handleCopy = (e) => {
@@ -172,22 +190,48 @@ const FormCardRow = ({
     );
   };
 
+  React.useEffect(() => {
+    function handleClickOutside(event) {
+      if (popoverOpen && toggleRef.current && !toggleRef.current.contains(event.target)) {
+        setPopoverOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [popoverOpen]);
+
   // --- Grid View ---
   if (view === 'grid') {
     return (
-      <div className={`form-card-balanced grid ${isForm ? 'my-forms-card' : 'my-quizzes-card'}${expanded ? ' enhanced-expanded' : ''}`} onClick={handleEdit} tabIndex={0} role="button" style={{ outline: 'none', position: 'relative', transition: 'box-shadow 0.3s, background 0.3s, border 0.3s', boxShadow: expanded ? '0 8px 32px rgba(37,99,235,0.18)' : '', border: expanded ? '2px solid #2563eb' : '' }}>
-        {isForm ? <FormTypeSymbol /> : <QuizTypeSymbol />}
-        <div className="form-card-title-row">
-          <span className={`form-title-balanced ${isForm ? 'my-forms-title' : 'my-quizzes-title'}`} onClick={handleEdit}>{name}</span>
-          <label className={`toggle-switch${isPublished ? ' active' : ''}`} title={isPublished ? 'Deactivate' : 'Activate'} onClick={handleToggle}>
-            <input type="checkbox" checked={!!isPublished} onChange={handleToggle} />
-            <span className="slider" />
-          </label>
+      <>
+        <div className={`form-card-balanced grid ${isForm ? 'my-forms-card' : 'my-quizzes-card'}`} onClick={handleEdit} tabIndex={0} role="button" style={{ outline: 'none', position: 'relative' }}>
+          {isForm ? <FormTypeSymbol /> : <QuizTypeSymbol />}
+          <div className="form-card-title-row">
+            <span className={`form-title-balanced ${isForm ? 'my-forms-title' : 'my-quizzes-title'}`} onClick={handleEdit}>{name}</span>
+            <label ref={toggleRef} className={`toggle-switch${isPublished ? ' active' : ''}`} title={isPublished ? 'Deactivate' : 'Activate'} onClick={handleToggle} style={{zIndex: 2, position: 'relative'}}>
+              <input type="checkbox" checked={!!isPublished} onChange={handleToggle} />
+              <span className="slider" />
+            </label>
+          </div>
+          <div className="form-card-date-balanced">{timestamp}</div>
+          <ActionButtons />
         </div>
-        <div className="form-card-date-balanced">{timestamp}</div>
-        <ActionButtons />
-        <LinkDisplay />
-      </div>
+        {popoverOpen && isPublished && !!link && ReactDOM.createPortal(
+          <div className="pretty-popover portal-popover" style={{ top: popoverCoords.top, left: popoverCoords.left, position: 'absolute' }}>
+            <div className="popover-arrow portal-arrow" />
+            <button className="popover-close-btn" onClick={() => setPopoverOpen(false)} title="Close">&times;</button>
+            <div className="popover-title">Share this form</div>
+            <div className="pretty-link-box">
+              <FaLink style={{ marginRight: 8, color: 'var(--accent)' }} />
+              <span className="pretty-link-text">{link}</span>
+              <button className="pretty-copy-btn" onClick={handleCopy} title="Copy link">
+                {copied ? 'Copied!' : <FaCopy />}
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
+      </>
     );
   }
 
