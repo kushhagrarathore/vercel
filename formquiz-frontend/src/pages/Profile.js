@@ -3,14 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import Spinner from '../components/Spinner';
 import { useToast } from '../components/Toast';
-import { AvatarCreator } from '@readyplayerme/react-avatar-creator';
-
-const READY_PLAYER_ME_SUBDOMAIN = 'demo'; // Replace with your subdomain if you have one
 
 const SIDEBAR_SECTIONS = [
   { label: 'Profile', group: 'Settings' },
   { label: 'Account', group: 'Settings' },
-  { label: 'Notifications', group: 'Settings' },
   { label: 'Privacy', group: 'Settings' },
   { label: 'Terms of Service', group: 'Legal' },
   { label: 'Privacy Policy', group: 'Legal' },
@@ -20,13 +16,18 @@ const SIDEBAR_SECTIONS = [
 ];
 
 const Profile = () => {
-  const [profile, setProfile] = useState({ name: '', email: '', avatarUrl: '' });
+  const [profile, setProfile] = useState({ name: '', email: '' });
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(true);
-  const [showAvatarCreator, setShowAvatarCreator] = useState(false);
   const [selectedSection, setSelectedSection] = useState('Profile');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteInput, setDeleteInput] = useState('');
+  const [deleteError, setDeleteError] = useState('');
   const toast = useToast();
   const navigate = useNavigate();
+
+  // Simulated stats (replace with real fetch if needed)
+  const [stats, setStats] = useState({ level: 1, quizzes: 0, achievements: 0 });
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -37,9 +38,10 @@ const Profile = () => {
           setProfile({
             name: user.user_metadata?.name || '',
             email: user.email,
-            avatarUrl: user.user_metadata?.avatarUrl || '',
           });
         }
+        // Fetch stats (replace with real fetch if needed)
+        setStats({ level: 1, quizzes: 0, achievements: 0 });
       } catch (err) {
         toast('Failed to load profile', 'error');
       } finally {
@@ -53,9 +55,9 @@ const Profile = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      // Update name and avatarUrl
+      // Update name
       const { error: metaError } = await supabase.auth.updateUser({
-        data: { name: profile.name, avatarUrl: profile.avatarUrl },
+        data: { name: profile.name },
       });
       if (metaError) throw metaError;
       // Update password if provided
@@ -63,18 +65,12 @@ const Profile = () => {
         const { error: passError } = await supabase.auth.updateUser({ password });
         if (passError) throw passError;
       }
-      toast("Profile updated! Don't forget to save your profile.", 'success');
+      toast('Profile updated!', 'success');
     } catch (err) {
       toast(err.message || 'Failed to update profile', 'error');
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleAvatarExported = (event) => {
-    setProfile((p) => ({ ...p, avatarUrl: event.data.url }));
-    setShowAvatarCreator(false);
-    toast("Avatar updated! Don't forget to save your profile.", 'success');
   };
 
   // Sidebar content (left)
@@ -114,40 +110,6 @@ const Profile = () => {
       >
         ← Dashboard
       </button>
-      <div
-        style={{
-          width: 100,
-          height: 100,
-          borderRadius: '50%',
-          background: '#fff',
-          boxShadow: '0 2px 12px #a5b4fc22',
-          marginBottom: 12,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          position: 'relative',
-          overflow: 'hidden',
-          border: '3px solid #ede9fe',
-          cursor: 'pointer',
-          transition: 'box-shadow 0.3s',
-        }}
-        onClick={() => setShowAvatarCreator(true)}
-        title="Click to edit your 3D avatar!"
-      >
-        {profile.avatarUrl ? (
-          <iframe
-            title="3D Avatar"
-            src={`https://demo.readyplayer.me/avatar?url=${encodeURIComponent(profile.avatarUrl)}&frameApi&bodyType=fullbody`}
-            style={{ width: '100px', height: '100px', border: 'none', background: 'transparent', borderRadius: '50%' }}
-            allow="camera; microphone; clipboard-read; clipboard-write"
-          />
-        ) : (
-          <div style={{ color: '#a5b4fc', fontWeight: 700, fontSize: 16, textAlign: 'center' }}>No 3D Avatar</div>
-        )}
-        <span style={{ position: 'absolute', bottom: -16, left: '50%', transform: 'translateX(-50%)', fontSize: 12, color: '#7c3aed', opacity: 0.8, fontWeight: 500 }}>
-          Edit
-        </span>
-      </div>
       <div style={{ textAlign: 'center', marginBottom: 14 }}>
         <div style={{ fontWeight: 900, fontSize: 22, color: '#5b21b6', marginBottom: 2 }}>{profile.name || 'Your Name'}</div>
         <div style={{ color: '#6366f1', fontWeight: 500, fontSize: 14 }}>{profile.email}</div>
@@ -178,6 +140,28 @@ const Profile = () => {
             {label}
           </div>
         ))}
+        {/* View Plans button */}
+        <div
+          onClick={() => navigate('/plan')}
+          style={{
+            color: '#6366f1',
+            fontWeight: 700,
+            fontSize: 15,
+            cursor: 'pointer',
+            opacity: 0.95,
+            borderRadius: 6,
+            padding: '7px 10px',
+            background: '#f3f4f6',
+            marginTop: 8,
+            marginBottom: 8,
+            transition: 'background 0.18s, color 0.18s',
+            boxShadow: '0 1px 4px #a5b4fc11',
+          }}
+          onMouseOver={e => { e.target.style.background = '#ede9fe'; e.target.style.color = '#5b21b6'; }}
+          onMouseOut={e => { e.target.style.background = '#f3f4f6'; e.target.style.color = '#6366f1'; }}
+        >
+          View Plans
+        </div>
       </div>
       {/* Legal group */}
       <div style={{ width: '100%', marginBottom: 18 }}>
@@ -221,7 +205,7 @@ const Profile = () => {
             transition: 'background 0.18s, color 0.18s',
             background: selectedSection === 'Log out' ? '#fee2e2' : 'transparent',
           }}
-          onClick={() => { setSelectedSection('Log out'); supabase.auth.signOut(); navigate('/login'); }}
+          onClick={async () => { setSelectedSection('Log out'); await supabase.auth.signOut(); navigate('/login'); }}
           onMouseOver={e => { e.target.style.background = '#fee2e2'; e.target.style.color = '#b91c1c'; }}
           onMouseOut={e => { if (selectedSection !== 'Log out') { e.target.style.background = 'transparent'; e.target.style.color = '#e11d48'; }}}
         >
@@ -239,7 +223,7 @@ const Profile = () => {
             transition: 'background 0.18s, color 0.18s',
             background: selectedSection === 'Delete Account' ? '#fee2e2' : 'transparent',
           }}
-          onClick={() => setSelectedSection('Delete Account')}
+          onClick={() => setShowDeleteModal(true)}
           onMouseOver={e => { e.target.style.background = '#fee2e2'; e.target.style.color = '#7f1d1d'; }}
           onMouseOut={e => { if (selectedSection !== 'Delete Account') { e.target.style.background = 'transparent'; e.target.style.color = '#b91c1c'; }}}
         >
@@ -258,13 +242,13 @@ const Profile = () => {
         <div style={{ flex: 1, minWidth: 320, maxWidth: 520 }}>
           <div style={{ marginBottom: 32, textAlign: 'left' }}>
             <div style={{ fontWeight: 900, fontSize: 32, color: '#5b21b6', marginBottom: 4 }}>Welcome, {profile.name || 'User'}!</div>
-            <div style={{ color: '#6366f1', fontWeight: 500, fontSize: 18, marginBottom: 8 }}>This is your personal profile hub. Complete your profile and customize your avatar for a better experience!</div>
+            <div style={{ color: '#6366f1', fontWeight: 500, fontSize: 18, marginBottom: 8 }}>This is your personal profile hub. Complete your profile for a better experience!</div>
             <div style={{ color: '#7c3aed', fontWeight: 600, fontSize: 16, marginBottom: 0 }}>Profile Completion: <span style={{ color: '#6366f1' }}>80%</span></div>
           </div>
           <div style={{ display: 'flex', gap: 24, marginBottom: 36 }}>
-            <div style={{ background: '#fff', borderRadius: 12, padding: '14px 28px', fontWeight: 700, color: '#7c3aed', fontSize: 18, boxShadow: '0 1px 4px #a5b4fc11' }}>🎉 Level 1</div>
-            <div style={{ background: '#fff', borderRadius: 12, padding: '14px 28px', fontWeight: 700, color: '#6366f1', fontSize: 18, boxShadow: '0 1px 4px #a5b4fc11' }}>🚀 0 Quizzes</div>
-            <div style={{ background: '#fff', borderRadius: 12, padding: '14px 28px', fontWeight: 700, color: '#5b21b6', fontSize: 18, boxShadow: '0 1px 4px #a5b4fc11' }}>🏆 0 Achievements</div>
+            <div style={{ background: '#fff', borderRadius: 12, padding: '14px 28px', fontWeight: 700, color: '#7c3aed', fontSize: 18, boxShadow: '0 1px 4px #a5b4fc11' }}>🎉 Level {stats.level}</div>
+            <div style={{ background: '#fff', borderRadius: 12, padding: '14px 28px', fontWeight: 700, color: '#6366f1', fontSize: 18, boxShadow: '0 1px 4px #a5b4fc11' }}>🚀 {stats.quizzes} Quizzes</div>
+            <div style={{ background: '#fff', borderRadius: 12, padding: '14px 28px', fontWeight: 700, color: '#5b21b6', fontSize: 18, boxShadow: '0 1px 4px #a5b4fc11' }}>🏆 {stats.achievements} Achievements</div>
           </div>
           <form onSubmit={handleSave} style={{ zIndex: 1, position: 'relative', maxWidth: 480 }}>
             <div style={{ marginBottom: 22 }}>
@@ -309,69 +293,6 @@ const Profile = () => {
             </button>
           </form>
         </div>
-        {/* Right: 3D Avatar & Customization */}
-        <div style={{ minWidth: 340, maxWidth: 400, flex: '0 0 380px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', position: 'relative' }}>
-          <div style={{
-            width: 260,
-            height: 340,
-            background: 'rgba(255,255,255,0.55)',
-            borderRadius: 32,
-            boxShadow: '0 8px 32px 0 #a5b4fc33, 0 1.5px 6px #7c3aed22',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 24,
-            position: 'relative',
-            overflow: 'hidden',
-            border: '2.5px solid #ede9fe',
-            transition: 'box-shadow 0.3s',
-            animation: 'floaty 3.5s ease-in-out infinite',
-          }}>
-            {profile.avatarUrl ? (
-              <iframe
-                title="3D Avatar"
-                src={`https://demo.readyplayer.me/avatar?url=${encodeURIComponent(profile.avatarUrl)}&frameApi&bodyType=fullbody`}
-                style={{ width: '220px', height: '320px', border: 'none', background: 'transparent', borderRadius: 28, boxShadow: '0 2px 12px #a5b4fc22' }}
-                allow="camera; microphone; clipboard-read; clipboard-write"
-              />
-            ) : (
-              <div style={{ color: '#a5b4fc', fontWeight: 700, fontSize: 18, textAlign: 'center', marginTop: 80 }}>No 3D Avatar</div>
-            )}
-            {/* Fun floating elements */}
-            <div style={{ position: 'absolute', top: 18, right: 18, width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#a5b4fc 60%,#ede9fe 100%)', opacity: 0.18, filter: 'blur(2px)', animation: 'bounce 2.2s infinite alternate' }} />
-            <div style={{ position: 'absolute', bottom: 18, left: 18, width: 24, height: 24, borderRadius: '50%', background: 'linear-gradient(135deg,#ede9fe 60%,#a5b4fc 100%)', opacity: 0.13, filter: 'blur(1.5px)', animation: 'bounce2 2.8s infinite alternate' }} />
-          </div>
-          {/* Customization Panel */}
-          <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18 }}>
-            <button
-              onClick={() => setShowAvatarCreator(true)}
-              style={{ background: 'linear-gradient(90deg,#7c3aed 60%,#6366f1 100%)', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 32px', fontWeight: 800, fontSize: 18, cursor: 'pointer', boxShadow: '0 2px 8px #7c3aed33', marginBottom: 0, letterSpacing: '0.03em', transition: 'transform 0.18s, box-shadow 0.18s', outline: 'none' }}
-              onMouseOver={e => { e.target.style.transform = 'scale(1.07)'; e.target.style.boxShadow = '0 4px 16px #7c3aed44'; }}
-              onMouseOut={e => { e.target.style.transform = 'scale(1)'; e.target.style.boxShadow = '0 2px 8px #7c3aed33'; }}
-            >
-              Edit Avatar
-            </button>
-            <button
-              onClick={() => { setProfile(p => ({ ...p, avatarUrl: '' })); toast('Randomized! Click Edit Avatar to create a new look.', 'info'); }}
-              style={{ background: 'linear-gradient(90deg,#f472b6 60%,#a5b4fc 100%)', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 28px', fontWeight: 700, fontSize: 16, cursor: 'pointer', boxShadow: '0 2px 8px #f472b633', marginBottom: 0, letterSpacing: '0.03em', transition: 'transform 0.18s, box-shadow 0.18s', outline: 'none', animation: 'bounce3 1.8s infinite alternate' }}
-              onMouseOver={e => { e.target.style.transform = 'scale(1.09) rotate(-2deg)'; e.target.style.boxShadow = '0 4px 16px #f472b644'; }}
-              onMouseOut={e => { e.target.style.transform = 'scale(1)'; e.target.style.boxShadow = '0 2px 8px #f472b633'; }}
-            >
-              🎲 Randomize
-            </button>
-            <button
-              onClick={() => { if (profile.avatarUrl) { navigator.clipboard.writeText(profile.avatarUrl); toast('Avatar link copied!', 'success'); } }}
-              style={{ background: 'linear-gradient(90deg,#6366f1 60%,#a5b4fc 100%)', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 28px', fontWeight: 700, fontSize: 16, cursor: 'pointer', boxShadow: '0 2px 8px #6366f133', marginBottom: 0, letterSpacing: '0.03em', transition: 'transform 0.18s, box-shadow 0.18s', outline: 'none' }}
-              onMouseOver={e => { e.target.style.transform = 'scale(1.06)'; e.target.style.boxShadow = '0 4px 16px #6366f144'; }}
-              onMouseOut={e => { e.target.style.transform = 'scale(1)'; e.target.style.boxShadow = '0 2px 8px #6366f133'; }}
-              disabled={!profile.avatarUrl}
-            >
-              📋 Copy Avatar Link
-            </button>
-          </div>
-        </div>
       </div>
     );
   } else if (selectedSection === 'Account') {
@@ -387,28 +308,19 @@ const Profile = () => {
         </ul>
       </div>
     );
-  } else if (selectedSection === 'Notifications') {
-    mainContent = (
-      <div style={{ maxWidth: 480 }}>
-        <h2 style={{ fontWeight: 900, fontSize: 28, color: '#5b21b6', marginBottom: 18 }}>Notifications</h2>
-        <p style={{ color: '#6366f1', fontWeight: 500, fontSize: 17, marginBottom: 18 }}>Control your notification preferences.</p>
-        <ul style={{ color: '#444', fontSize: 16, lineHeight: 1.7 }}>
-          <li>Email notifications</li>
-          <li>Push notifications</li>
-          <li>Quiz reminders</li>
-        </ul>
-      </div>
-    );
   } else if (selectedSection === 'Privacy') {
     mainContent = (
       <div style={{ maxWidth: 480 }}>
         <h2 style={{ fontWeight: 900, fontSize: 28, color: '#5b21b6', marginBottom: 18 }}>Privacy Settings</h2>
         <p style={{ color: '#6366f1', fontWeight: 500, fontSize: 17, marginBottom: 18 }}>Manage your privacy and data sharing preferences.</p>
         <ul style={{ color: '#444', fontSize: 16, lineHeight: 1.7 }}>
-          <li>Profile visibility</li>
-          <li>Data download</li>
-          <li>Ad preferences</li>
+          <li>Profile visibility (coming soon)</li>
+          <li>Data download (coming soon)</li>
+          <li>Ad preferences (coming soon)</li>
         </ul>
+        <div style={{ color: '#888', fontSize: 14, marginTop: 18 }}>
+          We collect only the data necessary to provide and improve our services. You can request a copy of your data or delete your account at any time. For more details, see our Privacy Policy.
+        </div>
       </div>
     );
   } else if (selectedSection === 'Terms of Service') {
@@ -417,7 +329,22 @@ const Profile = () => {
         <h2 style={{ fontWeight: 900, fontSize: 28, color: '#5b21b6', marginBottom: 18 }}>Terms of Service</h2>
         <p style={{ color: '#6366f1', fontWeight: 500, fontSize: 17, marginBottom: 18 }}>Read our terms and conditions for using this platform.</p>
         <div style={{ color: '#444', fontSize: 15, lineHeight: 1.7 }}>
-          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam euismod, urna eu tincidunt consectetur, nisi nisl aliquam enim, nec dictum ex enim nec urna.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8 }}>1. Acceptance of Terms</h3>
+          <p>By using this platform, you agree to abide by these terms and all applicable laws and regulations.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8, marginTop: 16 }}>2. User Responsibilities</h3>
+          <p>You are responsible for maintaining the confidentiality of your account and for all activities that occur under your account.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8, marginTop: 16 }}>3. Content</h3>
+          <p>You retain ownership of your content but grant us a license to use, display, and distribute it as necessary to provide the service.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8, marginTop: 16 }}>4. Prohibited Conduct</h3>
+          <p>You agree not to misuse the platform, including but not limited to spamming, hacking, or violating any laws.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8, marginTop: 16 }}>5. Termination</h3>
+          <p>We reserve the right to suspend or terminate your account for violations of these terms.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8, marginTop: 16 }}>6. Limitation of Liability</h3>
+          <p>We are not liable for any damages arising from your use of the platform.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8, marginTop: 16 }}>7. Changes to Terms</h3>
+          <p>We may update these terms at any time. Continued use of the platform constitutes acceptance of the new terms.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8, marginTop: 16 }}>8. Contact</h3>
+          <p>If you have questions, contact us at support@yourdomain.com.</p>
         </div>
       </div>
     );
@@ -427,7 +354,20 @@ const Profile = () => {
         <h2 style={{ fontWeight: 900, fontSize: 28, color: '#5b21b6', marginBottom: 18 }}>Privacy Policy</h2>
         <p style={{ color: '#6366f1', fontWeight: 500, fontSize: 17, marginBottom: 18 }}>Learn how we handle your data and privacy.</p>
         <div style={{ color: '#444', fontSize: 15, lineHeight: 1.7 }}>
-          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam euismod, urna eu tincidunt consectetur, nisi nisl aliquam enim, nec dictum ex enim nec urna.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8 }}>1. Data Collection</h3>
+          <p>We collect information you provide (such as name, email, and quiz data) and usage data (such as device and log information).</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8, marginTop: 16 }}>2. Data Usage</h3>
+          <p>We use your data to provide, maintain, and improve our services, and to communicate with you.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8, marginTop: 16 }}>3. Data Sharing</h3>
+          <p>We do not sell your data. We may share data with service providers as necessary to operate the platform.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8, marginTop: 16 }}>4. Data Security</h3>
+          <p>We use industry-standard security measures to protect your data.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8, marginTop: 16 }}>5. Your Rights</h3>
+          <p>You can access, update, or delete your data at any time. Contact us for assistance.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8, marginTop: 16 }}>6. Cookies</h3>
+          <p>We use cookies to enhance your experience. See our Cookie Policy for details.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8, marginTop: 16 }}>7. Contact</h3>
+          <p>If you have questions, contact us at privacy@yourdomain.com.</p>
         </div>
       </div>
     );
@@ -437,7 +377,14 @@ const Profile = () => {
         <h2 style={{ fontWeight: 900, fontSize: 28, color: '#5b21b6', marginBottom: 18 }}>Cookie Policy</h2>
         <p style={{ color: '#6366f1', fontWeight: 500, fontSize: 17, marginBottom: 18 }}>How we use cookies and similar technologies.</p>
         <div style={{ color: '#444', fontSize: 15, lineHeight: 1.7 }}>
-          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam euismod, urna eu tincidunt consectetur, nisi nisl aliquam enim, nec dictum ex enim nec urna.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8 }}>1. What Are Cookies?</h3>
+          <p>Cookies are small text files stored on your device to help us improve your experience.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8, marginTop: 16 }}>2. How We Use Cookies</h3>
+          <p>We use cookies for authentication, analytics, and to remember your preferences.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8, marginTop: 16 }}>3. Managing Cookies</h3>
+          <p>You can manage or disable cookies in your browser settings, but some features may not work as intended.</p>
+          <h3 style={{ fontWeight: 700, marginBottom: 8, marginTop: 16 }}>4. Contact</h3>
+          <p>If you have questions, contact us at privacy@yourdomain.com.</p>
         </div>
       </div>
     );
@@ -446,7 +393,77 @@ const Profile = () => {
       <div style={{ maxWidth: 480 }}>
         <h2 style={{ fontWeight: 900, fontSize: 28, color: '#b91c1c', marginBottom: 18 }}>Delete Account</h2>
         <p style={{ color: '#e11d48', fontWeight: 600, fontSize: 17, marginBottom: 18 }}>Warning: This action is irreversible!</p>
-        <button style={{ background: '#b91c1c', color: '#fff', border: 'none', borderRadius: 10, padding: '16px 32px', fontWeight: 900, fontSize: 18, cursor: 'pointer', marginTop: 12, letterSpacing: '0.03em' }} onClick={() => toast('Account deletion not implemented.', 'error')}>Delete My Account</button>
+        <button style={{ background: '#b91c1c', color: '#fff', border: 'none', borderRadius: 10, padding: '16px 32px', fontWeight: 900, fontSize: 18, cursor: 'pointer', marginTop: 12, letterSpacing: '0.03em' }} onClick={() => setShowDeleteModal(true)}>Delete My Account</button>
+        {/* Delete Account Modal */}
+        {showDeleteModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: 'rgba(30,34,45,0.18)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(60,60,100,0.13)', padding: 32, minWidth: 360, maxWidth: 400, position: 'relative', width: '90vw', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <h3 style={{ fontWeight: 900, fontSize: 22, color: '#b91c1c', marginBottom: 12 }}>Confirm Account Deletion</h3>
+              <p style={{ color: '#e11d48', fontWeight: 600, fontSize: 16, marginBottom: 18, textAlign: 'center' }}>
+                Are you sure you want to permanently delete your account? This action cannot be undone.<br />
+                Please type <span style={{ fontWeight: 900 }}>DELETE</span> to confirm.
+              </p>
+              <input
+                type="text"
+                value={deleteInput}
+                onChange={e => { setDeleteInput(e.target.value); setDeleteError(''); }}
+                style={{ width: '100%', padding: 12, borderRadius: 8, border: '1.5px solid #e0e0e0', fontSize: 16, marginBottom: 12 }}
+                placeholder="Type DELETE to confirm"
+                autoFocus
+              />
+              {deleteError && <div style={{ color: '#b91c1c', fontSize: 14, marginBottom: 8 }}>{deleteError}</div>}
+              <div style={{ display: 'flex', gap: 12, width: '100%' }}>
+                <button
+                  style={{ flex: 1, background: '#f3f4f6', color: '#444', border: 'none', borderRadius: 8, padding: '12px 0', fontWeight: 700, fontSize: 16, cursor: 'pointer' }}
+                  onClick={() => { setShowDeleteModal(false); setDeleteInput(''); setDeleteError(''); }}
+                >
+                  Cancel
+                </button>
+                <button
+                  style={{ flex: 1, background: '#b91c1c', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 0', fontWeight: 900, fontSize: 16, cursor: 'pointer' }}
+                  onClick={async () => {
+                    if (deleteInput !== 'DELETE') {
+                      setDeleteError('You must type DELETE to confirm.');
+                      return;
+                    }
+                    try {
+                      // Delete all user data from relevant tables
+                      const { data: { user } } = await supabase.auth.getUser();
+                      if (user) {
+                        await supabase.from('forms').delete().eq('user_id', user.id);
+                        await supabase.from('quizzes').delete().eq('user_id', user.id);
+                        await supabase.from('responses').delete().eq('user_id', user.id);
+                        await supabase.from('user_stats').delete().eq('user_id', user.id);
+                        await supabase.from('profiles').delete().eq('id', user.id);
+                        // Delete from auth
+                        await supabase.auth.admin.deleteUser(user.id);
+                        toast('Account deleted successfully.', 'success');
+                        setTimeout(() => {
+                          navigate('/login');
+                        }, 1200);
+                      }
+                    } catch (err) {
+                      setDeleteError('Failed to delete account. Please try again.');
+                    }
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -470,37 +487,6 @@ const Profile = () => {
     }}>
       {sidebar}
       {main}
-      {/* Avatar Creator Modal */}
-      {showAvatarCreator && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100vw',
-          height: '100vh',
-          background: 'rgba(30,34,45,0.18)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}>
-          <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(60,60,100,0.13)', padding: 0, minWidth: 360, minHeight: 480, position: 'relative', width: '90vw', maxWidth: 600, height: '80vh', display: 'flex', flexDirection: 'column' }}>
-            <button
-              onClick={() => setShowAvatarCreator(false)}
-              style={{ position: 'absolute', top: 18, right: 18, background: 'none', border: 'none', fontSize: 24, color: '#888', cursor: 'pointer', zIndex: 10 }}
-              aria-label="Close Avatar Creator"
-            >
-              ×
-            </button>
-            <AvatarCreator
-              subdomain={READY_PLAYER_ME_SUBDOMAIN}
-              style={{ width: '100%', height: '100%', border: 'none', borderRadius: 18 }}
-              config={{ clearCache: true, bodyType: 'fullbody', quickStart: false, language: 'en' }}
-              onAvatarExported={handleAvatarExported}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 };
