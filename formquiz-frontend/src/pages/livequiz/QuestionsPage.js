@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase/client';
 import QuestionPreview from './QuestionPreview';
 
@@ -26,6 +27,7 @@ export default function QuestionsPage() {
   const [showTitlePrompt, setShowTitlePrompt] = useState(false);
   const [titleInputGlow, setTitleInputGlow] = useState(false);
   const [titleInputBg, setTitleInputBg] = useState(false);
+  const navigate = useNavigate();
 
   // 1. Customization defaults
   const settingsDefaults = {
@@ -293,58 +295,71 @@ export default function QuestionsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Sticky, full-width Menu Bar */}
-      <div className="sticky top-0 left-0 w-full z-20 bg-white shadow px-6 py-4 flex items-center justify-between" style={{ minWidth: '100%' }}>
-        <input
-          ref={quizNameInputRef}
-          type="text"
-          value={quizName}
-          onChange={e => {
-            setQuizName(e.target.value);
-            if (e.target.value.trim()) setQuizTitleError('');
-            if (e.target.value.trim()) {
-              setShowTitlePrompt(false);
-              setTitleInputGlow(false);
-              setTitleInputBg(false);
-            }
-          }}
-          placeholder="Untitled Quiz"
-          className={`text-xl font-semibold truncate max-w-xs border-none focus:ring-0 focus:outline-none p-0 m-0 transition-all duration-300
-            ${titleInputGlow ? 'ring-2 ring-amber-400 ring-offset-2 border-amber-400' : ''}
-            ${titleInputBg ? 'bg-amber-100/70' : 'bg-transparent'}
-          `}
-          style={{ minWidth: '120px' }}
-        />
-        {/* Floating Prompt Box */}
-        {showTitlePrompt && (
-          <div
-            className="fixed left-1/2 top-16 z-50 -translate-x-1/2 animate-fade-in-out"
-            style={{
-              minWidth: 320,
-              background: 'rgba(255, 237, 213, 0.98)', // amber-100
-              color: '#b45309', // amber-700
-              border: '2px solid #f59e42', // amber-400
-              borderRadius: 16,
-              boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)',
-              padding: '18px 32px',
-              fontWeight: 600,
-              fontSize: 18,
-              textAlign: 'center',
-              transition: 'opacity 0.5s',
-            }}
+      {/* Navigation Buttons */}
+      <div className="flex justify-between items-center px-6 py-4 bg-white shadow sticky top-0 z-30">
+        <div className="flex items-center gap-4">
+          <button
+            className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 font-semibold"
+            onClick={() => navigate('/dashboard')}
           >
-            Please enter a quiz title before proceeding.
-          </div>
-        )}
-        <button
-          type="button"
-          onClick={handleMenuCreateQuiz}
-          className="ml-auto px-5 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors whitespace-nowrap"
-          disabled={loading}
-        >
-          {loading ? 'Creating...' : 'Create Quiz'}
-        </button>
+            ← Back to Dashboard
+          </button>
+          <input
+            ref={quizNameInputRef}
+            type="text"
+            value={quizName}
+            onChange={e => {
+              setQuizName(e.target.value);
+              if (e.target.value.trim()) setQuizTitleError('');
+              if (e.target.value.trim()) {
+                setShowTitlePrompt(false);
+                setTitleInputGlow(false);
+                setTitleInputBg(false);
+              }
+            }}
+            placeholder="Untitled Quiz"
+            className={`ml-4 text-xl font-semibold truncate max-w-xs border-none focus:ring-0 focus:outline-none p-0 m-0 transition-all duration-300 ${titleInputGlow ? 'ring-2 ring-amber-400 ring-offset-2 border-amber-400' : ''} ${titleInputBg ? 'bg-amber-100/70' : 'bg-transparent'}`}
+            style={{ minWidth: '120px' }}
+          />
+        </div>
+        <div className="flex items-center gap-4">
+          <button
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold"
+            onClick={() => navigate('/livequiz/admin')}
+          >
+            Go to Admin Page →
+          </button>
+          <button
+            type="button"
+            onClick={handleMenuCreateQuiz}
+            className="px-5 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors whitespace-nowrap"
+            disabled={loading}
+          >
+            {loading ? 'Creating...' : 'Create Quiz'}
+          </button>
+        </div>
       </div>
+      {/* Floating Prompt Box */}
+      {showTitlePrompt && (
+        <div
+          className="fixed left-1/2 top-16 z-50 -translate-x-1/2 animate-fade-in-out"
+          style={{
+            minWidth: 320,
+            background: 'rgba(255, 237, 213, 0.98)', // amber-100
+            color: '#b45309', // amber-700
+            border: '2px solid #f59e42', // amber-400
+            borderRadius: 16,
+            boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)',
+            padding: '18px 32px',
+            fontWeight: 600,
+            fontSize: 18,
+            textAlign: 'center',
+            transition: 'opacity 0.5s',
+          }}
+        >
+          Please enter a quiz title before proceeding.
+        </div>
+      )}
       {/* Layout: Sidebar + Main + (optional) Right Panel */}
       <div className="flex flex-row w-full">
         {/* Fixed, full-height Sidebar with native drag-and-drop */}
@@ -381,14 +396,15 @@ export default function QuestionsPage() {
         {/* Responsive container for main content and right sidebar */}
         <div
           className={`flex flex-row flex-1 transition-all duration-300 ml-60 ${customSidebarOpen ? 'mr-80' : ''}`}
-          style={{ minHeight: 'calc(100vh - 4.5rem)' }}
+          style={{ minHeight: 'calc(100vh - 4.5rem)', overflowY: 'auto' }}
         >
           {/* Main Content: Only show selected question for editing, or the add form if none selected */}
           <main
             className={`flex-1 p-8 transition-all duration-300 flex flex-col items-center justify-start`}
             style={{
-              maxWidth: customSidebarOpen ? 'calc(100vw - 15rem - 20rem)' : 'calc(100vw - 15rem)', // 15rem = sidebar, 20rem = right sidebar
+              maxWidth: customSidebarOpen ? 'calc(100vw - 15rem - 20rem)' : 'calc(100vw - 15rem)',
               width: '100%',
+              overflowY: 'auto',
             }}
           >
             {successMessage && (

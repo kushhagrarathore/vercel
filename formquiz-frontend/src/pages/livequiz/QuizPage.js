@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../supabase/client';
-import { useQuiz } from '../../context/QuizContext';
+import { useQuiz } from '../../pages/livequiz/QuizContext';
 
 export default function QuizPage() {
   const { session, setSession } = useQuiz();

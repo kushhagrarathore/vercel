@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabase/client';
-import { useQuiz } from '../../context/QuizContext';
+import { useQuiz } from '../../pages/livequiz/QuizContext';
 
 export default function AdminPage() {
   const {
