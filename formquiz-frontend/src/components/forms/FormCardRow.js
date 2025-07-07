@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './FormsCardRow.css';
 import { useNavigate } from 'react-router-dom';
 import { FaEye, FaChartBar, FaTimes, FaCopy, FaLink } from 'react-icons/fa';
+import { QRCodeSVG } from 'qrcode.react';
 
 const FormCardRow = ({
   view,
@@ -69,6 +70,11 @@ const FormCardRow = ({
     }
   };
 
+  const handleCloseExpand = (e) => {
+    e.stopPropagation();
+    setExpandedCardId(null);
+  };
+
   const ActionButtons = () => (
     <div className="card-actions-big">
       <button className="card-action-btn" title="Preview" onClick={handlePreview} tabIndex={-1}>
@@ -95,12 +101,21 @@ const FormCardRow = ({
   const LinkDisplay = () => {
     if (!isPublished || !expanded) return null;
     return link ? (
-      <div className="share-link-row" style={{ marginTop: 12 }}>
-        <FaLink style={{ marginRight: 6, color: 'var(--accent)' }} />
-        <a href={link} target="_blank" rel="noopener noreferrer" className="share-link-url" style={{ color: '#2563eb', textDecoration: 'underline', wordBreak: 'break-all' }}>{link}</a>
-        <button className="copy-link-btn" onClick={handleCopy} title="Copy link">
-          {copied ? 'Copied!' : <FaCopy />}
-        </button>
+      <div className="enhanced-share-section">
+        <div className="enhanced-share-header">
+          <span>Share this form</span>
+          <button className="enhanced-close-btn" onClick={handleCloseExpand} title="Close">&times;</button>
+        </div>
+        <div className="enhanced-link-box">
+          <FaLink style={{ marginRight: 8, color: 'var(--accent)' }} />
+          <span className="enhanced-link-text">{link}</span>
+          <button className="enhanced-copy-btn" onClick={handleCopy} title="Copy link">
+            {copied ? 'Copied!' : <FaCopy />}
+          </button>
+        </div>
+        <div className="enhanced-qr-section">
+          <QRCodeSVG value={window.location.origin + link} size={80} />
+        </div>
       </div>
     ) : (
       <div className="share-link-row" style={{ color: '#aaa', fontStyle: 'italic', fontSize: 13 }}>No public link available</div>
@@ -160,7 +175,7 @@ const FormCardRow = ({
   // --- Grid View ---
   if (view === 'grid') {
     return (
-      <div className={`form-card-balanced grid ${isForm ? 'my-forms-card' : 'my-quizzes-card'}${expanded ? ' expanded' : ''}`} onClick={handleEdit} tabIndex={0} role="button" style={{ outline: 'none', position: 'relative' }}>
+      <div className={`form-card-balanced grid ${isForm ? 'my-forms-card' : 'my-quizzes-card'}${expanded ? ' enhanced-expanded' : ''}`} onClick={handleEdit} tabIndex={0} role="button" style={{ outline: 'none', position: 'relative', transition: 'box-shadow 0.3s, background 0.3s, border 0.3s', boxShadow: expanded ? '0 8px 32px rgba(37,99,235,0.18)' : '', border: expanded ? '2px solid #2563eb' : '' }}>
         {isForm ? <FormTypeSymbol /> : <QuizTypeSymbol />}
         <div className="form-card-title-row">
           <span className={`form-title-balanced ${isForm ? 'my-forms-title' : 'my-quizzes-title'}`} onClick={handleEdit}>{name}</span>
