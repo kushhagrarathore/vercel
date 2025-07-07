@@ -277,7 +277,7 @@ const FormCardRow = ({
         </div>
         <div style={{ padding: '18px 18px 12px 28px', display: 'flex', flexDirection: 'column', flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontWeight: 700, fontSize: 20, color: '#3730a3', letterSpacing: -0.5 }}>{name}</span>
+            <span style={{ fontWeight: 400, fontSize: 20, color: '#3730a3', letterSpacing: -0.5 }}>{name}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
             <span style={{
@@ -369,7 +369,7 @@ const FormCardRow = ({
           borderRadius: 8,
           marginRight: 18,
         }} />
-        <span style={{ fontWeight: 700, fontSize: 18, color: '#3730a3', minWidth: 120 }}>{name}</span>
+        <span style={{ fontWeight: 400, fontSize: 18, color: '#3730a3', minWidth: 120 }}>{name}</span>
         <span style={{
           fontSize: 13,
           fontWeight: 600,
