@@ -304,9 +304,9 @@ const FormCardRow = ({
         </div>
         {/* Always show the link for all cards */}
         {fullLink && (
-          <div style={{ fontSize: 13, color: '#6366f1', marginTop: 6, wordBreak: 'break-all', background: '#f3f4f6', borderRadius: 8, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: 13, color: '#18181a', marginTop: 6, wordBreak: 'break-all', background: '#f3f4f6', borderRadius: 8, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 6 }} className="card-url-link">
             <FaLink style={{ fontSize: 14 }} />
-            <a href={fullLink} target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', textDecoration: 'underline', fontWeight: 500 }}>
+            <a href={fullLink} target="_blank" rel="noopener noreferrer" style={{ color: '#18181a', textDecoration: 'underline', fontWeight: 500 }}>
               {fullLink}
             </a>
           </div>
@@ -332,19 +332,77 @@ const FormCardRow = ({
   }
 
   // --- List View ---
-  return (
-    <div className={`form-card-balanced list minimal-row ${isForm ? 'my-forms-card' : 'my-quizzes-card'}`} onClick={handleEdit} tabIndex={0} role="button" style={{ outline: 'none' }}>
-      <div className="minimal-cell" style={{ flex: 2, minWidth: 0 }}>
-        <span className={`form-title-balanced ${isForm ? 'my-forms-title' : 'my-quizzes-title'}`} onClick={handleEdit}>{name}</span>
+  if (view === 'list') {
+    // Horizontal, modern list view
+    const accentColor = isForm
+      ? typeColors[formType] || '#6366f1'
+      : quizType === 'live'
+        ? typeColors['Live']
+        : typeColors[quizType] || typeColors['Quiz'];
+    const typeLabel = isForm
+      ? formType || 'Forms'
+      : quizType === 'live'
+        ? 'Live Quiz'
+        : quizType || 'Quiz';
+    return (
+      <div
+        className={`modern-form-card-list`}
+        style={{
+          boxShadow: '0 2px 12px rgba(120,130,150,0.08)',
+          borderRadius: 16,
+          background: '#f7f8fa',
+          border: '1px solid #e2e4ea',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '14px 24px',
+          marginBottom: 18,
+          gap: 18,
+          minHeight: 64,
+          position: 'relative',
+        }}
+      >
+        {/* Accent bar */}
+        <div style={{
+          width: 5,
+          height: 44,
+          background: accentColor,
+          borderRadius: 8,
+          marginRight: 18,
+        }} />
+        <span style={{ fontWeight: 700, fontSize: 18, color: '#3730a3', minWidth: 120 }}>{name}</span>
+        <span style={{
+          fontSize: 13,
+          fontWeight: 600,
+          color: isPublished ? '#22c55e' : '#f59e42',
+          background: isPublished ? 'rgba(34,197,94,0.08)' : 'rgba(251,191,36,0.10)',
+          borderRadius: 8,
+          padding: '2px 10px',
+          marginLeft: 10,
+        }}>{isPublished ? 'Published' : 'Draft'}</span>
+        <span style={{ fontSize: 12, color: accentColor, fontWeight: 600, background: 'rgba(99,102,241,0.07)', borderRadius: 8, padding: '2px 8px', marginLeft: 10 }}>{typeLabel}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginLeft: 18 }}>
+          <button className="card-action-btn edit" title="Preview" onClick={handlePreviewOnly} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 18, cursor: 'pointer' }}>
+            <FaEye />
+          </button>
+          <button className="card-action-btn share" title={copied ? 'Copied!' : fullLink} onClick={handleShare} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: 18, cursor: 'pointer' }}>
+            {copied ? 'Copied!' : <FaLink />}
+          </button>
+          <button className="card-action-btn delete" title="Delete" onClick={handleDelete} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#f87171', fontSize: 18, cursor: 'pointer' }}>
+            <FaTrash />
+          </button>
+          <div style={{ marginLeft: 18 }}>
+            <a href={fullLink} target="_blank" rel="noopener noreferrer" style={{ color: '#18181a', textDecoration: 'underline', fontWeight: 500, fontSize: 13, wordBreak: 'break-all' }}>
+              {fullLink}
+            </a>
+          </div>
+        </div>
+        {/* Toggle Switch for all types */}
+        <div style={{ position: 'absolute', top: 16, right: 18, zIndex: 2 }} onClick={e => e.stopPropagation()}>
+          <ToggleSwitch />
+        </div>
       </div>
-      <div className="minimal-cell" style={{ flex: 1 }}>
-        <span className="form-card-date-balanced">{timestamp}</span>
-      </div>
-      <div className="minimal-cell"><ToggleSwitch /></div>
-      <div className="minimal-cell"><ActionButtons /></div>
-      <div className="minimal-cell"><LinkDisplay /></div>
-    </div>
-  );
+    );
+  }
 };
 
 export default FormCardRow;
