@@ -14,7 +14,7 @@ import ResponsePage from './pages/ResponsePage';
 import UserEnd from './pages/forms/userend'; // CombineBuild (case sensitive)
 
 import Quiz from './pages/livequiz/quiz'; // CombineBuild
-import CreateQuizPage from './pages/livequiz/CreateQuizPage'; // Atharva branch
+import CreateQuizPage from './pages/livequiz/QuestionsPage'; // Atharva branch
 import PresentQuizPage from './pages/livequiz/PresentQuizPage'; // CombineBuild
 import PreviewQuizPage from './pages/livequiz/PreviewQuizPage'; // CombineBuild
 import QuizFillPage from './pages/livequiz/QuizFillPage'; // CombineBuild
