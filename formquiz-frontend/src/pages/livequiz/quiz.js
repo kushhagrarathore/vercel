@@ -201,10 +201,29 @@ export default function Quiz() {
   const [activeTab, setActiveTab] = useState('edit');
   const [responses, setResponses] = useState([]);
   const [addSlidePopupOpen, setAddSlidePopupOpen] = useState(false);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
   const pendingNavigationRef = useRef(null);
   const navigate = useNavigate();
+
+  // --- Bulletproof Unsaved Changes Logic ---
+  const [initialSlides, setInitialSlides] = useState('');
+  const [initialTitle, setInitialTitle] = useState('');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  function setInitialStateNow(slidesArr, quizTitle) {
+    setInitialSlides(JSON.stringify(slidesArr));
+    setInitialTitle(quizTitle);
+  }
+
+  // After loading from DB/AI, call setInitialStateNow(loadedSlides, loadedTitle)
+  // After saving, call setInitialStateNow(slides, title)
+
+  useEffect(() => {
+    setHasUnsavedChanges(
+      JSON.stringify(slides) !== initialSlides || title !== initialTitle
+    );
+  }, [slides, title, initialSlides, initialTitle]);
+  // --- End Bulletproof Logic ---
 
   // Set initial tab from query param
   useEffect(() => {
@@ -246,24 +265,23 @@ export default function Quiz() {
   useEffect(() => {
     if (location.state?.aiGenerated && location.state?.questions) {
       const aiQuestions = location.state.questions;
+      const quizId = location.state.quizId;
       const formattedSlides = aiQuestions.map((q, index) => ({
         id: q.id || Date.now() + index,
         name: q.question || `Question ${index + 1}`,
         type: 'multiple',
         question: q.question || '',
         options: q.options || ['', '', '', ''],
-        correctAnswers: [q.correct_answer || 0],
+        correctAnswers: Array.isArray(q.correct_answers) ? q.correct_answers : [0],
         background: '#ffffff',
         textColor: '#000000',
         fontFamily: textStyles[0].value,
       }));
-      
       setSlides(formattedSlides);
       setTitle(location.state.topic || 'AI Generated Quiz');
-      setPublishedQuizId(location.state.sessionCode); // Set the AI-generated quiz ID
+      setPublishedQuizId(quizId); // Use the UUID quiz ID
       setSelectedSlide(0);
       setHasUnsavedChanges(true);
-      
       // Clear the navigation state to prevent re-applying on refresh
       window.history.replaceState({}, document.title);
     }
@@ -352,11 +370,6 @@ export default function Quiz() {
     }
     fetchQuizAndSlides();
   }, [quizId]);
-
-  // Track unsaved changes
-  useEffect(() => {
-    setHasUnsavedChanges(true);
-  }, [slides, title]);
 
   // Warn on browser/tab close
   useEffect(() => {
@@ -626,6 +639,7 @@ export default function Quiz() {
     setNotification('Quiz and slides saved to Supabase!');
     setShowModal(true);
     setTimeout(() => setNotification(null), 3000);
+    setInitialStateNow(slides, title);
   };
 
   return (
