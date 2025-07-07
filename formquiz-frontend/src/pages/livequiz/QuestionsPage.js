@@ -212,9 +212,18 @@ export default function QuestionsPage() {
     }
     try {
       const titleToSave = quizName.trim() ? quizName : 'Untitled Quiz';
+      // Fetch current user from Supabase Auth
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        setError('Could not get current user.');
+        setLoading(false);
+        return;
+      }
+      const userId = userData.user.id;
+      // Insert quiz with user_id
       const { data, error } = await supabase
         .from('lq_quizzes')
-        .insert([{ title: titleToSave }])
+        .insert([{ title: titleToSave, user_id: userId }])
         .select()
         .single();
       if (!error) {
