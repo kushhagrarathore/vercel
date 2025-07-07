@@ -9,34 +9,26 @@ function SortableSlide({ id, index, title, isActive, onSelect, onRename, onDupli
   return (
     <div
       ref={setNodeRef}
+      className={`slide-list-item${isActive ? ' selected' : ''}`}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
-        background: isActive ? '#e0e7ff' : '#f5f7ff',
-        borderRadius: 10,
-        marginBottom: 12,
         boxShadow: isDragging ? '0 4px 16px rgba(59,130,246,0.10)' : '0 1px 4px rgba(30,50,80,0.04)',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '12px 16px 12px 14px',
-        cursor: 'pointer',
-        border: isActive ? '2px solid #3b82f6' : '1.5px solid #e5eaf0',
-        minHeight: 48,
-        position: 'relative',
       }}
       onClick={() => onSelect(index)}
     >
-      <span {...attributes} {...listeners} style={{ marginRight: 10, cursor: 'grab', color: '#b6c3d1', fontSize: 18 }}><FaGripVertical /></span>
-      <span style={{ fontWeight: 600, fontSize: 15, marginRight: 8, color: '#3b82f6' }}>Q{index + 1}</span>
+      <span {...attributes} {...listeners} className="slide-number" style={{ cursor: 'grab' }}>{(index + 1).toString().padStart(2, '0')}</span>
       <input
         value={title}
         onChange={e => onRename(index, e.target.value)}
-        style={{ flex: 1, fontWeight: 500, fontSize: 15, border: 'none', background: 'transparent', outline: 'none', color: '#222', minWidth: 0 }}
+        className="slide-title"
         placeholder="Question title..."
         onClick={e => e.stopPropagation()}
       />
-      <button onClick={e => { e.stopPropagation(); onDuplicate(index); }} style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer', color: '#b6c3d1', fontSize: 16, padding: 4 }} title="Duplicate"><FaCopy /></button>
-      <button onClick={e => { e.stopPropagation(); if (!disableDelete) onDelete(index); }} style={{ marginLeft: 6, background: 'none', border: 'none', cursor: disableDelete ? 'not-allowed' : 'pointer', color: disableDelete ? '#ccc' : '#ef4444', fontSize: 16, padding: 4 }} title="Delete" disabled={disableDelete}><FaTrash /></button>
+      <span className="slide-icons">
+        <button onClick={e => { e.stopPropagation(); onDuplicate(index); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b6c3d1', fontSize: 16, padding: 4 }} title="Duplicate"><FaCopy /></button>
+        <button onClick={e => { e.stopPropagation(); if (!disableDelete) onDelete(index); }} className="remove-slide-btn" title="Delete" disabled={disableDelete}><FaTrash /></button>
+      </span>
     </div>
   );
 }

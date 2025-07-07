@@ -395,6 +395,8 @@ const Dashboard = () => {
                     link={
                       activeTab === 'forms'
                         ? `/form/${item.id}`
+                        : activeTab === 'quizzes'
+                        ? `/userend?quizId=${item.id}`
                         : `/join/${item.id}`
                     }
                     creator={username}
