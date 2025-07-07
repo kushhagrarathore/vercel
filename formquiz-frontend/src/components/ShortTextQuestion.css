@@ -67,3 +67,11 @@
   color: #999; /* Greyer placeholder */
   font-style: italic; /* Italicize for clarity */
 }
+
+.question-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+}

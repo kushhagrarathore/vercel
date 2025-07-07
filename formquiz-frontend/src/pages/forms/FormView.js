@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import './FormView.css';
 import Spinner from '../../components/Spinner';
@@ -8,6 +8,8 @@ import { useToast } from '../../components/Toast';
 
 const FormView = () => {
   const { formId } = useParams();
+  const location = useLocation();
+  const isPreviewMode = new URLSearchParams(location.search).get('mode') === 'preview';
   const [form, setForm] = useState(null);
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
@@ -43,12 +45,14 @@ const FormView = () => {
 
   // ✅ Handle input change
   const handleChange = (questionId, value) => {
+    if (isPreviewMode) return; // Prevent editing in preview mode
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
   // ✅ Handle form submission (resolved)
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (isPreviewMode) return; // Prevent submit in preview mode
 
     // Validate required questions
     const unansweredRequired = form.questions.filter(
@@ -95,6 +99,7 @@ const FormView = () => {
             onChange={(e) => handleChange(q.id, e.target.value)}
             className="form-input"
             required={q.required}
+            disabled={isPreviewMode}
           />
         );
       case 'long_text':
@@ -106,6 +111,7 @@ const FormView = () => {
             onChange={(e) => handleChange(q.id, e.target.value)}
             rows={4}
             style={{ width: '100%', padding: 8 }}
+            disabled={isPreviewMode}
           />
         );
       case 'multiple_choice':
@@ -120,6 +126,7 @@ const FormView = () => {
                   value={opt}
                   checked={answers[q.id] === opt}
                   onChange={() => handleChange(q.id, opt)}
+                  disabled={isPreviewMode}
                 />{' '}
                 {opt}
               </label>
@@ -159,23 +166,25 @@ const FormView = () => {
               <div>{renderQuestion(q, i)}</div>
             </div>
           ))}
-          <button type="submit" style={{
-            width: '100%',
-            background: 'linear-gradient(90deg, #4a6bff 0%, #6b8cff 100%)',
-            color: 'white',
-            fontWeight: 700,
-            fontSize: 18,
-            border: 'none',
-            borderRadius: 8,
-            padding: '14px 0',
-            marginTop: 10,
-            boxShadow: '0 2px 8px rgba(44,62,80,0.08)',
-            cursor: 'pointer',
-            transition: 'background 0.2s',
-            letterSpacing: '0.5px'
-          }}>
-            Submit
-          </button>
+          {!isPreviewMode && (
+            <button type="submit" style={{
+              width: '100%',
+              background: 'linear-gradient(90deg, #4a6bff 0%, #6b8cff 100%)',
+              color: 'white',
+              fontWeight: 700,
+              fontSize: 18,
+              border: 'none',
+              borderRadius: 8,
+              padding: '14px 0',
+              marginTop: 10,
+              boxShadow: '0 2px 8px rgba(44,62,80,0.08)',
+              cursor: 'pointer',
+              transition: 'background 0.2s',
+              letterSpacing: '0.5px'
+            }}>
+              Submit
+            </button>
+          )}
         </form>
       </div>
     </div>

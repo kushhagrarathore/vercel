@@ -15,6 +15,8 @@ const FormCardRow = ({
   onPublishToggle,
   quizType,
   formType,
+  expanded,
+  setExpandedCardId,
 }) => {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
@@ -31,7 +33,7 @@ const FormCardRow = ({
   const handlePreview = (e) => {
     e.stopPropagation();
     if (isForm) {
-      navigate(`/preview/${formId}`);
+      navigate(`/preview/${formId}?mode=preview`);
     } else {
       navigate(`/quiz/preview/${formId}`);
     }
@@ -55,6 +57,7 @@ const FormCardRow = ({
   const handleToggle = (e) => {
     e.stopPropagation();
     if (onPublishToggle) onPublishToggle(formId, !isPublished);
+    setExpandedCardId(!isPublished ? formId : null);
   };
 
   const handleCopy = (e) => {
@@ -90,9 +93,9 @@ const FormCardRow = ({
 
   // --- Link Display ---
   const LinkDisplay = () => {
-    if (!isPublished) return null;
+    if (!isPublished || !expanded) return null;
     return link ? (
-      <div className="share-link-row" onClick={e => e.stopPropagation()}>
+      <div className="share-link-row" style={{ marginTop: 12 }}>
         <FaLink style={{ marginRight: 6, color: 'var(--accent)' }} />
         <a href={link} target="_blank" rel="noopener noreferrer" className="share-link-url" style={{ color: '#2563eb', textDecoration: 'underline', wordBreak: 'break-all' }}>{link}</a>
         <button className="copy-link-btn" onClick={handleCopy} title="Copy link">
@@ -157,11 +160,14 @@ const FormCardRow = ({
   // --- Grid View ---
   if (view === 'grid') {
     return (
-      <div className={`form-card-balanced grid ${isForm ? 'my-forms-card' : 'my-quizzes-card'}`} onClick={handleEdit} tabIndex={0} role="button" style={{ outline: 'none', position: 'relative' }}>
+      <div className={`form-card-balanced grid ${isForm ? 'my-forms-card' : 'my-quizzes-card'}${expanded ? ' expanded' : ''}`} onClick={handleEdit} tabIndex={0} role="button" style={{ outline: 'none', position: 'relative' }}>
         {isForm ? <FormTypeSymbol /> : <QuizTypeSymbol />}
         <div className="form-card-title-row">
           <span className={`form-title-balanced ${isForm ? 'my-forms-title' : 'my-quizzes-title'}`} onClick={handleEdit}>{name}</span>
-          <ToggleSwitch />
+          <label className={`toggle-switch${isPublished ? ' active' : ''}`} title={isPublished ? 'Deactivate' : 'Activate'} onClick={handleToggle}>
+            <input type="checkbox" checked={!!isPublished} onChange={handleToggle} />
+            <span className="slider" />
+          </label>
         </div>
         <div className="form-card-date-balanced">{timestamp}</div>
         <ActionButtons />

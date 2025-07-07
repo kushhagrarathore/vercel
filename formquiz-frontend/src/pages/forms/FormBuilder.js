@@ -690,7 +690,6 @@ const FormBuilder = () => {
             </div>
             <nav className="header-nav">
               <button className={`nav-tab${activeSection === 'build' ? ' active' : ''}`} onClick={() => setActiveSection('build')}>Build</button>
-              <button className={`nav-tab${activeSection === 'integrate' ? ' active' : ''}`} onClick={() => setActiveSection('integrate')}>Integrate</button>
               <button className={`nav-tab${activeSection === 'share' ? ' active' : ''}`} onClick={() => setActiveSection('share')}>Share</button>
               <button className={`nav-tab${activeSection === 'results' ? ' active' : ''}`} onClick={() => setActiveSection('results')}>Results</button>
             </nav>
@@ -700,9 +699,6 @@ const FormBuilder = () => {
               </button>
               <button className="preview-button" onClick={handlePreviewClick}>
                 Preview
-              </button>
-              <button className="new-form-button" onClick={handleNewFormClick}>
-                + New Form
               </button>
               <button className="delete-button" onClick={handleDeleteForm}>
                 Delete Form

@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabase';
 import { useToast } from '../components/Toast';
 import './Dashboard.css';
+import { FiSun, FiMoon } from 'react-icons/fi';
 
 // Debounce hook
 function useDebounce(value, delay) {
@@ -100,12 +101,22 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [loading, setLoading] = useState(true);
   const [liveQuizzes, setLiveQuizzes] = useState([]);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme === 'dark';
+  });
+  const [expandedCardId, setExpandedCardId] = useState(null);
 
   const toast = useToast();
 
   useEffect(() => {
     localStorage.setItem('dashboardTab', activeTab);
   }, [activeTab]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
+    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+  }, [isDarkMode]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -170,7 +181,7 @@ const Dashboard = () => {
 
           // Fetch live quizzes
           const { data: liveQuizData, error: liveQuizError } = await supabase
-            .from('lq_quizzes')
+            .from('live_quizzes')
             .select('quiz_id, is_live')
             .eq('is_live', true);
 
@@ -227,6 +238,7 @@ const Dashboard = () => {
         f.id === formId ? { ...f, is_published: newStatus } : f
       )
     );
+    setExpandedCardId(newStatus ? formId : null);
   };
 
   const handleDeleteForm = (formId) => {
@@ -274,7 +286,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="dashboard-animated-layout">
+    <div className="dashboard-animated-layout" style={{ background: isDarkMode ? '#181c24' : '#f8f9fb', minHeight: '100vh' }}>
       <Navbar activeTab={activeTab} onToggle={handleTabToggle} />
 
       <div className="dashboard-animated-content">
@@ -332,6 +344,27 @@ const Dashboard = () => {
               List
             </button>
           </div>
+          <button
+            onClick={() => setIsDarkMode((prev) => !prev)}
+            style={{
+              background: isDarkMode ? '#2563eb' : '#f3f4f6',
+              color: isDarkMode ? '#fff' : '#2563eb',
+              border: 'none',
+              borderRadius: 999,
+              padding: '8px 16px',
+              fontWeight: 700,
+              fontSize: 17,
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(37,99,235,0.10)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              marginLeft: 16
+            }}
+            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {isDarkMode ? <FiSun /> : <FiMoon />}
+          </button>
         </div>
 
         <section
@@ -391,6 +424,8 @@ const Dashboard = () => {
                         ? item.type || 'Forms'
                         : undefined
                     }
+                    expanded={expandedCardId === item.id}
+                    setExpandedCardId={setExpandedCardId}
                   />
                 </motion.div>
               ))
