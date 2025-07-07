@@ -70,7 +70,14 @@ const MultipleChoiceQuestion = ({
               fontFamily: fontFamily
             }}
           >
-            <input type="radio" disabled className="option-radio" style={{ accentColor: buttonColor }} />
+            <input
+              type="radio"
+              disabled
+              className={`option-radio${Array.isArray(question.correct_answers) && question.correct_answers[0] === index ? ' checked' : ''}`}
+              style={{ accentColor: buttonColor }}
+              checked={Array.isArray(question.correct_answers) && question.correct_answers[0] === index}
+              readOnly
+            />
             <input
               type="text"
               placeholder={`Option ${index + 1}`}

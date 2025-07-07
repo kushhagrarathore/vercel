@@ -47,14 +47,14 @@ const QuizArenaLayout = ({
           background: cardBackground,
           borderRadius: 18,
           boxShadow: '0 8px 32px rgba(60,60,100,0.10)',
-          minWidth: 320,
-          maxWidth: 480,
+          minWidth: 420,
+          maxWidth: 700,
           width: '100%',
           margin: '0 12px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          padding: '38px 28px 32px 28px',
+          padding: '48px 40px 40px 40px',
           position: 'relative',
           transition: 'box-shadow 0.18s, border 0.18s, background 0.18s',
         }}>
@@ -116,7 +116,7 @@ const QuizArenaLayout = ({
                 </div>
               </div>
             )}
-            <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ display: 'flex', gap: 10, marginLeft: 'auto' }}>
               {showPrevButton && (
                 <button
                   onClick={onPrev}

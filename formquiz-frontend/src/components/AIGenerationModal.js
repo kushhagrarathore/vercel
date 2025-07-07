@@ -54,11 +54,13 @@ const AIGenerationModal = ({ isOpen, onClose }) => {
 
       if (result.success) {
         toast('Quiz generated successfully!', 'success');
-        // Navigate to the quiz editor with the generated questions
+        // Extract quiz_id from the first question (all should have the same quiz_id)
+        const quizId = result.data && result.data.length > 0 ? result.data[0].quiz_id : undefined;
+        // Navigate to the quiz editor with the generated questions and quizId
         navigate('/quiz', { 
           state: { 
             aiGenerated: true, 
-            sessionCode,
+            quizId, // Pass the UUID quiz ID
             topic: topic.trim(),
             questions: result.data 
           } 
@@ -132,7 +134,7 @@ const AIGenerationModal = ({ isOpen, onClose }) => {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                 <h3 className="font-semibold text-blue-800 mb-2">What you'll get:</h3>
                 <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• 3 multiple choice questions</li>
+                  <li>• 10 multiple choice questions</li>
                   <li>• 4 options per question</li>
                   <li>• Correct answers marked</li>
                   <li>• Ready to customize and publish</li>

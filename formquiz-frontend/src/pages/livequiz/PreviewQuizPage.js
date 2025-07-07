@@ -104,19 +104,23 @@ const PreviewQuizPage = () => {
         background: customization.nextButtonColor || '#2563eb',
         color: customization.nextButtonTextColor || '#fff',
         border: 'none',
-        borderRadius: 999,
-        padding: '10px 28px',
+        borderRadius: 12,
+        padding: '10px 24px',
         fontWeight: 700,
-        fontSize: 17,
+        fontSize: 16,
         cursor: 'pointer',
         boxShadow: '0 2px 8px rgba(37,99,235,0.10)',
-        position: 'absolute',
+        position: 'fixed',
         top: 32,
         right: 32,
-        zIndex: 20,
+        zIndex: 100,
+        transition: 'background 0.18s, color 0.18s',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
       }}
     >
-      Back to Editing
+      <span style={{ fontSize: 18, marginRight: 6 }}>←</span> Back to Edit
     </button>
   );
 

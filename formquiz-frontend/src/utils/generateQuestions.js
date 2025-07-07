@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@supabase/supabase-js";
+import { v4 as uuidv4 } from 'uuid';
 
 export async function generateQuestions(topic, session_code, userId = null) {
   // Validate environment variables
@@ -19,14 +20,14 @@ export async function generateQuestions(topic, session_code, userId = null) {
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   const prompt = `
-    Generate 4 multiple choice (MCQ) quiz questions on the topic "${topic}".
-    Each question should have:
+    Generate 10 multiple choice (MCQ) quiz questions on the topic "${topic}".
+    Each question MUST have:
       - a question string
       - 4 options (A, B, C, D)
-      - correct_answer_index (0-based)
-    Example: { "question": "What is the capital of France?", "options": ["Berlin", "London", "Paris", "Madrid"], "correct_answer_index": 2 }
+      - correct_answers: an array with ONE 0-based integer index of the correct option (e.g., [2] for option C)
+    Example: { "question": "What is the capital of France?", "options": ["Berlin", "London", "Paris", "Madrid"], "correct_answers": [2] }
     
-    Format your response as a JSON array of 4 objects, each matching the example above. Return only the JSON array, with no explanations, notes, or extra text.
+    Format your response as a JSON array of 10 objects, each matching the example above. Return only the JSON array, with no explanations, notes, or extra text. If you cannot provide a correct_answers array for a question, do not include that question.
   `;
 
   const result = await model.generateContent(prompt);
@@ -53,12 +54,12 @@ export async function generateQuestions(topic, session_code, userId = null) {
   }
 
   // Validate and flatten MCQ questions
-  const quiz_id = crypto.randomUUID();
+  const quiz_id = uuidv4();
   const insertData = [];
   let slide_index = 0;
   if (Array.isArray(questions)) {
     for (const q of questions) {
-      if (!q.question || !Array.isArray(q.options) || q.options.length !== 4 || typeof q.correct_answer_index !== 'number' || q.correct_answer_index < 0 || q.correct_answer_index > 3) continue;
+      if (!q.question || !Array.isArray(q.options) || q.options.length !== 4 || !Array.isArray(q.correct_answers) || q.correct_answers.length !== 1 || typeof q.correct_answers[0] !== 'number' || q.correct_answers[0] < 0 || q.correct_answers[0] > 3) continue;
       insertData.push({
         id: crypto.randomUUID(),
         quiz_id,
@@ -66,7 +67,7 @@ export async function generateQuestions(topic, session_code, userId = null) {
         question: q.question,
         type: 'multiple',
         options: q.options,
-        correct_answers: [q.correct_answer_index],
+        correct_answers: q.correct_answers,
         background: '#ffffff',
         text_color: '#000000',
         font_size: 20,
