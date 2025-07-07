@@ -211,7 +211,7 @@ export default function AdminPage() {
     try {
       setLoading(true);
       const { data, error } = await supabase
-        .from('questions')
+        .from('lq_questions')
         .select('*')
         .eq('quiz_id', quizId)
         .order('created_at', { ascending: true });

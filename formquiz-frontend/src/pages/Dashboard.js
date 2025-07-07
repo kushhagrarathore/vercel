@@ -179,16 +179,15 @@ const Dashboard = () => {
             setQuizzes(quizData || []);
           }
 
-          // Fetch live quizzes
+          // Fetch live quizzes from lq_quizzes for this user
           const { data: liveQuizData, error: liveQuizError } = await supabase
-            .from('live_quizzes')
-            .select('quiz_id, is_live')
-            .eq('is_live', true);
+            .from('lq_quizzes')
+            .select('*')
+            .eq('user_id', user.id);
 
           if (liveQuizError) {
             console.error("Error fetching live quizzes:", liveQuizError);
           } else {
-            console.log("Fetched live quizzes:", liveQuizData);
             setLiveQuizzes(liveQuizData || []);
           }
         } else {
@@ -220,8 +219,7 @@ const Dashboard = () => {
   if (activeTab === 'forms') {
     currentData = filteredForms;
   } else if (activeTab === 'livequiz') {
-    const liveQuizIds = new Set(liveQuizzes.map((lq) => lq.quiz_id));
-    currentData = quizzes.filter((q) => liveQuizIds.has(q.id));
+    currentData = liveQuizzes;
   } else if (activeTab === 'quizzes') {
     currentData = filteredQuizzes;
   } else {

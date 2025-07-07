@@ -70,7 +70,7 @@ function App() {
             <Route path="/profile" element={<Profile />} />
 
             {/* Live Quiz Admin */}
-            <Route path="/livequiz/admin/:quizId" element={<QuizProvider><AdminPage /></QuizProvider>} />
+            <Route path="/Admin" element={<QuizProvider><AdminPage /></QuizProvider>} />
 
           </Routes>
         </LiveQuizProvider>

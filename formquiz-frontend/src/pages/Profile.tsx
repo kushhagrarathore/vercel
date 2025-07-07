@@ -7,7 +7,6 @@ import { supabase } from '../supabase';
 import { useToast } from '../components/Toast';
 import { ProfileService } from '../services/profileService';
 import { UserProfile, UserStats, ProfileCompletion, SidebarSection } from '../types/profile';
-import DeleteAccountModal from '../components/DeleteAccountModal';
 import Spinner from '../components/Spinner';
 
 const SIDEBAR_SECTIONS: SidebarSection[] = [
@@ -479,25 +478,18 @@ const Profile: React.FC = () => {
         );
       case 'Delete Account':
         return (
-          <DeleteAccountModal
-            isOpen={showDeleteModal}
-            onClose={() => setShowDeleteModal(false)}
-            onConfirm={async () => {
-              setDeleteLoading(true);
-              try {
-                await ProfileService.deleteAccount();
-                await supabase.auth.signOut();
-                navigate('/login');
-                toast('Account deleted successfully', 'success');
-              } catch (error) {
-                toast('Failed to delete account', 'error');
-              } finally {
-                setDeleteLoading(false);
-                setShowDeleteModal(false);
-              }
-            }}
-            isLoading={deleteLoading}
-          />
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-3xl font-bold text-purple-900 mb-6">Delete Account</h2>
+            <p className="text-indigo-600 font-medium text-lg mb-6">
+              Are you sure you want to delete your account? This action cannot be undone.
+            </p>
+            <button
+              onClick={handleDeleteAccount}
+              className="px-4 py-2 bg-red-600 text-white rounded font-bold hover:bg-red-700"
+            >
+              Delete Account
+            </button>
+          </div>
         );
       default:
         return null;

@@ -325,7 +325,7 @@ export default function QuestionsPage() {
         <div className="flex items-center gap-4">
           <button
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold"
-            onClick={() => navigate('/livequiz/admin')}
+            onClick={() => navigate('/Admin')}
           >
             Go to Admin Page →
           </button>
