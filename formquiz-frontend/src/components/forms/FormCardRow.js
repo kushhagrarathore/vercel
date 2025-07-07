@@ -108,6 +108,15 @@ const FormCardRow = ({
     }
   };
 
+  const handlePreviewOnly = (e) => {
+    e.stopPropagation();
+    if (isForm) {
+      navigate(`/preview/${formId}?mode=preview`);
+    } else {
+      navigate(`/quiz/preview/${formId}`);
+    }
+  };
+
   const ActionButtons = () => (
     <div className="card-actions-big">
       <button className="card-action-btn" title="Preview" onClick={handlePreview} tabIndex={-1}>
@@ -262,12 +271,10 @@ const FormCardRow = ({
           borderTopLeftRadius: 18,
           borderBottomLeftRadius: 18,
         }} />
-        {/* Only show toggle switch for forms */}
-        {isForm && (
-          <div style={{ position: 'absolute', top: 16, right: 18, zIndex: 2 }} onClick={e => e.stopPropagation()}>
-            <ToggleSwitch />
-          </div>
-        )}
+        {/* Always show toggle switch for all types (forms, quizzes, livequizzes) */}
+        <div style={{ position: 'absolute', top: 16, right: 18, zIndex: 2 }} onClick={e => e.stopPropagation()}>
+          <ToggleSwitch />
+        </div>
         <div style={{ padding: '18px 18px 12px 28px', display: 'flex', flexDirection: 'column', flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <span style={{ fontWeight: 700, fontSize: 20, color: '#3730a3', letterSpacing: -0.5 }}>{name}</span>
@@ -284,8 +291,8 @@ const FormCardRow = ({
             <span style={{ fontSize: 12, color: accentColor, fontWeight: 600, background: 'rgba(99,102,241,0.07)', borderRadius: 8, padding: '2px 8px' }}>{typeLabel}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8 }}>
-            <button className="card-action-btn edit" title="Edit" onClick={handleEdit} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 18, cursor: 'pointer' }}>
-              <FaEdit />
+            <button className="card-action-btn edit" title="Preview" onClick={handlePreviewOnly} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 18, cursor: 'pointer' }}>
+              <FaEye />
             </button>
             <button className="card-action-btn share" title={copied ? 'Copied!' : fullLink} onClick={handleShare} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: 18, cursor: 'pointer' }}>
               {copied ? 'Copied!' : <FaLink />}

@@ -279,6 +279,7 @@ const Dashboard = () => {
         q.id === quizId ? { ...q, is_published: newStatus } : q
       )
     );
+    setExpandedCardId(newStatus ? quizId : null);
   };
 
   const handleTabToggle = (tab) => {
@@ -396,9 +397,7 @@ const Dashboard = () => {
                     link={
                       activeTab === 'forms'
                         ? `/form/${item.id}`
-                        : item.is_published
-                        ? `${window.location.origin}/join/${item.id}`
-                        : ''
+                        : `/join/${item.id}`
                     }
                     creator={username}
                     formId={item.id}
