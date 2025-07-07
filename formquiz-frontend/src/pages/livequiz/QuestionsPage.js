@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabase/client';
 import QuestionPreview from './QuestionPreview';
-import { useNavigate, useParams } from 'react-router-dom';
 
 export default function QuestionsPage() {
   const [questions, setQuestions] = useState([]);
@@ -27,8 +26,6 @@ export default function QuestionsPage() {
   const [showTitlePrompt, setShowTitlePrompt] = useState(false);
   const [titleInputGlow, setTitleInputGlow] = useState(false);
   const [titleInputBg, setTitleInputBg] = useState(false);
-  const navigate = useNavigate();
-  const { quizId } = useParams();
 
   // 1. Customization defaults
   const settingsDefaults = {
@@ -296,22 +293,6 @@ export default function QuestionsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Navigation Buttons */}
-      <div className="flex items-center justify-between pt-8 px-8 mb-6">
-        <button
-          className="bg-purple-100 text-purple-700 font-bold rounded-lg px-6 py-3 shadow transition hover:bg-purple-200 text-lg"
-          onClick={() => navigate('/dashboard')}
-        >
-          ← Back to Dashboard
-        </button>
-        <button
-          className="bg-indigo-500 text-white font-bold rounded-lg px-6 py-3 shadow transition hover:bg-indigo-600 text-lg"
-          onClick={() => quizId && navigate(`/livequiz/admin/${quizId}`)}
-          disabled={!quizId}
-        >
-          Go to Admin Page
-        </button>
-      </div>
       {/* Sticky, full-width Menu Bar */}
       <div className="sticky top-0 left-0 w-full z-20 bg-white shadow px-6 py-4 flex items-center justify-between" style={{ minWidth: '100%' }}>
         <input
