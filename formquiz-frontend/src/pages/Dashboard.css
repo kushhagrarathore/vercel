@@ -974,6 +974,8 @@ body {
   padding: 28px 38px 0 38px;
   background: none;
   flex-wrap: wrap;
+  justify-content: flex-start;
+  margin-bottom: 32px; /* Add more space below the search bar */
 }
 .dashboard-toggle-group {
   display: flex;

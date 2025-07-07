@@ -11,6 +11,9 @@ const typeColors = {
   Contact: '#60a5fa',
   Blank: '#fbbf24',
   Forms: '#6366f1',
+  Quiz: '#7c3aed',
+  Live: '#ef4444',
+  blank: '#7c3aed',
 };
 
 const FormCardRow = ({
@@ -89,7 +92,12 @@ const FormCardRow = ({
     setExpandedCardId(null);
   };
 
-  const fullLink = link ? `${window.location.origin}${link}` : '';
+  // Fix fullLink construction to avoid duplicate domains
+  const fullLink = link
+    ? link.startsWith('http://') || link.startsWith('https://')
+      ? link
+      : `${window.location.origin}${link}`
+    : '';
 
   const handleShare = (e) => {
     e.stopPropagation();
@@ -97,6 +105,15 @@ const FormCardRow = ({
       navigator.clipboard.writeText(fullLink);
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
+    }
+  };
+
+  const handlePreviewOnly = (e) => {
+    e.stopPropagation();
+    if (isForm) {
+      navigate(`/preview/${formId}?mode=preview`);
+    } else {
+      navigate(`/quiz/preview/${formId}`);
     }
   };
 
@@ -209,97 +226,108 @@ const FormCardRow = ({
 
   // --- Grid View ---
   if (view === 'grid') {
+    // Determine accent color and type label
+    const accentColor = isForm
+      ? typeColors[formType] || '#6366f1'
+      : quizType === 'live'
+        ? typeColors['Live']
+        : typeColors[quizType] || typeColors['Quiz'];
+    const typeLabel = isForm
+      ? formType || 'Forms'
+      : quizType === 'live'
+        ? 'Live Quiz'
+        : quizType || 'Quiz';
+
     return (
-      <>
-        <div
-          className={`modern-form-card${expanded ? ' expanded' : ''}`}
-          style={{
-            boxShadow: '0 4px 24px rgba(80, 80, 180, 0.08)',
-            borderRadius: 18,
-            background: '#fff',
-            border: '1.5px solid #f3f4f6',
-            transition: 'box-shadow 0.22s, transform 0.18s',
-            position: 'relative',
-            overflow: 'hidden',
-            minHeight: 120,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            cursor: 'pointer',
-            ...(expanded ? { boxShadow: '0 8px 32px rgba(80,80,180,0.16)', transform: 'scale(1.03)' } : {}),
-          }}
-          onClick={handleEdit}
-          tabIndex={0}
-          role="button"
-        >
-          {/* Accent bar */}
-          <div style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            height: '100%',
-            width: 6,
-            background: typeColors[formType] || '#6366f1',
-            borderTopLeftRadius: 18,
-            borderBottomLeftRadius: 18,
-          }} />
-          {/* Toggle Switch in top-right */}
-          <div style={{ position: 'absolute', top: 16, right: 18, zIndex: 2 }} onClick={e => e.stopPropagation()}>
-            <ToggleSwitch />
-          </div>
-          <div style={{ padding: '18px 18px 12px 28px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontWeight: 700, fontSize: 20, color: '#3730a3', letterSpacing: -0.5 }}>{name}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <span style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: isPublished ? '#22c55e' : '#f59e42',
-                background: isPublished ? 'rgba(34,197,94,0.08)' : 'rgba(251,191,36,0.10)',
-                borderRadius: 8,
-                padding: '2px 10px',
-              }}>{isPublished ? 'Published' : 'Draft'}</span>
-              {formType && <span style={{ fontSize: 12, color: typeColors[formType] || '#6366f1', fontWeight: 600, background: 'rgba(99,102,241,0.07)', borderRadius: 8, padding: '2px 8px' }}>{formType}</span>}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8 }}>
-              <button className="card-action-btn edit" title="Edit" onClick={handleEdit} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 18, cursor: 'pointer' }}>
-                <FaEdit />
-              </button>
-              <button className="card-action-btn share" title={copied ? 'Copied!' : fullLink} onClick={handleShare} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: 18, cursor: 'pointer' }}>
-                {copied ? 'Copied!' : <FaLink />}
-              </button>
-              <button className="card-action-btn delete" title="Delete" onClick={handleDelete} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#f87171', fontSize: 18, cursor: 'pointer' }}>
-                <FaTrash />
-              </button>
-            </div>
-            {fullLink && (
-              <div style={{ fontSize: 13, color: '#6366f1', marginTop: 6, wordBreak: 'break-all', background: '#f3f4f6', borderRadius: 8, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                <FaLink style={{ fontSize: 14 }} />
-                <a href={fullLink} target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', textDecoration: 'underline', fontWeight: 500 }}>
-                  {fullLink}
-                </a>
-              </div>
-            )}
-          </div>
-          {/* Popover and other overlays remain unchanged */}
-          {popoverOpen && isPublished && !!link && ReactDOM.createPortal(
-            <div className="pretty-popover portal-popover" style={{ top: popoverCoords.top, left: popoverCoords.left, position: 'absolute' }}>
-              <div className="popover-arrow portal-arrow" />
-              <button className="popover-close-btn" onClick={() => setPopoverOpen(false)} title="Close">&times;</button>
-              <div className="popover-title">Share this form</div>
-              <div className="pretty-link-box">
-                <FaLink style={{ marginRight: 8, color: 'var(--accent)' }} />
-                <span className="pretty-link-text">{link}</span>
-                <button className="pretty-copy-btn" onClick={handleCopy} title="Copy link">
-                  {copied ? 'Copied!' : <FaCopy />}
-                </button>
-              </div>
-            </div>,
-            document.body
-          )}
+      <div
+        className={`modern-form-card${expanded ? ' expanded' : ''}`}
+        style={{
+          boxShadow: '0 4px 24px rgba(80, 80, 180, 0.08)',
+          borderRadius: 18,
+          background: '#fff',
+          border: '1.5px solid #f3f4f6',
+          transition: 'box-shadow 0.22s, transform 0.18s',
+          position: 'relative',
+          overflow: 'hidden',
+          minHeight: 120,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          cursor: 'pointer',
+          ...(expanded ? { boxShadow: '0 8px 32px rgba(80,80,180,0.16)', transform: 'scale(1.03)' } : {}),
+        }}
+        onClick={handleEdit}
+        tabIndex={0}
+        role="button"
+      >
+        {/* Accent bar */}
+        <div style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          height: '100%',
+          width: 6,
+          background: accentColor,
+          borderTopLeftRadius: 18,
+          borderBottomLeftRadius: 18,
+        }} />
+        {/* Always show toggle switch for all types (forms, quizzes, livequizzes) */}
+        <div style={{ position: 'absolute', top: 16, right: 18, zIndex: 2 }} onClick={e => e.stopPropagation()}>
+          <ToggleSwitch />
         </div>
-      </>
+        <div style={{ padding: '18px 18px 12px 28px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontWeight: 700, fontSize: 20, color: '#3730a3', letterSpacing: -0.5 }}>{name}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <span style={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: isPublished ? '#22c55e' : '#f59e42',
+              background: isPublished ? 'rgba(34,197,94,0.08)' : 'rgba(251,191,36,0.10)',
+              borderRadius: 8,
+              padding: '2px 10px',
+            }}>{isPublished ? 'Published' : 'Draft'}</span>
+            <span style={{ fontSize: 12, color: accentColor, fontWeight: 600, background: 'rgba(99,102,241,0.07)', borderRadius: 8, padding: '2px 8px' }}>{typeLabel}</span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8 }}>
+            <button className="card-action-btn edit" title="Preview" onClick={handlePreviewOnly} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 18, cursor: 'pointer' }}>
+              <FaEye />
+            </button>
+            <button className="card-action-btn share" title={copied ? 'Copied!' : fullLink} onClick={handleShare} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: 18, cursor: 'pointer' }}>
+              {copied ? 'Copied!' : <FaLink />}
+            </button>
+            <button className="card-action-btn delete" title="Delete" onClick={handleDelete} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#f87171', fontSize: 18, cursor: 'pointer' }}>
+              <FaTrash />
+            </button>
+          </div>
+        </div>
+        {/* Always show the link for all cards */}
+        {fullLink && (
+          <div style={{ fontSize: 13, color: '#6366f1', marginTop: 6, wordBreak: 'break-all', background: '#f3f4f6', borderRadius: 8, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <FaLink style={{ fontSize: 14 }} />
+            <a href={fullLink} target="_blank" rel="noopener noreferrer" style={{ color: '#6366f1', textDecoration: 'underline', fontWeight: 500 }}>
+              {fullLink}
+            </a>
+          </div>
+        )}
+        {/* Popover and other overlays remain unchanged */}
+        {popoverOpen && isPublished && !!link && ReactDOM.createPortal(
+          <div className="pretty-popover portal-popover" style={{ top: popoverCoords.top, left: popoverCoords.left, position: 'absolute' }}>
+            <div className="popover-arrow portal-arrow" />
+            <button className="popover-close-btn" onClick={() => setPopoverOpen(false)} title="Close">&times;</button>
+            <div className="popover-title">Share this form</div>
+            <div className="pretty-link-box">
+              <FaLink style={{ marginRight: 8, color: 'var(--accent)' }} />
+              <span className="pretty-link-text">{link}</span>
+              <button className="pretty-copy-btn" onClick={handleCopy} title="Copy link">
+                {copied ? 'Copied!' : <FaCopy />}
+              </button>
+            </div>
+          </div>,
+          document.body
+        )}
+      </div>
     );
   }
 

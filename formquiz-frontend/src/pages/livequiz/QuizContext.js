@@ -8,7 +8,6 @@ export function QuizProvider({ children }) {
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [quizPhase, setQuizPhase] = useState('waiting'); // waiting, question, results, ended
-  const [quiz, setQuiz] = useState(null);
 
   const value = {
     user,
@@ -21,8 +20,6 @@ export function QuizProvider({ children }) {
     setParticipants,
     quizPhase,
     setQuizPhase,
-    quiz,
-    setQuiz,
   };
 
   return <QuizContext.Provider value={value}>{children}</QuizContext.Provider>;

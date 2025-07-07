@@ -116,9 +116,6 @@ const Navbar = ({ activeTab, onToggle }) => {
           {dropdownOpen && (
             <div className="dropdown-menu">
               <div className="dropdown-item" onClick={handleProfile} style={{ fontWeight: 400 }}>Profile</div>
-              <div className="dropdown-item" onClick={toggleTheme} style={{ fontWeight: 400 }}>
-                {isDarkMode ? 'Light Mode' : 'Dark Mode'}
-              </div>
               <div className="dropdown-item" onClick={handleViewPlans} style={{ fontWeight: 400 }}>View Plans</div>
               <div className="dropdown-item" onClick={handleLogout} style={{ fontWeight: 400 }}>Logout</div>
             </div>
