@@ -28,7 +28,6 @@ export default function AdminPage() {
   const [presentationMode, setPresentationMode] = useState(false);
   const presentationRef = useRef(null);
   const [waitingToStart, setWaitingToStart] = useState(false);
- const [justStartedSession, setJustStartedSession] = useState(false)
 
   // Customization defaults (copy from QuestionsPage.js)
   const settingsDefaults = {
@@ -245,7 +244,7 @@ export default function AdminPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [presentationMode]);
 
-  async function fetchParticipants(sessionId) {
+  const fetchParticipants = useCallback(async (sessionId) => {
     if (!sessionId) return;
     const { data, error } = await supabase
       .from('session_participants')
@@ -256,7 +255,7 @@ export default function AdminPage() {
       return;
     }
     setParticipants(data || []);
-  }
+  }, []);
 
   async function startQuiz() {
     if (!selectedQuizId) {

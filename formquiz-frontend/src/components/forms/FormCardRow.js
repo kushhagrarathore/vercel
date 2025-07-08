@@ -34,7 +34,6 @@ const FormCardRow = ({
   const [copied, setCopied] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const toggleRef = React.useRef(null);
-  const [popoverCoords, setPopoverCoords] = useState({ x: 0, y: 0 });
 
   const handleEdit = (e) => {
     if (e) e.stopPropagation();

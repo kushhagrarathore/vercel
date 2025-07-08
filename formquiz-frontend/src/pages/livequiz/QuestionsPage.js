@@ -23,7 +23,6 @@ export default function QuestionsPage() {
   const dragOverItem = useRef();
   const [fullScreenPreview, setFullScreenPreview] = useState(false);
   const [customTab, setCustomTab] = useState('templates');
-  const [quizTitleError, setQuizTitleError] = useState('');
   const [showTitlePrompt, setShowTitlePrompt] = useState(false);
   const [titleInputGlow, setTitleInputGlow] = useState(false);
   const [titleInputBg, setTitleInputBg] = useState(false);
@@ -195,7 +194,6 @@ export default function QuestionsPage() {
     }
     setLoading(true);
     setSuccessMessage('');
-    setQuizTitleError('');
     setShowTitlePrompt(false);
     setTitleInputGlow(false);
     setTitleInputBg(false);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Play, Plus, Users, Trophy, Clock, Edit, Trash2, Copy, Settings } from 'lucide-react';
+import { Play, Plus, Users, Trophy, Clock, Edit, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 // Mock data for demonstration

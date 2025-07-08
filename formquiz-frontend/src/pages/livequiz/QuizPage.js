@@ -16,7 +16,6 @@ export default function QuizPage() {
   const [timerWarning, setTimerWarning] = useState(false);
   const [showCorrect, setShowCorrect] = useState(false);
   const [pointsEarned, setPointsEarned] = useState(null);
-  const [liveScore, setLiveScore] = useState(null);
   const [cumulativeScore, setCumulativeScore] = useState(0);
 
   useEffect(() => {

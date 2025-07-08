@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
-import Leaderboard from '../livequiz/Leaderboard';
 import './ResultsPage.css';
 
 const ResultsPage = () => {

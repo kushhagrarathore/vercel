@@ -78,7 +78,7 @@ export async function generateQuestions(topic, session_code, userId = null) {
   }
 
   // Create the quiz record
-  const { data: quizData, error: quizError } = await supabase
+  const { error: quizError } = await supabase
     .from('quizzes')
     .insert([{
       id: quiz_id,

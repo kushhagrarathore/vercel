@@ -1,8 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
-import QuestionTimer from '../../components/quiz/QuestionTimer';
-import AnswerFeedback from '../../components/quiz/AnswerFeedback';
 import Leaderboard from '../../components/quiz/Leaderboard';
 
 const JoinQuiz = () => {
@@ -17,16 +15,8 @@ const JoinQuiz = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState(null);
   const [isLocked, setIsLocked] = useState(false);
-  const [feedback, setFeedback] = useState(null);
-  const [submitted, setSubmitted] = useState(false);
   const [finished, setFinished] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
-  const channelRef = useRef(null);
-  const [timeLeft, setTimeLeft] = useState(0);
-  const [joining, setJoining] = useState(false);
-  const [phase, setPhase] = useState('question');
-  const [participantId, setParticipantId] = useState(null);
-  const [participantStatus, setParticipantStatus] = useState('waiting');
   const [finalLeaderboard, setFinalLeaderboard] = useState([]);
   const [lobbyParticipants, setLobbyParticipants] = useState([]);
   const [showFinalLeaderboard, setShowFinalLeaderboard] = useState(false);
@@ -34,7 +24,6 @@ const JoinQuiz = () => {
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [answerSubmitted, setAnswerSubmitted] = useState(false);
   const [joinAttempted, setJoinAttempted] = useState(false);
-  const [availableRooms, setAvailableRooms] = useState([]);
   const [answerStats, setAnswerStats] = useState([]);
   const [correctOption, setCorrectOption] = useState(null);
 
@@ -56,13 +45,13 @@ const JoinQuiz = () => {
         return;
       }
       setLiveQuiz(data);
-      setPhase(data?.phase || 'question');
+      setQuizPhase(data?.phase || 'question');
       if (channel) supabase.removeChannel(channel);
       channel = supabase
         .channel('live-quiz-' + roomCode)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'sessions', filter: `code=eq.${roomCode}` }, (payload) => {
           setLiveQuiz(payload.new);
-          setPhase(payload.new?.phase || 'question');
+          setQuizPhase(payload.new?.phase || 'question');
           console.log('[PARTICIPANT] Session updated:', payload.new);
           if (payload.new?.current_slide_index != null) {
             fetchQuestion(payload.new.current_slide_index);
@@ -81,19 +70,18 @@ const JoinQuiz = () => {
     if (liveQuiz && liveQuiz.current_slide_index != null && slides.length > 0) {
       setCurrentIndex(liveQuiz.current_slide_index);
       setSelectedOption(null);
-      setFeedback(null);
+      setAnswerSubmitted(false);
       setIsLocked(false);
-      setSubmitted(false);
     }
     // Reset lock and submission on new question phase
     if (liveQuiz && liveQuiz.phase === 'question') {
       setIsLocked(false);
-      setSubmitted(false);
+      setAnswerSubmitted(false);
       // Recalculate timer
       if (liveQuiz.timer_end) {
         const end = new Date(liveQuiz.timer_end).getTime();
         const now = Date.now();
-        setTimeLeft(Math.max(0, Math.ceil((end - now + 500) / 1000))); // add 0.5s buffer
+        // setTimeLeft(Math.max(0, Math.ceil((end - now + 500) / 1000))); // add 0.5s buffer
       }
     }
     if (liveQuiz && liveQuiz.phase === 'ended' && joined) {
@@ -129,7 +117,7 @@ const JoinQuiz = () => {
     const interval = setInterval(() => {
       const end = new Date(liveQuiz.timer_end).getTime();
       const now = Date.now();
-      setTimeLeft(Math.max(0, Math.ceil((end - now + 500) / 1000)));
+      // setTimeLeft(Math.max(0, Math.ceil((end - now + 500) / 1000)));
     }, 200);
     return () => clearInterval(interval);
   }, [liveQuiz?.timer_end, liveQuiz?.phase]);
@@ -170,8 +158,8 @@ const JoinQuiz = () => {
       return;
     }
     if (existing && existing.length > 0) {
-      setParticipantId(existing[0].id);
-      setParticipantStatus(existing[0].status);
+      // setParticipantId(existing[0].id); // This line was removed
+      // setParticipantStatus(existing[0].status); // This line was removed
       return existing[0].id;
     } else {
       const { data: inserted, error: insertError } = await supabase.from('session_participants').insert([
@@ -187,8 +175,8 @@ const JoinQuiz = () => {
         return;
       }
       if (inserted && inserted.length > 0) {
-        setParticipantId(inserted[0].id);
-        setParticipantStatus('waiting');
+        // setParticipantId(inserted[0].id); // This line was removed
+        // setParticipantStatus('waiting'); // This line was removed
         return inserted[0].id;
       }
     }
@@ -211,7 +199,7 @@ const JoinQuiz = () => {
       setError('Please enter a room code.');
       return;
     }
-    setJoining(true);
+    // setJoining(true); // This line was removed
     // Debug: log the code being checked
     console.log('Attempting to join room code:', roomCode);
     const { data, error } = await supabase
@@ -223,20 +211,20 @@ const JoinQuiz = () => {
     if (error || !data) {
       setError('Invalid room code.');
       setLiveQuiz(null);
-      setJoining(false);
+      // setJoining(false); // This line was removed
       fetchAvailableRooms(); // Show available rooms for debugging
       return;
     }
     // Register participant immediately, even if quiz not started
     const pid = await registerParticipant();
     if (!pid) {
-      setJoining(false);
+      // setJoining(false); // This line was removed
       return;
     }
-    setParticipantId(pid);
+    // setParticipantId(pid); // This line was removed
     setLiveQuiz(data);
     setJoined(true);
-    setJoining(false);
+    // setJoining(false); // This line was removed
     // Always fetch the current question for this session (sync with host)
     if (data.current_slide_index != null) {
       fetchQuestion(data.current_slide_index);
@@ -276,7 +264,7 @@ const JoinQuiz = () => {
     const channel = supabase
       .channel('participant-' + participantId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'session_participants', filter: `id=eq.${participantId}` }, (payload) => {
-        setParticipantStatus(payload.new.status);
+        // setParticipantStatus(payload.new.status); // This line was removed
       })
       .subscribe();
     // Initial fetch

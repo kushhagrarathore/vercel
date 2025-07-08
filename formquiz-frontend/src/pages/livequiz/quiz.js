@@ -202,7 +202,6 @@ export default function Quiz() {
   const [responses, setResponses] = useState([]);
   const [addSlidePopupOpen, setAddSlidePopupOpen] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
-  const pendingNavigationRef = useRef(null);
   const navigate = useNavigate();
 
   // --- Bulletproof Unsaved Changes Logic ---

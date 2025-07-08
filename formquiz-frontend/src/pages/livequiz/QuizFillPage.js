@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
-import Spinner from '../../components/Spinner';
-import Skeleton from '../../components/Skeleton';
-import { useToast } from '../../components/Toast';
 
 const QuizFillPage = () => {
   const { quizId } = useParams();

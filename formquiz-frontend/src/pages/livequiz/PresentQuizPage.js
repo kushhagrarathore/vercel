@@ -42,7 +42,6 @@ const PresentQuizPage = () => {
   const [leaderboard, setLeaderboard] = useState([]);
   const channelRef = useRef(null);
   const [participants, setParticipants] = useState([]);
-  const [participantCount, setParticipantCount] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
   const [phase, setPhase] = useState(PHASES.LOBBY);
   const [leaderboardTopN, setLeaderboardTopN] = useState(3);
@@ -51,9 +50,6 @@ const PresentQuizPage = () => {
   const [transitionCountdown, setTransitionCountdown] = useState(2);
   const cardRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [lobbyCount, setLobbyCount] = useState(0);
-  const [showFinishQuiz, setShowFinishQuiz] = useState(false);
-  const [quizState, setQuizState] = useState(null);
   const [timer, setTimer] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const isHost = true; // This is the host page
