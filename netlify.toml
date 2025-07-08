@@ -1,7 +1,6 @@
 [build]
-  base = "formquiz-frontend"
   command = "npm run build"
-  publish = "formquiz-frontend/build"
+  publish = "build"
 
 [build.environment]
-  NODE_VERSION = "20" 
+  NODE_VERSION = "20.6.1" 
