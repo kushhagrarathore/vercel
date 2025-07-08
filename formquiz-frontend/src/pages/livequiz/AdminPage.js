@@ -255,7 +255,7 @@ export default function AdminPage() {
       return;
     }
     setParticipants(data || []);
-  }, []);
+  }, [setParticipants]);
 
   async function startQuiz() {
     if (!selectedQuizId) {

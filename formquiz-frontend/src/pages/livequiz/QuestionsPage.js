@@ -99,7 +99,7 @@ export default function QuestionsPage() {
     if (selectedQuestionIdx !== null && questions[selectedQuestionIdx]) {
       setForm({ ...questions[selectedQuestionIdx], settings: getSettings(questions[selectedQuestionIdx].settings) });
     }
-  }, [selectedQuestionIdx]);
+  }, [selectedQuestionIdx, questions, getSettings]);
 
   async function handleSubmit(e) {
     e.preventDefault();

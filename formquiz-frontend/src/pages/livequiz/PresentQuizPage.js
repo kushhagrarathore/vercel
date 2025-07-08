@@ -16,10 +16,6 @@ const PHASES = {
   ANSWER_REVEAL: 'answer_reveal',
 };
 
-function randomRoomCode() {
-  return Math.random().slice(2, 8);
-}
-
 // Spiral layout calculation for revolving bubbles
 const spiralCoords = (idx, total, centerX, centerY, radius = 120, spacing = 40) => {
   const angle = (2 * Math.PI * idx) / Math.max(1, total);
@@ -36,11 +32,9 @@ const PresentQuizPage = () => {
   const [error, setError] = useState(null);
   const [slides, setSlides] = useState([]);
   const [roomCode, setRoomCode] = useState('');
-  const [liveQuiz, setLiveQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [leaderboard, setLeaderboard] = useState([]);
-  const channelRef = useRef(null);
   const [participants, setParticipants] = useState([]);
   const [timeLeft, setTimeLeft] = useState(0);
   const [phase, setPhase] = useState(PHASES.LOBBY);
@@ -60,9 +54,6 @@ const PresentQuizPage = () => {
   const [channel, setChannel] = useState(null);
   const [answerStats, setAnswerStats] = useState([]);
   const [correctOption, setCorrectOption] = useState(null);
-
-  // Debug logging utility
-  const debug = (...args) => { if (process.env.NODE_ENV !== 'production') console.log('[Host]', ...args); };
 
   // Fetch slides for this quiz
   useEffect(() => {
@@ -339,12 +330,6 @@ const PresentQuizPage = () => {
     cardStyle.gap = 10;
   }
 
-  const handleFinishQuiz = async () => {
-    if (!liveQuiz) return;
-    await supabase.from('sessions').update({ phase: 'ended' }).eq('code', roomCode);
-    setPhase('ended');
-  };
-
   // Ensure phase transitions always happen, even after refresh
   useEffect(() => {
     if (status !== 'live' || !liveQuiz || !slides.length) return;
@@ -449,27 +434,6 @@ const PresentQuizPage = () => {
 
   // After the last question, add a button to end the quiz and show the final leaderboard
   const handleShowFinalLeaderboard = () => {
-    setPhase(PHASES.FINAL_LEADERBOARD);
-  };
-
-  const handleShowLeaderboard = async () => {
-    const { data: scores } = await supabase
-      .from('session_participant_answers')
-      .select('participant_id, sum(points) as score')
-      .eq('session_code', roomCode)
-      .group('participant_id')
-      .order('score', { ascending: false });
-    for (const row of scores || []) {
-      await supabase
-        .from('session_participants')
-        .update({ score: row.score })
-        .eq('id', row.participant_id);
-    }
-    safeSend({
-      type: 'broadcast',
-      event: 'show_leaderboard',
-      payload: { scores }
-    });
     setPhase(PHASES.FINAL_LEADERBOARD);
   };
 

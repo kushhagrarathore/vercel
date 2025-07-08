@@ -62,7 +62,6 @@ function App() {
 
             {/* Live Quiz Routes */}
             <Route path="/live/leaderboard/:quizId" element={<Leaderboard />} />
-            <Route path="/live-quiz" element={<LiveQuiz />} />
 
             {/* Profile */}
             <Route path="/profile" element={<Profile />} />
