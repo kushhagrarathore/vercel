@@ -222,7 +222,7 @@ const FormCardRow = ({
         )}
         {/* Popover and other overlays remain unchanged */}
         {popoverOpen && isPublished && !!link && ReactDOM.createPortal(
-          <div className="pretty-popover portal-popover" style={{ top: popoverCoords.top, left: popoverCoords.left, position: 'absolute' }}>
+          <div className="pretty-popover portal-popover" style={{ position: 'absolute' }}>
             <div className="popover-arrow portal-arrow" />
             <button className="popover-close-btn" onClick={() => setPopoverOpen(false)} title="Close">&times;</button>
             <div className="popover-title">Share this form</div>

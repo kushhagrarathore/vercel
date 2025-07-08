@@ -283,7 +283,6 @@ export default function AdminPage() {
       setSession(data);
       setQuizPhase('waiting');
       setWaitingToStart(true);
-      setJustStartedSession(true);
     } catch (err) {
       setError(err.message);
     }
