@@ -28,6 +28,8 @@ export default function QuestionsPage() {
   const [titleInputGlow, setTitleInputGlow] = useState(false);
   const [titleInputBg, setTitleInputBg] = useState(false);
   const navigate = useNavigate();
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [deletedQuestionIds, setDeletedQuestionIds] = useState([]);
 
   // 1. Customization defaults
   const settingsDefaults = {
@@ -297,6 +299,101 @@ export default function QuestionsPage() {
     dragOverItem.current = undefined;
   };
 
+  // Delete question handler
+  const handleDeleteQuestion = (idx) => {
+    const questionToDelete = questions[idx];
+    if (questionToDelete.id) {
+      setDeletedQuestionIds((prev) => [...prev, questionToDelete.id]);
+    }
+    const updatedQuestions = questions.filter((_, i) => i !== idx);
+    setQuestions(updatedQuestions);
+    // Adjust selectedQuestionIdx if needed
+    if (selectedQuestionIdx === idx) {
+      setSelectedQuestionIdx(null);
+      setIsEditingExisting(false);
+      setForm({ question_text: '', options: ['', ''], correct_answer_index: 0, timer: 20 });
+    } else if (selectedQuestionIdx > idx) {
+      setSelectedQuestionIdx(selectedQuestionIdx - 1);
+    }
+    setHasUnsavedChanges(true);
+  };
+
+  // --- CREATE or SAVE QUIZ LOGIC ---
+  const handleCreateOrSaveQuiz = async () => {
+    setLoading(true);
+    setSuccessMessage('');
+    setQuizTitleError('');
+    setShowTitlePrompt(false);
+    setTitleInputGlow(false);
+    setTitleInputBg(false);
+    if (!quizName.trim()) {
+      setQuizTitleError('Please enter a quiz title before proceeding.');
+      setShowTitlePrompt(true);
+      setTitleInputGlow(true);
+      setTitleInputBg(true);
+      setLoading(false);
+      setTimeout(() => setShowTitlePrompt(false), 3500);
+      setTimeout(() => setTitleInputGlow(false), 2500);
+      setTimeout(() => setTitleInputBg(false), 2500);
+      return;
+    }
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        setError('Unable to get user info. Please log in again.');
+        setLoading(false);
+        return;
+      }
+      const userId = user.id;
+      const titleToSave = quizName.trim() ? quizName : 'Untitled Quiz';
+      let quizId = selectedQuizId;
+      if (!selectedQuizId) {
+        // CREATE new draft quiz
+        const { data, error } = await supabase
+          .from('lq_quizzes')
+          .insert([{ title: titleToSave, user_id: userId }])
+          .select()
+          .single();
+        if (error) throw error;
+        quizId = data.id;
+        setSelectedQuizId(data.id);
+        // Save all current questions to lq_questions
+        for (const [i, q] of questions.entries()) {
+          await supabase.from('lq_questions').update({ quiz_id: data.id, slide_index: i }).eq('id', q.id);
+        }
+        setSuccessMessage('Draft created!');
+      } else {
+        // SAVE/UPDATE existing draft quiz
+        const { error } = await supabase
+          .from('lq_quizzes')
+          .update({ title: titleToSave })
+          .eq('id', quizId);
+        if (error) throw error;
+        // Delete questions marked for deletion
+        if (deletedQuestionIds.length > 0) {
+          await supabase.from('lq_questions').delete().in('id', deletedQuestionIds);
+          setDeletedQuestionIds([]);
+        }
+        // Update slide_index/order for remaining questions
+        for (const [i, q] of questions.entries()) {
+          await supabase.from('lq_questions').update({ slide_index: i }).eq('id', q.id);
+        }
+        setSuccessMessage('Draft saved!');
+      }
+      setHasUnsavedChanges(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Track unsaved changes on any edit
+  useEffect(() => {
+    setHasUnsavedChanges(true);
+    // eslint-disable-next-line
+  }, [quizName, questions, form]);
+
   if (error) {
     return <div className="p-4 text-red-500">Error: {error}</div>;
   }
@@ -339,11 +436,11 @@ export default function QuestionsPage() {
           </button>
           <button
             type="button"
-            onClick={handleMenuCreateQuiz}
-            className="px-5 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors whitespace-nowrap"
+            onClick={handleCreateOrSaveQuiz}
+            className={`px-5 py-2 ${selectedQuizId ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-600 hover:bg-green-700'} text-white rounded transition-colors whitespace-nowrap`}
             disabled={loading}
           >
-            {loading ? 'Creating...' : 'Create Quiz'}
+            {loading ? (selectedQuizId ? 'Saving...' : 'Creating...') : (selectedQuizId ? 'Save' : 'Create Quiz')}
           </button>
         </div>
       </div>
@@ -388,6 +485,14 @@ export default function QuestionsPage() {
                 >
                   <span className="text-xs font-semibold text-gray-500 mr-2">Q{idx + 1}</span>
                   <span className="truncate flex-1">{q.question_text || `Question ${idx + 1}`}</span>
+                  <button
+                    type="button"
+                    className="ml-2 text-red-500 hover:text-red-700 p-1 rounded"
+                    title="Delete Question"
+                    onClick={e => { e.stopPropagation(); handleDeleteQuestion(idx); }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
                 </li>
               ))}
             </ul>
