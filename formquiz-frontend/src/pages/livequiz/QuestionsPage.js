@@ -198,7 +198,6 @@ export default function QuestionsPage() {
     setTitleInputGlow(false);
     setTitleInputBg(false);
     if (!quizName.trim()) {
-      setQuizTitleError('Please enter a quiz title before proceeding.');
       setShowTitlePrompt(true);
       setTitleInputGlow(true);
       setTitleInputBg(true);
@@ -308,7 +307,6 @@ export default function QuestionsPage() {
             value={quizName}
             onChange={e => {
               setQuizName(e.target.value);
-              if (e.target.value.trim()) setQuizTitleError('');
               if (e.target.value.trim()) {
                 setShowTitlePrompt(false);
                 setTitleInputGlow(false);

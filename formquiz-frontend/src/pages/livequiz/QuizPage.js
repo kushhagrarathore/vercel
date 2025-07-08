@@ -49,7 +49,7 @@ export default function QuizPage() {
           .select('score')
           .eq('id', participant.id)
           .single();
-        if (!error && data) setLiveScore(data.score);
+        if (!error && data) setCumulativeScore(data.score);
       }
       fetchScore();
       const timeout = setTimeout(() => {
@@ -69,7 +69,7 @@ export default function QuizPage() {
         { event: '*', schema: 'public', table: 'session_participants', filter: `id=eq.${participant.id}` },
         (payload) => {
           if (payload.new && typeof payload.new.score === 'number') {
-            setLiveScore(payload.new.score);
+            setCumulativeScore(payload.new.score);
           }
         }
       )
@@ -87,7 +87,7 @@ export default function QuizPage() {
         .select('score')
         .eq('id', participant.id)
         .single();
-      if (!error && data) setLiveScore(data.score);
+      if (!error && data) setCumulativeScore(data.score);
     }
     fetchScore();
   }, [showCorrect, participant?.id]);

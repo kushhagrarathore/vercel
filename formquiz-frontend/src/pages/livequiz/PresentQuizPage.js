@@ -369,7 +369,7 @@ const PresentQuizPage = () => {
           }).eq('code', roomCode);
           setPhase('question');
         } else {
-          setShowFinishQuiz(true);
+          setShowLeaderboard(true);
         }
       }, 2000);
       return () => clearTimeout(timeout);
@@ -385,7 +385,7 @@ const PresentQuizPage = () => {
 
   // Host broadcasts timer every second
   useEffect(() => {
-    if (phase !== 'question' || !quizState || !roomCode) return;
+    if (phase !== 'question' || !liveQuiz || !roomCode) return;
     if (!isHost) return;
     let interval = setInterval(async () => {
       if (timer > 0) {
@@ -400,7 +400,7 @@ const PresentQuizPage = () => {
           
           // After 2s, move to next question or end
           setTimeout(async () => {
-            const nextIdx = slides.findIndex(s => s.id === quizState.current_slide_index) + 1;
+            const nextIdx = slides.findIndex(s => s.id === liveQuiz.current_slide_index) + 1;
             if (nextIdx < slides.length) {
               await supabase.from('live_quiz_state').update({
                 current_slide_index: nextIdx,
@@ -415,17 +415,17 @@ const PresentQuizPage = () => {
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [phase, quizState, timer, roomCode, isHost, slides]);
+  }, [phase, liveQuiz, timer, roomCode, isHost, slides]);
 
   // Show leaderboard after question ends
   useEffect(() => {
-    if (quizState?.quiz_status === 'leaderboard') {
+    if (liveQuiz?.quiz_status === 'leaderboard') {
       setShowLeaderboard(true);
       setTimeout(() => {
         setShowLeaderboard(false);
       }, 3500);
     }
-  }, [quizState?.quiz_status]);
+  }, [liveQuiz?.quiz_status]);
 
   // Subscribe to live_responses for this room (optional, for live stats)
   useEffect(() => {
