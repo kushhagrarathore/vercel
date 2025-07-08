@@ -21,7 +21,6 @@ import QuizFillPage from './pages/livequiz/QuizFillPage'; // CombineBuild
 import QuizPage from './pages/livequiz/QuizPage';
 import Profile from './pages/Profile';
 import Leaderboard from './pages/livequiz/Leaderboard'; // Atharva branch
-import LiveQuiz from './pages/livequiz/LiveQuiz'; // Atharva branch
 import AdminPage from './pages/livequiz/AdminPage';
 
 function App() {

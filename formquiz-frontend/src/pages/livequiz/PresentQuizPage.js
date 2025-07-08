@@ -225,10 +225,10 @@ const PresentQuizPage = () => {
 
   // Auto-advance timer for host (only in question phase)
   useEffect(() => {
-    if (status !== 'live' || !liveQuiz?.timer_end || !liveQuiz?.current_slide_index || phase !== 'question') return;
+    if (status !== 'live' || !timer || !currentIndex || phase !== 'question') return;
     const timer = setInterval(() => {
       const now = Date.now();
-      const end = new Date(liveQuiz.timer_end).getTime();
+      const end = new Date(timer).getTime();
       setTimeLeft(Math.max(0, Math.ceil((end - now) / 1000)));
       if (end <= now) {
         clearInterval(timer);
@@ -236,11 +236,11 @@ const PresentQuizPage = () => {
       }
     }, 500);
     return () => clearInterval(timer);
-  }, [status, liveQuiz, phase]);
+  }, [status, timer, currentIndex, phase]);
 
   // Host: End Quiz
   const handleEnd = async () => {
-    if (!liveQuiz) return;
+    if (!timer) return;
     await supabase.from('sessions').update({
       quiz_status: 'ended',
       timer_end: null,
@@ -250,7 +250,7 @@ const PresentQuizPage = () => {
 
   // Update transition countdown during 'transition' phase
   useEffect(() => {
-    if (phase !== 'transition') return;
+    if (phase !== PHASES.TRANSITION) return;
     setTransitionCountdown(2);
     const interval = setInterval(() => {
       setTransitionCountdown(prev => {
@@ -332,16 +332,16 @@ const PresentQuizPage = () => {
 
   // Ensure phase transitions always happen, even after refresh
   useEffect(() => {
-    if (status !== 'live' || !liveQuiz || !slides.length) return;
-    if (phase === 'leaderboard') {
+    if (status !== 'live' || !slides.length) return;
+    if (phase === PHASES.LEADERBOARD) {
       const timeout = setTimeout(async () => {
-        await supabase.from('sessions').update({ phase: 'transition' }).eq('code', roomCode);
-        setPhase('transition');
+        await supabase.from('sessions').update({ phase: PHASES.TRANSITION }).eq('code', roomCode);
+        setPhase(PHASES.TRANSITION);
       }, 3500);
       return () => clearTimeout(timeout);
     }
-    if (phase === 'transition') {
-      const currentIdx = slides.findIndex(s => s.id === liveQuiz.current_slide_index);
+    if (phase === PHASES.TRANSITION) {
+      const currentIdx = slides.findIndex(s => s.id === currentIndex);
       const next = currentIdx + 1;
       const timeout = setTimeout(async () => {
         if (next < slides.length) {
@@ -350,67 +350,67 @@ const PresentQuizPage = () => {
           await supabase.from('sessions').update({
             current_slide_index: next,
             timer_end: timerEnd,
-            phase: 'question',
+            phase: PHASES.QUESTION,
           }).eq('code', roomCode);
-          setPhase('question');
+          setPhase(PHASES.QUESTION);
         } else {
           setShowLeaderboard(true);
         }
       }, 2000);
       return () => clearTimeout(timeout);
     }
-  }, [status, phase, liveQuiz, slides, roomCode]);
+  }, [status, phase, currentIndex, slides, roomCode]);
 
   // If in 'question' phase and timer is 0, auto-advance
   useEffect(() => {
-    if (status === 'live' && phase === 'question' && timeLeft === 0 && liveQuiz && slides.length > 0) {
+    if (status === 'live' && phase === 'question' && timeLeft === 0 && slides.length > 0) {
       handleNext();
     }
-  }, [status, phase, timeLeft, liveQuiz, slides]);
+  }, [status, phase, timeLeft, slides]);
 
   // Host broadcasts timer every second
   useEffect(() => {
-    if (phase !== 'question' || !liveQuiz || !roomCode) return;
+    if (phase !== PHASES.QUESTION || !timer || !roomCode) return;
     if (!isHost) return;
     let interval = setInterval(async () => {
       if (timer > 0) {
         await supabase.from('live_quiz_state').update({ timer_value: timer - 1 }).eq('quiz_room_id', roomCode);
       } else {
         // Show leaderboard first
-        await supabase.from('live_quiz_state').update({ quiz_status: 'leaderboard' }).eq('quiz_room_id', roomCode);
+        await supabase.from('live_quiz_state').update({ quiz_status: PHASES.LEADERBOARD }).eq('quiz_room_id', roomCode);
         
         // After 3.5s, show transition
         setTimeout(async () => {
-          await supabase.from('live_quiz_state').update({ quiz_status: 'transition' }).eq('quiz_room_id', roomCode);
+          await supabase.from('live_quiz_state').update({ quiz_status: PHASES.TRANSITION }).eq('quiz_room_id', roomCode);
           
           // After 2s, move to next question or end
           setTimeout(async () => {
-            const nextIdx = slides.findIndex(s => s.id === liveQuiz.current_slide_index) + 1;
+            const nextIdx = slides.findIndex(s => s.id === currentIndex) + 1;
             if (nextIdx < slides.length) {
               await supabase.from('live_quiz_state').update({
                 current_slide_index: nextIdx,
                 timer_value: 20,
-                quiz_status: 'question'
+                quiz_status: PHASES.QUESTION
               }).eq('quiz_room_id', roomCode);
             } else {
-              await supabase.from('live_quiz_state').update({ quiz_status: 'ended' }).eq('quiz_room_id', roomCode);
+              await supabase.from('live_quiz_state').update({ quiz_status: PHASES.ENDED }).eq('quiz_room_id', roomCode);
             }
           }, 2000);
         }, 3500);
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [phase, liveQuiz, timer, roomCode, isHost, slides]);
+  }, [phase, timer, roomCode, isHost, slides]);
 
   // Show leaderboard after question ends
   useEffect(() => {
-    if (liveQuiz?.quiz_status === 'leaderboard') {
+    if (phase === PHASES.LEADERBOARD) {
       setShowLeaderboard(true);
       setTimeout(() => {
         setShowLeaderboard(false);
       }, 3500);
     }
-  }, [liveQuiz?.quiz_status]);
+  }, [phase]);
 
   // Subscribe to live_responses for this room (optional, for live stats)
   useEffect(() => {
