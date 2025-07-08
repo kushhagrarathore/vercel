@@ -20,7 +20,6 @@ import PreviewQuizPage from './pages/livequiz/PreviewQuizPage'; // CombineBuild
 import QuizFillPage from './pages/livequiz/QuizFillPage'; // CombineBuild
 import QuizPage from './pages/livequiz/QuizPage';
 import Profile from './pages/Profile';
-import JoinQuiz from './pages/livequiz/JoinQuiz'; // Atharva branch
 import Leaderboard from './pages/livequiz/Leaderboard'; // Atharva branch
 import LiveQuiz from './pages/livequiz/LiveQuiz'; // Atharva branch
 import AdminPage from './pages/livequiz/AdminPage';
@@ -62,7 +61,6 @@ function App() {
             <Route path="/quiz/edit/:quizId" element={<Quiz />} />
 
             {/* Live Quiz Routes */}
-            <Route path="/join/:quizId" element={<JoinQuiz />} />
             <Route path="/live/leaderboard/:quizId" element={<Leaderboard />} />
             <Route path="/live-quiz" element={<LiveQuiz />} />
 
