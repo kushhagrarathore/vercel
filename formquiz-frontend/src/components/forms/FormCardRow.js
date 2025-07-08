@@ -14,6 +14,7 @@ const typeColors = {
   Live: '#ef4444',
   blank: '#7c3aed',
 };
+const [popoverCoords, setPopoverCoords] = useState({ x: 0, y: 0 });
 
 const FormCardRow = ({
   view,
