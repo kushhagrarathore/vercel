@@ -52,6 +52,19 @@ export default function AdminPage() {
     return { ...settingsDefaults, ...(obj || {}) };
   }
 
+  const fetchParticipants = useCallback(async (sessionId) => {
+    if (!sessionId) return;
+    const { data, error } = await supabase
+      .from('session_participants')
+      .select('*')
+      .eq('session_id', sessionId);
+    if (error) {
+      console.error('Error fetching participants:', error);
+      return;
+    }
+    setParticipants(data || []);
+  }, [setParticipants]);
+
   const fetchQuizzes = useCallback(async () => {
     try {
       const { data, error } = await supabase.from('quizzes').select('*');
@@ -243,19 +256,6 @@ export default function AdminPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [presentationMode]);
-
-  const fetchParticipants = useCallback(async (sessionId) => {
-    if (!sessionId) return;
-    const { data, error } = await supabase
-      .from('session_participants')
-      .select('*')
-      .eq('session_id', sessionId);
-    if (error) {
-      console.error('Error fetching participants:', error);
-      return;
-    }
-    setParticipants(data || []);
-  }, [setParticipants]);
 
   async function startQuiz() {
     if (!selectedQuizId) {

@@ -122,7 +122,7 @@ const PresentQuizPage = () => {
 
   // Timer logic (just locks answers, does not auto-advance)
   useEffect(() => {
-    if (phase !== PHASES.QUESTION || timer <= 0) return;
+    if (phase !== PHASES.QUESTION || !timer) return;
     setTimeLeft(timer);
     if (timerInterval.current) clearInterval(timerInterval.current);
     timerInterval.current = setInterval(() => {

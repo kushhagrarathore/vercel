@@ -58,7 +58,7 @@ export default function QuizPage() {
       }, 2500); // 2.5s delay before reset
       return () => clearTimeout(timeout);
     }
-  }, [showCorrect, timeLeft, selectedAnswer]);
+  }, [showCorrect, timeLeft, selectedAnswer, participant?.id]);
 
   useEffect(() => {
     if (!participant?.id) return;
