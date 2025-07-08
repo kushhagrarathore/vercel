@@ -15,7 +15,7 @@ import { Button } from '../../components/buttonquiz';
 import { Input } from '../../components/input';
 
 
-import { supabase } from "../../supabase";
+import { supabase } from '../../supabase.js';
 import "./quiz.css";
 
 // 🔲 Modal for sharing
@@ -118,25 +118,6 @@ const questionTypes = [
   { label: 'True/False', value: 'true_false' },
   { label: 'One Word Answer', value: 'one_word' },
 ];
-
-// Custom hook to block navigation in React Router v6
-function useBlocker(blocker, when = true) {
-  const { navigator } = React.useContext(React.UNSAFE_NavigationContext);
-  useEffect(() => {
-    if (!when) return;
-    const push = navigator.push;
-    navigator.push = (...args) => {
-      if (blocker()) {
-        // Block navigation
-        return;
-      }
-      push.apply(navigator, args);
-    };
-    return () => {
-      navigator.push = push;
-    };
-  }, [navigator, blocker, when]);
-}
 
 // Add this function at the top (after imports):
 function calculateScore(slides, userAnswers) {
@@ -385,16 +366,13 @@ export default function Quiz() {
   }, [hasUnsavedChanges]);
 
   // Custom navigation blocker for in-app navigation
-  useBlocker(
-    React.useCallback(() => {
-      if (hasUnsavedChanges) {
-        setShowUnsavedModal(true);
-        return true; // Block navigation
-      }
-      return false;
-    }, [hasUnsavedChanges]),
-    hasUnsavedChanges
-  );
+  useEffect(() => {
+    if (hasUnsavedChanges) {
+      setShowUnsavedModal(true);
+      return true; // Block navigation
+    }
+    return false;
+  }, [hasUnsavedChanges]);
 
   // Handle leave/cancel in modal
   const handleLeave = () => {

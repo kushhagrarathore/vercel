@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../supabase/client';
+import { supabase } from '../../supabase.js';
 import QuestionPreview from './QuestionPreview';
 
 export default function QuestionsPage() {
