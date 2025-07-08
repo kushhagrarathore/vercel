@@ -2,6 +2,9 @@
   "name": "formquiz-frontend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
     "@dicebear/avataaars": "^9.2.3",
     "@dicebear/avatars": "^4.10.8",
