@@ -211,10 +211,18 @@ export default function QuestionsPage() {
       return;
     }
     try {
+      // Fetch the current authenticated user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        setError('Unable to get user info. Please log in again.');
+        setLoading(false);
+        return;
+      }
+      const userId = user.id;
       const titleToSave = quizName.trim() ? quizName : 'Untitled Quiz';
       const { data, error } = await supabase
         .from('lq_quizzes')
-        .insert([{ title: titleToSave }])
+        .insert([{ title: titleToSave, user_id: userId }])
         .select()
         .single();
       if (!error) {
