@@ -2,9 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import './FormView.css';
-import Spinner from '../../components/Spinner';
-import Skeleton from '../../components/Skeleton';
-import { useToast } from '../../components/Toast';
+
 
 const FormView = () => {
   const { formId } = useParams();

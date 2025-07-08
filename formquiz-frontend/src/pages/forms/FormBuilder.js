@@ -6,7 +6,6 @@ import { QRCodeSVG } from 'qrcode.react';
 import { ChromePicker } from 'react-color';
 import './FormBuilder.css';
 import Spinner from '../../components/Spinner';
-import Skeleton from '../../components/Skeleton';
 import { useToast } from '../../components/Toast';
 
 // Question components
@@ -22,7 +21,7 @@ const FormBuilder = () => {
   const [formId, setFormId] = useState(null);
   const [activeTab, setActiveTab] = useState('standard');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
-  const [isDebugMode, setIsDebugMode] = useState(false);
+  const [isDebugMode] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const navigate = useNavigate();
   const { formId: paramFormId } = useParams();
@@ -149,7 +148,7 @@ const FormBuilder = () => {
       }
     };
     initializeForm();
-  }, [paramFormId, toast]);
+  }, [paramFormId, toast, customization]);
 
   // Auto-save to localStorage
   useEffect(() => {
@@ -444,39 +443,7 @@ const FormBuilder = () => {
     navigate('/dashboard');
   };
 
-  const handleNewFormClick = () => {
-    if (hasUnsavedChanges) {
-      const confirmNew = window.confirm(
-        '⚠️ You have unsaved changes. Are you sure you want to create a new form?'
-      );
-      if (!confirmNew) return;
-    }
 
-    localStorage.removeItem('formQuestions');
-    localStorage.removeItem('formTitle');
-    localStorage.removeItem('currentFormId');
-    localStorage.removeItem('formCustomization');
-
-    setQuestions([]);
-    setTitle('Untitled Form');
-    setFormId(null);
-    setCustomization({
-      backgroundColor: '#ffffff',
-      textColor: '#000000',
-      buttonColor: '#4a6bff',
-      buttonTextColor: '#ffffff',
-      backgroundImage: '',
-      logoImage: '',
-      fontFamily: 'Arial, sans-serif',
-      borderRadius: '4px',
-    });
-    setHasUnsavedChanges(false);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('isLoggedIn');
-    navigate('/');
-  };
 
   const handlePreviewClick = () => {
     if (questions.length === 0) {

@@ -55,12 +55,7 @@ const Navbar = ({ activeTab, onToggle }) => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, []);
 
-  const toggleTheme = () => {
-    const newTheme = !isDarkMode;
-    setIsDarkMode(newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme ? 'dark' : 'light');
-    localStorage.setItem('theme', newTheme ? 'dark' : 'light');
-  };
+
 
   return (
     <div className="top-navbar">

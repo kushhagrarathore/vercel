@@ -169,9 +169,13 @@ export default function Login() {
         </button>
       </form>
       <div className="framer-login-footer">
-        <a href="#" className="framer-forgot" onClick={handleForgotPassword}>
+        <button
+          type="button"
+          className="framer-forgot"
+          onClick={handleForgotPassword}
+        >
           Forgot Password?
-        </a>
+        </button>
         <button
           type="button"
           className="framer-signup"

@@ -28,7 +28,7 @@ export default function AdminPage() {
   const [presentationMode, setPresentationMode] = useState(false);
   const presentationRef = useRef(null);
   const [waitingToStart, setWaitingToStart] = useState(false);
-  const [justStartedSession, setJustStartedSession] = useState(false);
+
 
   // Customization defaults (copy from QuestionsPage.js)
   const settingsDefaults = {
@@ -55,13 +55,13 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetchQuizzes();
-  }, []);
+  }, [fetchQuizzes]);
 
   useEffect(() => {
     if (selectedQuizId) {
       fetchQuestions(selectedQuizId);
     }
-  }, [selectedQuizId]);
+  }, [selectedQuizId, fetchQuestions]);
 
   useEffect(() => {
     if (!session || !currentQuestion || quizPhase !== 'question') {
@@ -97,7 +97,7 @@ export default function AdminPage() {
     if (selectedQuizId) {
       fetchQuestions(selectedQuizId);
     }
-  }, [selectedQuizId]);
+  }, [selectedQuizId, fetchQuestions]);
 
   // Fetch and subscribe to participants for the current session
   useEffect(() => {

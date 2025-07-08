@@ -338,8 +338,8 @@ export default function LiveQuizUser() {
         return;
       }
 
-      // Calculate scores
-      const scores = responsesData.map(resp => {
+      // Calculate scores (unused variable removed)
+      responsesData.forEach(resp => {
         let score = 0;
         slidesData.forEach((slide, idx) => {
           const userAnswer = resp.answers[idx];
@@ -375,10 +375,6 @@ export default function LiveQuizUser() {
             }
           }
         });
-        return {
-          user: resp.user_id,
-          score,
-        };
       });
       setAllResponses(responsesData);
     }
@@ -570,8 +566,8 @@ export default function LiveQuizUser() {
         .fadein { animation: fadein 0.4s; }
         @keyframes fadein { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
         @media (max-width: 900px) {
-          .md\:w-7\/10 { width: 100% !important; }
-          .md\:flex { display: none !important; }
+          .md\\:w-7\\/10 { width: 100% !important; }
+          .md\\:flex { display: none !important; }
         }
       `}</style>
     </div>
