@@ -22,12 +22,12 @@
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^13.5.0",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^19.1.8",
     "@types/react-dom": "^19.1.6",
     "classnames": "^2.5.1",
-    "framer-motion": "^12.18.1",
-    "lucide-react": "^0.516.0",
+    "framer-motion": "^12.23.0",
+    "lucide-react": "^0.525.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.1.0",
     "react-circular-progressbar": "^2.2.0",
@@ -36,12 +36,12 @@
     "react-hook-form": "^7.60.0",
     "react-hot-toast": "^2.5.2",
     "react-icons": "^5.5.0",
-    "react-qr-code": "^2.0.15",
+    "react-qr-code": "^2.0.18",
     "react-router-dom": "^7.6.2",
     "react-scripts": "^5.0.1",
     "socket.io-client": "^4.8.1",
-    "typescript": "^4.9.5",
-    "web-vitals": "^2.1.4",
+    "typescript": "^5.8.3",
+    "web-vitals": "^5.0.3",
     "yup": "^1.6.1"
   },
   "scripts": {
@@ -69,14 +69,14 @@
     ]
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^1.4.1",
-    "aria-query": "^5.3.0",
+    "@eslint/eslintrc": "^3.3.1",
+    "aria-query": "^5.3.2",
     "autoprefixer": "^10.4.17",
     "eslint": "^8.57.0",
     "eslint-config-react-app": "^7.0.1",
     "eslint-plugin-import": "^2.27.5",
-    "eslint-plugin-jsx-a11y": "^6.7.1",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "postcss": "^8.4.35",
-    "tailwindcss": "^3.4.1"
+    "tailwindcss": "^4.1.11"
   }
 }
