@@ -340,7 +340,6 @@ export default function LiveQuizUser() {
 
       // Calculate scores (unused variable removed)
       responsesData.forEach(resp => {
-        let score = 0;
         slidesData.forEach((slide, idx) => {
           const userAnswer = resp.answers[idx];
           // Debug logging
@@ -358,7 +357,7 @@ export default function LiveQuizUser() {
               Array.isArray(slide.correct_answers) &&
               slide.correct_answers.includes(userAnswer.selectedIndex)
             ) {
-              score++;
+              // score++; // This line was removed as per the edit hint
             }
           } else if (slide.type === 'one_word') {
             // Only award if user actually answered and answer is correct
@@ -371,7 +370,7 @@ export default function LiveQuizUser() {
                 ans => ans.trim().replace(/\s+/g, ' ').toLowerCase() === userAnswer.text.trim().replace(/\s+/g, ' ').toLowerCase()
               )
             ) {
-              score++;
+              // score++; // This line was removed as per the edit hint
             }
           }
         });

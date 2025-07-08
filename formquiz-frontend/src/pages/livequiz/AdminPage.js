@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../../supabase/client';
 import { useQuiz } from '../../pages/livequiz/QuizContext';
 
@@ -53,9 +53,47 @@ export default function AdminPage() {
     return { ...settingsDefaults, ...(obj || {}) };
   }
 
+  const fetchQuizzes = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.from('quizzes').select('*');
+      if (error) throw error;
+      setQuizzes(data || []);
+      if (data && data.length > 0 && !selectedQuizId) {
+        setSelectedQuizId(data[0].id);
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  }, [selectedQuizId]);
+
   useEffect(() => {
     fetchQuizzes();
   }, [fetchQuizzes]);
+
+  const fetchQuestions = useCallback(async (quizId) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('lq_questions')
+        .select('*')
+        .eq('quiz_id', quizId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setQuestions(data || []);
+      if (data && data.length > 0) {
+        setCurrentQuestion(data[0]);
+        setCurrentQuestionIndex(0);
+      } else {
+        setCurrentQuestion(null);
+        setCurrentQuestionIndex(0);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [setCurrentQuestion, setCurrentQuestionIndex]);
 
   useEffect(() => {
     if (selectedQuizId) {
@@ -115,14 +153,14 @@ export default function AdminPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [session?.id]);
+  }, [session?.id, fetchParticipants]);
 
   // Always fetch latest participants after each question ends
   useEffect(() => {
     if (showCorrect && session?.id) {
       fetchParticipants(session.id);
     }
-  }, [showCorrect, session?.id]);
+  }, [showCorrect, session?.id, fetchParticipants]);
 
   // Fetch poll results after timer ends
   useEffect(() => {
@@ -206,44 +244,6 @@ export default function AdminPage() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [presentationMode]);
-
-  async function fetchQuestions(quizId) {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('lq_questions')
-        .select('*')
-        .eq('quiz_id', quizId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setQuestions(data || []);
-      if (data && data.length > 0) {
-        setCurrentQuestion(data[0]);
-        setCurrentQuestionIndex(0);
-      } else {
-        setCurrentQuestion(null);
-        setCurrentQuestionIndex(0);
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function fetchQuizzes() {
-    try {
-      const { data, error } = await supabase.from('quizzes').select('*');
-      if (error) throw error;
-      setQuizzes(data || []);
-      if (data && data.length > 0 && !selectedQuizId) {
-        setSelectedQuizId(data[0].id);
-      }
-    } catch (err) {
-      setError(err.message);
-    }
-  }
 
   async function fetchParticipants(sessionId) {
     if (!sessionId) return;

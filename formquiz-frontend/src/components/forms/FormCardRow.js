@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import './FormsCardRow.css';
 import { useNavigate } from 'react-router-dom';
-import { FaEye, FaChartBar, FaTimes, FaCopy, FaLink, FaTrash } from 'react-icons/fa';
-import { QRCodeSVG } from 'qrcode.react';
+import { FaEye, FaCopy, FaLink, FaTrash } from 'react-icons/fa';
 import ReactDOM from 'react-dom';
 
 const typeColors = {
@@ -45,24 +44,6 @@ const FormCardRow = ({
     }
   };
 
-  const handlePreview = (e) => {
-    e.stopPropagation();
-    if (isForm) {
-      navigate(`/preview/${formId}?mode=preview`);
-    } else {
-      navigate(`/quiz/preview/${formId}`);
-    }
-  };
-
-  const handleResults = (e) => {
-    e.stopPropagation();
-    if (isForm) {
-      navigate(`/results/${formId}`);
-    } else {
-      navigate(`/quiz/${formId}?tab=results`);
-    }
-  };
-
   const handleDelete = (e) => {
     e.stopPropagation();
     if (!window.confirm('Are you sure you want to delete this form?')) return;
@@ -83,11 +64,6 @@ const FormCardRow = ({
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     }
-  };
-
-  const handleCloseExpand = (e) => {
-    e.stopPropagation();
-    setExpandedCardId(null);
   };
 
   // Fix fullLink construction to avoid duplicate domains

@@ -6,7 +6,6 @@ import './navbar.css';
 
 const Navbar = ({ activeTab, onToggle }) => {
   const [name, setName] = useState('');
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
@@ -51,7 +50,6 @@ const Navbar = ({ activeTab, onToggle }) => {
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme');
     const isDark = savedTheme === 'dark';
-    setIsDarkMode(isDark);
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, []);
 
