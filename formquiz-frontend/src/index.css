@@ -1,7 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import "tailwindcss";
 
+/* Your custom styles here */
 /* Custom styles must be wrapped in @layer for Tailwind v4+ */
 @layer base {
   body {
