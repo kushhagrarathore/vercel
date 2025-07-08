@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback, useContext } from "react";
-import { useNavigate, useParams, useLocation, UNSAFE_NavigationContext as NavigationContext } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -121,7 +121,7 @@ const questionTypes = [
 
 // Custom hook to block navigation in React Router v6
 function useBlocker(blocker, when = true) {
-  const { navigator } = useContext(NavigationContext);
+  const { navigator } = React.useContext(React.UNSAFE_NavigationContext);
   useEffect(() => {
     if (!when) return;
     const push = navigator.push;
@@ -386,7 +386,7 @@ export default function Quiz() {
 
   // Custom navigation blocker for in-app navigation
   useBlocker(
-    useCallback(() => {
+    React.useCallback(() => {
       if (hasUnsavedChanges) {
         setShowUnsavedModal(true);
         return true; // Block navigation

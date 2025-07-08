@@ -304,23 +304,23 @@ export default function QuestionsPage() {
           >
             ← Back to Dashboard
           </button>
-          <input
-            ref={quizNameInputRef}
-            type="text"
-            value={quizName}
-            onChange={e => {
-              setQuizName(e.target.value);
-              if (e.target.value.trim()) setQuizTitleError('');
-              if (e.target.value.trim()) {
-                setShowTitlePrompt(false);
-                setTitleInputGlow(false);
-                setTitleInputBg(false);
-              }
-            }}
-            placeholder="Untitled Quiz"
+        <input
+          ref={quizNameInputRef}
+          type="text"
+          value={quizName}
+          onChange={e => {
+            setQuizName(e.target.value);
+            if (e.target.value.trim()) setQuizTitleError('');
+            if (e.target.value.trim()) {
+              setShowTitlePrompt(false);
+              setTitleInputGlow(false);
+              setTitleInputBg(false);
+            }
+          }}
+          placeholder="Untitled Quiz"
             className={`ml-4 text-xl font-semibold truncate max-w-xs border-none focus:ring-0 focus:outline-none p-0 m-0 transition-all duration-300 ${titleInputGlow ? 'ring-2 ring-amber-400 ring-offset-2 border-amber-400' : ''} ${titleInputBg ? 'bg-amber-100/70' : 'bg-transparent'}`}
-            style={{ minWidth: '120px' }}
-          />
+          style={{ minWidth: '120px' }}
+        />
         </div>
         <div className="flex items-center gap-4">
           <button
@@ -339,27 +339,27 @@ export default function QuestionsPage() {
           </button>
         </div>
       </div>
-      {/* Floating Prompt Box */}
-      {showTitlePrompt && (
-        <div
-          className="fixed left-1/2 top-16 z-50 -translate-x-1/2 animate-fade-in-out"
-          style={{
-            minWidth: 320,
-            background: 'rgba(255, 237, 213, 0.98)', // amber-100
-            color: '#b45309', // amber-700
-            border: '2px solid #f59e42', // amber-400
-            borderRadius: 16,
-            boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)',
-            padding: '18px 32px',
-            fontWeight: 600,
-            fontSize: 18,
-            textAlign: 'center',
-            transition: 'opacity 0.5s',
-          }}
-        >
-          Please enter a quiz title before proceeding.
-        </div>
-      )}
+        {/* Floating Prompt Box */}
+        {showTitlePrompt && (
+          <div
+            className="fixed left-1/2 top-16 z-50 -translate-x-1/2 animate-fade-in-out"
+            style={{
+              minWidth: 320,
+              background: 'rgba(255, 237, 213, 0.98)', // amber-100
+              color: '#b45309', // amber-700
+              border: '2px solid #f59e42', // amber-400
+              borderRadius: 16,
+              boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)',
+              padding: '18px 32px',
+              fontWeight: 600,
+              fontSize: 18,
+              textAlign: 'center',
+              transition: 'opacity 0.5s',
+            }}
+          >
+            Please enter a quiz title before proceeding.
+          </div>
+        )}
       {/* Layout: Sidebar + Main + (optional) Right Panel */}
       <div className="flex flex-row w-full">
         {/* Fixed, full-height Sidebar with native drag-and-drop */}

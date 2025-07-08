@@ -8,8 +8,6 @@ import './FormBuilder.css';
 import Spinner from '../../components/Spinner';
 import Skeleton from '../../components/Skeleton';
 import { useToast } from '../../components/Toast';
-
-// Question components
 import LongTextQuestion from '../../components/quiz/LongTextQuestion';
 import ShortTextQuestion from '../../components/quiz/ShortTextQuestion';
 import MultipleChoiceQuestion from '../../components/quiz/MultipleChoiceQuestion';
