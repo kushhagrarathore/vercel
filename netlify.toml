@@ -1,4 +1,5 @@
 [build]
+  base = "formquiz-frontend"
   command = "npm run build"
   publish = "build"
 
