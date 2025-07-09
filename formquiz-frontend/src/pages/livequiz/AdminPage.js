@@ -108,7 +108,7 @@ export default function AdminPage() {
       .channel('participants-' + session.id)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'session_participants', filter: `session_id=eq.${session.id}` },
+        { event: '*', schema: 'public', table: 'lq_session_participants', filter: `session_id=eq.${session.id}` },
         () => fetchParticipants(session.id)
       )
       .subscribe();
@@ -132,7 +132,7 @@ export default function AdminPage() {
         return;
       }
       const { data, error } = await supabase
-        .from('live_responses')
+        .from('lq_live_responses')
         .select('selected_option_index')
         .eq('session_id', session.id)
         .eq('question_id', currentQuestion.id);
@@ -158,7 +158,7 @@ export default function AdminPage() {
       if (!session?.id || participants.length === 0) return;
       const ids = participants.map(p => p.id);
       const { data, error } = await supabase
-        .from('live_responses')
+        .from('lq_live_responses')
         .select('participant_id, points_awarded')
         .eq('session_id', session.id);
       if (!error && data) {
@@ -234,7 +234,7 @@ export default function AdminPage() {
 
   async function fetchQuizzes() {
     try {
-      const { data, error } = await supabase.from('quizzes').select('*');
+      const { data, error } = await supabase.from('lq_quizzes').select('*');
       if (error) throw error;
       setQuizzes(data || []);
       if (data && data.length > 0 && !selectedQuizId) {
@@ -248,7 +248,7 @@ export default function AdminPage() {
   async function fetchParticipants(sessionId) {
     if (!sessionId) return;
     const { data, error } = await supabase
-      .from('session_participants')
+      .from('lq_session_participants')
       .select('*')
       .eq('session_id', sessionId);
     if (error) {
@@ -266,7 +266,7 @@ export default function AdminPage() {
     try {
       const sessionCode = Math.random().toString(36).substring(2, 8).toUpperCase();
       const { data, error } = await supabase
-        .from('sessions')
+        .from('lq_sessions')
         .insert([
           {
             code: sessionCode,
@@ -304,7 +304,7 @@ export default function AdminPage() {
       timerEnd.setSeconds(timerEnd.getSeconds() + (currentQuestion.timer || 20));
 
       await supabase
-        .from('sessions')
+        .from('lq_sessions')
         .update({
           phase: 'question',
           timer_end: timerEnd.toISOString(),
@@ -335,7 +335,7 @@ export default function AdminPage() {
 
     try {
       await supabase
-        .from('sessions')
+        .from('lq_sessions')
         .update({
           is_live: false,
           phase: 'ended',
@@ -351,7 +351,7 @@ export default function AdminPage() {
   async function removeParticipant(participantId) {
     try {
       await supabase
-        .from('session_participants')
+        .from('lq_session_participants')
         .delete()
         .eq('id', participantId);
 
