@@ -359,7 +359,7 @@ export default function QuestionsPage() {
         setSelectedQuizId(data.id);
         // Save all current questions to lq_questions
         for (const [i, q] of questions.entries()) {
-          await supabase.from('lq_questions').update({ quiz_id: data.id, slide_index: i }).eq('id', q.id);
+          await supabase.from('lq_questions').update({ quiz_id: data.id, order_index: i }).eq('id', q.id);
         }
         setSuccessMessage('Draft created!');
       } else {
@@ -374,9 +374,9 @@ export default function QuestionsPage() {
           await supabase.from('lq_questions').delete().in('id', deletedQuestionIds);
           setDeletedQuestionIds([]);
         }
-        // Update slide_index/order for remaining questions
+        // Update order_index for remaining questions
         for (const [i, q] of questions.entries()) {
-          await supabase.from('lq_questions').update({ slide_index: i }).eq('id', q.id);
+          await supabase.from('lq_questions').update({ order_index: i }).eq('id', q.id);
         }
         setSuccessMessage('Draft saved!');
       }
@@ -432,7 +432,7 @@ export default function QuestionsPage() {
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold"
             onClick={() => navigate('/Admin')}
           >
-            Go to Admin Page →
+            Start Quiz →
           </button>
           <button
             type="button"

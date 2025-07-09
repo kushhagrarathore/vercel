@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../../supabase.js';
 import { useQuiz } from '../../pages/livequiz/QuizContext';
 
@@ -6,6 +7,7 @@ export default function QuizPage() {
   const { session, setSession } = useQuiz();
   const [username, setUsername] = useState('');
   const [sessionCode, setSessionCode] = useState('');
+  const [searchParams] = useSearchParams();
   const [participant, setParticipant] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
@@ -18,6 +20,15 @@ export default function QuizPage() {
   const [pointsEarned, setPointsEarned] = useState(null);
   const [liveScore, setLiveScore] = useState(null);
   const [cumulativeScore, setCumulativeScore] = useState(0);
+
+  // Auto-fill session code from URL query param 'code' on mount
+  useEffect(() => {
+    const codeFromUrl = searchParams.get('code');
+    if (codeFromUrl && !sessionCode) {
+      setSessionCode(codeFromUrl);
+    }
+    // eslint-disable-next-line
+  }, [searchParams]);
 
   useEffect(() => {
     if (!participant?.id) return;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabase.js';
 import { useQuiz } from '../../pages/livequiz/QuizContext';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function AdminPage() {
   const {
@@ -410,6 +411,19 @@ export default function AdminPage() {
             {presentationMode ? 'Exit Presentation Mode' : 'Presentation Mode'}
           </button>
         </div>
+        {/* QR Code for user response page */}
+        {session?.code && (
+          <div className="flex flex-col items-center mb-6">
+            <span className="font-semibold text-gray-700 mb-2">Join as Participant:</span>
+            <QRCodeSVG
+              value={`${window.location.origin}/quiz/user?code=${session.code}`}
+              size={160}
+              level="H"
+              includeMargin={true}
+            />
+            <span className="mt-2 text-sm text-gray-500 break-all">{`${window.location.origin}/quiz/user?code=${session.code}`}</span>
+          </div>
+        )}
 
         {/* Quiz Start Flow: After creating session, show code, participant list, and Start Quiz button */}
         {waitingToStart && session ? (
