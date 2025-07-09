@@ -335,7 +335,8 @@ export default function AdminPage() {
   // Handler for 'Next' button on leaderboard
   async function handleLeaderboardNext() {
     if (currentQuestionIndex >= questions.length - 1) {
-      await endQuiz();
+      // Show podium leaderboard after last question
+      setShowPodium(true);
       return;
     }
     const nextIndex = currentQuestionIndex + 1;
@@ -386,6 +387,63 @@ export default function AdminPage() {
     }
   }
 
+  // Podium state
+  const [showPodium, setShowPodium] = useState(false);
+
+  // Podium leaderboard rendering
+  const renderPodium = () => {
+    // Get top 3 participants by score
+    const sorted = participants
+      .map(p => ({ ...p, score: participantScores[p.id] || 0 }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+    // Pad to always have 3 slots
+    while (sorted.length < 3) sorted.push(null);
+    // Podium heights for 1st, 2nd, 3rd
+    const heights = [120, 80, 60];
+    const places = ['1st', '2nd', '3rd'];
+    const colors = ['bg-yellow-300', 'bg-gray-300', 'bg-amber-400'];
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
+        <div className="w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl p-12 animate-fade-in border border-gray-200 flex flex-col items-center">
+          <h3 className="text-4xl font-extrabold text-gray-800 mb-10 text-center tracking-wide drop-shadow">🏆 Podium</h3>
+          <div className="flex flex-row items-end justify-center gap-8 w-full mb-8">
+            {/* 2nd place */}
+            <div className="flex flex-col items-center flex-1">
+              <div className={`w-24 h-[${heights[1]}px] rounded-t-xl ${colors[1]} flex flex-col items-center justify-end shadow-md`} style={{height:heights[1], minHeight:heights[1]}}>
+                <span className="text-2xl font-bold text-gray-700 mt-2">{places[1]}</span>
+                <span className="text-lg font-medium text-gray-700 mb-2">{sorted[1]?.username || '—'}</span>
+                <span className="text-lg font-semibold text-gray-600 mb-4">{sorted[1]?.score ?? '—'}</span>
+              </div>
+            </div>
+            {/* 1st place */}
+            <div className="flex flex-col items-center flex-1">
+              <div className={`w-28 h-[${heights[0]}px] rounded-t-xl ${colors[0]} flex flex-col items-center justify-end shadow-lg border-4 border-yellow-400`} style={{height:heights[0], minHeight:heights[0]}}>
+                <span className="text-3xl font-extrabold text-yellow-700 mt-2">{places[0]}</span>
+                <span className="text-xl font-bold text-gray-800 mb-2">{sorted[0]?.username || '—'}</span>
+                <span className="text-xl font-bold text-gray-700 mb-4">{sorted[0]?.score ?? '—'}</span>
+              </div>
+            </div>
+            {/* 3rd place */}
+            <div className="flex flex-col items-center flex-1">
+              <div className={`w-24 h-[${heights[2]}px] rounded-t-xl ${colors[2]} flex flex-col items-center justify-end shadow-md`} style={{height:heights[2], minHeight:heights[2]}}>
+                <span className="text-2xl font-bold text-gray-700 mt-2">{places[2]}</span>
+                <span className="text-lg font-medium text-gray-700 mb-2">{sorted[2]?.username || '—'}</span>
+                <span className="text-lg font-semibold text-gray-600 mb-4">{sorted[2]?.score ?? '—'}</span>
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowPodium(false)}
+            className="mt-8 px-8 py-3 bg-gray-700 text-white rounded-xl font-bold text-xl shadow hover:bg-gray-800 transition-all"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return <div className="p-4">Loading...</div>;
   }
@@ -400,6 +458,18 @@ export default function AdminPage() {
       className={`min-h-screen min-w-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-purple-100 font-sans transition-all duration-500 ${presentationMode ? 'fixed inset-0 w-screen h-screen z-50 p-0 m-0 overflow-hidden' : 'px-2 sm:px-4'}`}
       style={presentationMode ? { margin: 0, padding: 0 } : {}}
     >
+      {/* Enter Presentation Mode Button */}
+      {!presentationMode && (
+        <div className="fixed top-4 right-4 z-40">
+          <button
+            onClick={() => setPresentationMode(true)}
+            className="px-6 py-2 bg-blue-700 text-white rounded-lg font-semibold shadow hover:bg-blue-900 transition-all text-base border border-blue-900"
+            title="Enter Presentation Mode (Fullscreen)"
+          >
+            Enter Presentation Mode
+          </button>
+        </div>
+      )}
       {/* Fixed Presentation Mode Top Bar */}
       {presentationMode && (
         <div className="fixed top-0 left-0 w-full z-50 bg-white/90 shadow-md flex items-center justify-between px-8 py-3 gap-4"
@@ -535,7 +605,7 @@ export default function AdminPage() {
         ) : (
           <div className="space-y-8">
             {/* Show leaderboard only, hide question/response containers when leaderboard is visible */}
-            {showLeaderboard ? (
+            {showPodium ? renderPodium() : showLeaderboard ? (
               <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
                 <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-12 animate-fade-in border border-gray-200">
                   <h3 className="text-3xl font-bold text-gray-800 mb-8 text-center tracking-wide">Leaderboard</h3>
