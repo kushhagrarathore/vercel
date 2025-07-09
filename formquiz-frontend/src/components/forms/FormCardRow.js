@@ -59,9 +59,9 @@ const FormCardRow = ({
   const handleResults = (e) => {
     e.stopPropagation();
     if (isForm) {
-      navigate(`/results/${formId}`);
+      navigate(`/forms/${formId}/results`);
     } else {
-      navigate(`/quiz/${formId}?tab=results`);
+      navigate(`/quiz/${formId}/results`);
     }
   };
 
@@ -294,6 +294,9 @@ const FormCardRow = ({
             <button className="card-action-btn edit" title="Preview" onClick={handlePreviewOnly} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 18, cursor: 'pointer' }}>
               <FaEye />
             </button>
+            <button className="card-action-btn results" title="Results" onClick={handleResults} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#22c55e', fontSize: 18, cursor: 'pointer' }}>
+              <FaChartBar />
+            </button>
             <button className="card-action-btn share" title={copied ? 'Copied!' : fullLink} onClick={handleShare} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: 18, cursor: 'pointer' }}>
               {copied ? 'Copied!' : <FaLink />}
             </button>
@@ -383,6 +386,9 @@ const FormCardRow = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginLeft: 18 }}>
           <button className="card-action-btn edit" title="Preview" onClick={handlePreviewOnly} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 18, cursor: 'pointer' }}>
             <FaEye />
+          </button>
+          <button className="card-action-btn results" title="Results" onClick={handleResults} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#22c55e', fontSize: 18, cursor: 'pointer' }}>
+            <FaChartBar />
           </button>
           <button className="card-action-btn share" title={copied ? 'Copied!' : fullLink} onClick={handleShare} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: 18, cursor: 'pointer' }}>
             {copied ? 'Copied!' : <FaLink />}

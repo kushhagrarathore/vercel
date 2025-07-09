@@ -49,6 +49,91 @@ function calculateScore(slides, userAnswers) {
   return score;
 }
 
+// Enhanced Results UI CSS
+const resultsStyles = `
+.results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.result-card {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgba(44,62,80,0.08);
+  padding: 18px 22px;
+  border: 1px solid #e5e7eb;
+}
+.question-text {
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: #23272f;
+  font-size: 1.1rem;
+}
+.q-number {
+  color: #4a6bff;
+  font-weight: 700;
+  margin-right: 6px;
+}
+.options-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.option {
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  color: #23272f;
+  font-size: 1rem;
+  margin-bottom: 2px;
+  border: 1px solid transparent;
+  transition: background 0.2s, color 0.2s;
+}
+.option.correct {
+  background: #d1fae5;
+  color: #059669;
+  border-color: #059669;
+  font-weight: 700;
+}
+.option.wrong {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #b91c1c;
+  font-weight: 700;
+}
+.option.correct-answer {
+  background: #fef9c3;
+  color: #b45309;
+  border-color: #b45309;
+  font-weight: 700;
+}
+.your-answer {
+  font-weight: 500;
+  margin-top: 6px;
+}
+.your-answer .correct {
+  color: #059669;
+}
+.your-answer .wrong {
+  color: #b91c1c;
+}
+.correct-answer {
+  margin-top: 4px;
+  color: #059669;
+  font-weight: 500;
+}
+`;
+if (typeof document !== 'undefined' && !document.getElementById('results-enhanced-css')) {
+  const style = document.createElement('style');
+  style.id = 'results-enhanced-css';
+  style.innerHTML = resultsStyles;
+  document.head.appendChild(style);
+}
+
 export default function LiveQuizUser() {
   const query = useQuery();
   const quizId = query.get("quizId");
@@ -491,23 +576,65 @@ export default function LiveQuizUser() {
                   </div>
                   <div className="text-left max-w-xl mx-auto mt-8">
                     <h4 className="text-xl font-bold mb-4" style={{ color: customization.textColor }}>Your Responses</h4>
-                    <ol className="space-y-4">
+                    <ol className="results-list">
                       {slides.map((slide, idx) => {
                         const userAnswer = userAnswers[idx];
                         let answerDisplay = '';
+                        let isCorrect = false;
+                        let correctDisplay = '';
+                        const correct = Array.isArray(slide.correct_answers) ? slide.correct_answers : [];
                         if (slide.type === 'multiple' || slide.type === 'true_false') {
-                          answerDisplay = typeof userAnswer?.selectedIndex === 'number' && slide.options && slide.options[userAnswer.selectedIndex] !== undefined
-                            ? slide.options[userAnswer.selectedIndex]
-                            : 'No answer';
+                          if (typeof userAnswer?.selectedIndex === 'number' && slide.options && slide.options[userAnswer.selectedIndex] !== undefined) {
+                            answerDisplay = slide.options[userAnswer.selectedIndex];
+                          } else {
+                            answerDisplay = 'No answer';
+                          }
+                          isCorrect = userAnswer && typeof userAnswer.selectedIndex === 'number' && correct.includes(userAnswer.selectedIndex);
+                          if (!isCorrect && correct.length > 0 && slide.options) {
+                            correctDisplay = correct.map(i => slide.options[i]).join(', ');
+                          }
                         } else if (slide.type === 'one_word') {
                           answerDisplay = userAnswer?.text ? userAnswer.text : 'No answer';
+                          isCorrect = userAnswer && typeof userAnswer.text === 'string' && userAnswer.text.trim() !== '' && correct.some(ans => typeof ans === 'string' && ans.trim().replace(/\s+/g, ' ').toLowerCase() === userAnswer.text.trim().replace(/\s+/g, ' ').toLowerCase());
+                          if (!isCorrect && correct.length > 0) {
+                            correctDisplay = correct.join(', ');
+                          }
                         } else {
                           answerDisplay = 'No answer';
                         }
                         return (
-                          <li key={slide.id || idx} className="mb-2 p-4 rounded-lg bg-gray-50 border">
-                            <div className="font-semibold mb-1" style={{ color: customization.textColor }}>Q{idx + 1}: {slide.question}</div>
-                            <div><span className="font-medium">Your Answer:</span> {answerDisplay}</div>
+                          <li key={slide.id || idx} className="result-card">
+                            <div className="question-text"><span className="q-number">Q{idx + 1}:</span> {slide.question}</div>
+                            {slide.options && (slide.type === 'multiple' || slide.type === 'true_false') && (
+                              <div className="options-list">
+                                {slide.options.map((opt, i) => (
+                                  <div
+                                    key={i}
+                                    className={
+                                      'option' +
+                                      (userAnswer?.selectedIndex === i ? (isCorrect ? ' correct' : ' wrong') : '') +
+                                      (correct.includes(i) && !isCorrect ? ' correct-answer' : '')
+                                    }
+                                  >
+                                    {opt}
+                                    {userAnswer?.selectedIndex === i && (isCorrect ? ' ✔️' : ' ❌')}
+                                    {correct.includes(i) && !isCorrect && ' ✓'}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {slide.type === 'one_word' && (
+                              <div>
+                                <span className="your-answer">
+                                  Your Answer: <span className={isCorrect ? 'correct' : 'wrong'}>{answerDisplay} {isCorrect ? '✔️' : '❌'}</span>
+                                </span>
+                                {!isCorrect && correctDisplay && (
+                                  <div className="correct-answer">
+                                    Correct Answer: <span>{correctDisplay}</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </li>
                         );
                       })}

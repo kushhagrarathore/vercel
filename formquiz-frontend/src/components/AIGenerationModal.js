@@ -4,10 +4,14 @@ import { FaRobot, FaSpinner, FaTimes } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from './Toast';
 import { generateQuestions } from '../utils/generateQuestions';
+import { supabase } from '../supabase';
+import { QRCodeSVG } from 'qrcode.react';
 
 const AIGenerationModal = ({ isOpen, onClose }) => {
   const [topic, setTopic] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const [quizUrl, setQuizUrl] = useState('');
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -20,9 +24,7 @@ const AIGenerationModal = ({ isOpen, onClose }) => {
     setIsGenerating(true);
     try {
       const sessionCode = `ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
       let result;
-      
       if (process.env.NODE_ENV === 'production') {
         // Use API route in production (Vercel)
         const apiUrl = `${window.location.origin}/api/generate`;
@@ -36,9 +38,7 @@ const AIGenerationModal = ({ isOpen, onClose }) => {
             session_code: sessionCode,
           }),
         });
-
         result = await response.json();
-
         if (!response.ok) {
           throw new Error(result.error || 'Failed to generate questions');
         }
@@ -56,16 +56,40 @@ const AIGenerationModal = ({ isOpen, onClose }) => {
         toast('Quiz generated successfully!', 'success');
         // Extract quiz_id from the first question (all should have the same quiz_id)
         const quizId = result.data && result.data.length > 0 ? result.data[0].quiz_id : undefined;
-        // Navigate to the quiz editor with the generated questions and quizId
-        navigate('/quiz', { 
-          state: { 
-            aiGenerated: true, 
-            quizId, // Pass the UUID quiz ID
-            topic: topic.trim(),
-            questions: result.data 
-          } 
-        });
-        onClose();
+        // Save quiz to Supabase
+        const { data: quizInsert, error: quizError } = await supabase
+          .from('quizzes')
+          .insert([
+            {
+              id: quizId,
+              title: topic.trim(),
+              description: `AI generated quiz on ${topic.trim()}`,
+              is_active: true,
+              is_published: false,
+              created_at: new Date().toISOString(),
+              customization_settings: {},
+            },
+          ]);
+        if (quizError) {
+          throw new Error('Failed to save quiz to Supabase');
+        }
+        // Save questions to Supabase
+        for (const q of result.data) {
+          const { error: qError } = await supabase
+            .from('questions')
+            .insert([{ ...q, form_id: null, quiz_id: quizId }]);
+          if (qError) {
+            throw new Error('Failed to save questions to Supabase');
+          }
+        }
+        // Generate and save quiz URL
+        const url = `/quiz/${quizId}`;
+        await supabase.from('quizzes').update({ form_url: url }).eq('id', quizId);
+        setQuizUrl(window.location.origin + url);
+        setShowQR(true);
+        // Optionally, navigate to the quiz editor or dashboard
+        // navigate(url);
+        // onClose();
       } else {
         throw new Error(result.error || 'Generation failed');
       }
@@ -99,6 +123,23 @@ const AIGenerationModal = ({ isOpen, onClose }) => {
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           >
+            {/* Show QR code and URL after creation */}
+            {showQR ? (
+              <div className="flex flex-col items-center justify-center gap-4">
+                <h2 className="text-xl font-bold text-gray-800">Quiz Created!</h2>
+                <QRCodeSVG value={quizUrl} size={120} />
+                <div className="mt-2 text-blue-700 break-all text-center">
+                  <a href={quizUrl} target="_blank" rel="noopener noreferrer" className="underline">{quizUrl}</a>
+                </div>
+                <button
+                  onClick={() => { setShowQR(false); onClose(); }}
+                  className="mt-4 bg-blue-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-600 transition-all"
+                >
+                  Close
+                </button>
+              </div>
+            ) : (
+            <>
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-2 rounded-lg">
@@ -168,6 +209,8 @@ const AIGenerationModal = ({ isOpen, onClose }) => {
                 </button>
               </div>
             </div>
+            </>
+            )}
           </motion.div>
         </motion.div>
       )}

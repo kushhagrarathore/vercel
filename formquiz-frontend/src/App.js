@@ -24,6 +24,7 @@ import JoinQuiz from './pages/livequiz/JoinQuiz'; // Atharva branch
 import Leaderboard from './pages/livequiz/Leaderboard'; // Atharva branch
 import LiveQuiz from './pages/livequiz/LiveQuiz'; // Atharva branch
 import AdminPage from './pages/livequiz/AdminPage';
+import QuizResultsPage from './pages/livequiz/ResultsPage';
 
 function App() {
   return (
@@ -46,7 +47,7 @@ function App() {
             <Route path="/public/:formId" element={<FormView />} />
             <Route path="/respond/:formId" element={<ResponsePage />} />
             <Route path="/results/:formId" element={<ResultsPage />} />
-            <Route path="/form/:formId/results" element={<ViewResponses />} />
+            <Route path="/forms/:formId/results" element={<ViewResponses />} />
             <Route path="/view-responses" element={<ViewResponses />} />
             <Route path="/userend" element={<UserEnd />} />
 
@@ -60,6 +61,7 @@ function App() {
             <Route path="/quiz/results/:quizId" element={<ResultsPage />} />
             <Route path="/quiz/fill/:quizId" element={<QuizFillPage />} />
             <Route path="/quiz/edit/:quizId" element={<Quiz />} />
+            <Route path="/quiz/:quizId/results" element={<QuizResultsPage />} />
 
             {/* Live Quiz Routes */}
             <Route path="/join/:quizId" element={<JoinQuiz />} />
