@@ -30,6 +30,7 @@ export default function AdminPage() {
   const presentationRef = useRef(null);
   const [waitingToStart, setWaitingToStart] = useState(false);
   const [justStartedSession, setJustStartedSession] = useState(false);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
 
   // Customization defaults (copy from QuestionsPage.js)
   const settingsDefaults = {
@@ -411,27 +412,26 @@ export default function AdminPage() {
             {presentationMode ? 'Exit Presentation Mode' : 'Presentation Mode'}
           </button>
         </div>
-        {/* QR Code for user response page */}
-        {session?.code && (
-          <div className="flex flex-col items-center mb-6">
-            <span className="font-semibold text-gray-700 mb-2">Join as Participant:</span>
-            <QRCodeSVG
-              value={`${window.location.origin}/quiz/user?code=${session.code}`}
-              size={160}
-              level="H"
-              includeMargin={true}
-            />
-            <span className="mt-2 text-sm text-gray-500 break-all">{`${window.location.origin}/quiz/user?code=${session.code}`}</span>
-          </div>
-        )}
-
         {/* Quiz Start Flow: After creating session, show code, participant list, and Start Quiz button */}
-        {waitingToStart && session ? (
+        {waitingToStart && session && !presentationMode ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
-            <div className="w-full max-w-lg mx-auto bg-white/80 rounded-xl shadow-lg p-6 animate-fade-in">
+            <div className="w-full max-w-lg mx-auto bg-white/80 rounded-xl shadow-lg p-6 animate-fade-in relative">
               <h2 className="text-2xl font-bold text-blue-700 mb-4 text-center">Quiz Lobby</h2>
               <div className="mb-4 text-center">
                 <span className="text-lg font-semibold text-gray-800">Quiz Code: <span className="text-blue-700 text-2xl font-bold">{session.code}</span></span>
+              </div>
+              {/* QR Code for user response page, inside lobby details */}
+              <div className="flex flex-col items-center mb-4 cursor-pointer group" onClick={() => setQrModalOpen(true)} title="Click to enlarge QR code">
+                <span className="font-semibold text-gray-700 mb-2">Join as Participant:</span>
+                <QRCodeSVG
+                  value={`${window.location.origin}/quiz/user?code=${session.code}`}
+                  size={120}
+                  level="H"
+                  includeMargin={true}
+                  className="transition-transform group-hover:scale-105"
+                />
+                <span className="mt-2 text-xs text-gray-500 break-all">{`${window.location.origin}/quiz/user?code=${session.code}`}</span>
+                <span className="text-xs text-blue-500 mt-1">Click to enlarge</span>
               </div>
               <div className="mb-6">
                 <h3 className="font-bold mb-2 text-lg text-gray-800 text-center">Participants</h3>
@@ -456,6 +456,22 @@ export default function AdminPage() {
                   Start Quiz
                 </button>
               </div>
+              {/* QR Code Modal Overlay */}
+              {qrModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setQrModalOpen(false)}>
+                  <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center relative" onClick={e => e.stopPropagation()}>
+                    <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl font-bold" onClick={() => setQrModalOpen(false)} aria-label="Close QR code modal">&times;</button>
+                    <QRCodeSVG
+                      value={`${window.location.origin}/quiz/user?code=${session.code}`}
+                      size={320}
+                      level="H"
+                      includeMargin={true}
+                    />
+                    <span className="mt-4 text-base text-gray-700 font-semibold text-center">Scan to join as participant</span>
+                    <span className="mt-2 text-xs text-gray-500 break-all text-center">{`${window.location.origin}/quiz/user?code=${session.code}`}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         ) :
