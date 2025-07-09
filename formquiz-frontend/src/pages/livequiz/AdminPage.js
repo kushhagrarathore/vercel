@@ -31,6 +31,12 @@ export default function AdminPage() {
   const [waitingToStart, setWaitingToStart] = useState(false);
   const [justStartedSession, setJustStartedSession] = useState(false);
   const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const handleCopyLink = (url) => {
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   // Customization defaults (copy from QuestionsPage.js)
   const settingsDefaults = {
@@ -321,15 +327,32 @@ export default function AdminPage() {
   }
 
   async function nextQuestion() {
+    // Show leaderboard after results, before moving to next question
+    setShowLeaderboard(true);
+    // Wait for admin to click 'Next' on leaderboard before advancing
+  }
+
+  // Handler for 'Next' button on leaderboard
+  async function handleLeaderboardNext() {
     if (currentQuestionIndex >= questions.length - 1) {
       await endQuiz();
       return;
     }
-
     const nextIndex = currentQuestionIndex + 1;
     setCurrentQuestionIndex(nextIndex);
     setCurrentQuestion(questions[nextIndex]);
-    setQuizPhase('waiting');
+    // Update lq_sessions with new current_question_id and phase
+    if (session?.id && questions[nextIndex]?.id) {
+      await supabase
+        .from('lq_sessions')
+        .update({
+          current_question_id: questions[nextIndex].id,
+          phase: 'question',
+        })
+        .eq('id', session.id);
+    }
+    setQuizPhase('question');
+    setShowLeaderboard(false);
   }
 
   async function endQuiz() {
@@ -413,17 +436,28 @@ export default function AdminPage() {
                 <span className="text-lg font-semibold text-gray-800">Quiz Code: <span className="text-blue-700 text-2xl font-bold">{session.code}</span></span>
               </div>
               {/* QR Code for user response page, inside lobby details */}
-              <div className="flex flex-col items-center mb-4 cursor-pointer group" onClick={() => setQrModalOpen(true)} title="Click to enlarge QR code">
+              <div className="flex flex-col items-center mb-4 group" title="Click to enlarge QR code">
                 <span className="font-semibold text-gray-700 mb-2">Join as Participant:</span>
                 <QRCodeSVG
                   value={`${window.location.origin}/quiz/user?code=${session.code}`}
                   size={120}
                   level="H"
                   includeMargin={true}
-                  className="transition-transform group-hover:scale-105"
+                  className="transition-transform group-hover:scale-105 cursor-pointer"
+                  onClick={() => setQrModalOpen(true)}
                 />
-                <span className="mt-2 text-xs text-gray-500 break-all">{`${window.location.origin}/quiz/user?code=${session.code}`}</span>
-                <span className="text-xs text-blue-500 mt-1">Click to enlarge</span>
+                <button
+                  type="button"
+                  className="mt-2 text-xs text-blue-600 underline break-all hover:text-blue-800 focus:outline-none"
+                  onClick={() => handleCopyLink(`${window.location.origin}/quiz/user?code=${session.code}`)}
+                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                >
+                  {`${window.location.origin}/quiz/user?code=${session.code}`}
+                </button>
+                {copied && (
+                  <span className="text-green-600 text-xs font-semibold mt-1 animate-fade-in">Copied!</span>
+                )}
+                <span className="text-xs text-blue-500 mt-1">Click QR to enlarge, link to copy</span>
               </div>
               <div className="mb-6">
                 <h3 className="font-bold mb-2 text-lg text-gray-800 text-center">Participants</h3>
@@ -460,7 +494,17 @@ export default function AdminPage() {
                       includeMargin={true}
                     />
                     <span className="mt-4 text-base text-gray-700 font-semibold text-center">Scan to join as participant</span>
-                    <span className="mt-2 text-xs text-gray-500 break-all text-center">{`${window.location.origin}/quiz/user?code=${session.code}`}</span>
+                    <button
+                      type="button"
+                      className="mt-2 text-xs text-blue-600 underline break-all hover:text-blue-800 focus:outline-none"
+                      onClick={() => handleCopyLink(`${window.location.origin}/quiz/user?code=${session.code}`)}
+                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+                    >
+                      {`${window.location.origin}/quiz/user?code=${session.code}`}
+                    </button>
+                    {copied && (
+                      <span className="text-green-600 text-xs font-semibold mt-1 animate-fade-in">Copied!</span>
+                    )}
                   </div>
                 </div>
               )}
@@ -520,11 +564,7 @@ export default function AdminPage() {
                   </ol>
                   <div className="flex justify-center mt-4">
                     <button
-                      onClick={async () => {
-                        setShowLeaderboard(false);
-                        setShowCorrect(true);
-                        setQuizPhase('question');
-                      }}
+                      onClick={handleLeaderboardNext}
                       className="px-8 py-3 bg-gray-700 text-white rounded-xl font-bold text-xl shadow hover:bg-gray-800 transition-all"
                       style={{ minWidth: '160px' }}
                     >
