@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { FaWpforms, FaQuestionCircle } from 'react-icons/fa';
+import { FiClipboard, FiMic, FiHelpCircle, FiChevronDown } from 'react-icons/fi';
 import './navbar.css';
 
 const Navbar = ({ activeTab, onToggle }) => {
   const [name, setName] = useState('');
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
@@ -20,7 +19,6 @@ const Navbar = ({ activeTab, onToggle }) => {
           .select('name')
           .eq('id', user.id)
           .single();
-
         if (!error && data) {
           setName(data.name);
         }
@@ -48,81 +46,64 @@ const Navbar = ({ activeTab, onToggle }) => {
   const handleProfile = () => navigate('/profile');
   const handleViewPlans = () => navigate('/plans');
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const isDark = savedTheme === 'dark';
-    setIsDarkMode(isDark);
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-  }, []);
-
-  const toggleTheme = () => {
-    const newTheme = !isDarkMode;
-    setIsDarkMode(newTheme);
-    document.documentElement.setAttribute('data-theme', newTheme ? 'dark' : 'light');
-    localStorage.setItem('theme', newTheme ? 'dark' : 'light');
-  };
-
   return (
-    <div className="top-navbar">
-      <div className="navbar-left">
-        <div className="logo" style={{ fontWeight: 500, color: '#7c3aed', opacity: 0.85, letterSpacing: '-0.5px' }}>Inquizo</div>
+    <nav className="modern-navbar">
+      {/* Logo */}
+      <div className="inquizo-logo">
+        <span className="logo-icon">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+            <circle cx="16" cy="16" r="15" fill="url(#logo-gradient)" />
+            <path d="M16 10c2.2 0 3.5 1.7 3.5 3.5 0 2.3-3.5 2.3-3.5 5.5" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+            <circle cx="16" cy="23" r="1.2" fill="#fff"/>
+            <defs>
+              <linearGradient id="logo-gradient" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+                <stop stopColor="#6D5BFF"/>
+                <stop offset="1" stopColor="#FF6B81"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </span>
+        <span className="logo-text">Inquizo</span>
       </div>
 
-      <div className="navbar-right">
-        <div className="form-quiz-toggle modern-tabs">
-          <button
-            className={`tab-btn${activeTab === 'forms' ? ' active' : ''}`}
-            onClick={() => onToggle && onToggle('forms')}
-            aria-label="My Forms"
-            style={{ fontWeight: activeTab === 'forms' ? 500 : 400, letterSpacing: '-0.2px' }}
-          >
-            <FaWpforms style={{ marginRight: 6, fontSize: 18, color: activeTab === 'forms' ? '#fff' : '#7c3aed77' }} />
-            My Forms
-          </button>
-          <button
-            className={`tab-btn livequiz-switch${activeTab === 'livequiz' ? ' active' : ''}`}
-            onClick={() => onToggle && onToggle('livequiz')}
-            aria-label="My Livequiz"
-            style={{ fontWeight: activeTab === 'livequiz' ? 500 : 400, color: activeTab === 'livequiz' ? '#ef4444' : '#ef444499', letterSpacing: '-0.2px' }}
-          >
-            <span style={{ marginRight: 6, fontSize: 18, color: activeTab === 'livequiz' ? '#ef4444' : '#ef444477' }}>🔴</span>
-            My Livequiz
-          </button>
-          <button
-            className={`tab-btn myquizzes${activeTab === 'quizzes' ? ' active' : ''}`}
-            onClick={() => onToggle && onToggle('quizzes')}
-            aria-label="My Quizzes"
-            style={{ fontWeight: activeTab === 'quizzes' ? 500 : 400, color: activeTab === 'quizzes' ? '#7c3aed' : '#7c3aed99', letterSpacing: '-0.2px' }}
-          >
-            <FaQuestionCircle style={{ marginRight: 6, fontSize: 18, color: activeTab === 'quizzes' ? '#7c3aed' : '#7c3aed77' }} />
-            My Quizzes
-          </button>
-        </div>
+      {/* Navigation Pills */}
+      <div className="nav-pills">
+        <button className={`nav-pill${activeTab === 'forms' ? ' active' : ''}`} onClick={() => onToggle && onToggle('forms')}>
+          <span className="nav-icon"><FiClipboard /></span>
+          My Forms
+        </button>
+        <button className={`nav-pill${activeTab === 'livequiz' ? ' active' : ''}`} onClick={() => onToggle && onToggle('livequiz')}>
+          <span className="nav-icon"><FiMic /></span>
+          My Livequiz
+        </button>
+        <button className={`nav-pill${activeTab === 'quizzes' ? ' active' : ''}`} onClick={() => onToggle && onToggle('quizzes')}>
+          <span className="nav-icon"><FiHelpCircle /></span>
+          My Quizzes
+        </button>
+      </div>
 
-        <div className="profile-wrapper" ref={dropdownRef}>
-          <div className="profile-section" onClick={() => setDropdownOpen(!dropdownOpen)}>
-            <span className="username" style={{ fontWeight: 400, color: '#3b3663' }}>{name || 'User'}</span>
-            <img
-              src={`https://api.dicebear.com/7.x/initials/svg?seed=${name || 'User'}`}
-              alt="Profile"
-              className="profile-pic"
-              style={{ border: '1px solid #ede9fe', opacity: 0.92 }}
-            />
-            <svg className="dropdown-icon" width="16" height="16" viewBox="0 0 20 20">
-              <path d="M5 7l5 5 5-5H5z" fill="currentColor" />
-            </svg>
+      {/* User Profile */}
+      <div className="user-profile" ref={dropdownRef}>
+        <span className="user-name">{name || 'User'}</span>
+        <span className="user-avatar-ring">
+          <img
+            src={`https://api.dicebear.com/7.x/initials/svg?seed=${name || 'User'}`}
+            alt="Profile"
+            className="user-avatar"
+          />
+        </span>
+        <span className="dropdown-arrow" onClick={() => setDropdownOpen(!dropdownOpen)}>
+          <FiChevronDown />
+        </span>
+        {dropdownOpen && (
+          <div className="dropdown-menu">
+            <div className="dropdown-item" onClick={handleProfile}>Profile</div>
+            <div className="dropdown-item" onClick={handleViewPlans}>View Plans</div>
+            <div className="dropdown-item" onClick={handleLogout}>Logout</div>
           </div>
-
-          {dropdownOpen && (
-            <div className="dropdown-menu">
-              <div className="dropdown-item" onClick={handleProfile} style={{ fontWeight: 400 }}>Profile</div>
-              <div className="dropdown-item" onClick={handleViewPlans} style={{ fontWeight: 400 }}>View Plans</div>
-              <div className="dropdown-item" onClick={handleLogout} style={{ fontWeight: 400 }}>Logout</div>
-            </div>
-          )}
-        </div>
+        )}
       </div>
-    </div>
+    </nav>
   );
 };
 

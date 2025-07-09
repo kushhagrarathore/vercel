@@ -582,3 +582,46 @@ input[type="text"].copy-link {
   top: 50%;
   transform: translateY(-50%) rotate(-90deg);
 }
+
+.formcard-checkbox {
+  position: static;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  border: 2.5px solid #e0e0e0;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 2px #e0e7ef22;
+  transition: background 0.18s, border 0.18s, transform 0.18s;
+  z-index: 20;
+  outline: none;
+  padding: 0;
+  user-select: none;
+  margin-top: 2px;
+}
+.formcard-checkbox.selected {
+  border: 2.5px solid #6366f1;
+  background: #6366f1;
+  box-shadow: 0 2px 8px #a5b4fc33;
+  transform: scale(1.08);
+}
+.formcard-checkbox:focus {
+  box-shadow: 0 0 0 2px #6366f1;
+}
+.formcard-checkbox:hover {
+  border: 2.5px solid #6366f1;
+  background: #f3f4f6;
+}
+
+.formcard-topright-controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 20;
+}

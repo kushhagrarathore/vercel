@@ -28,6 +28,7 @@ const Profile = () => {
 
   // Simulated stats (replace with real fetch if needed)
   const [stats, setStats] = useState({ level: 1, quizzes: 0, achievements: 0 });
+  const [profileCompletion, setProfileCompletion] = useState(0);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -39,9 +40,34 @@ const Profile = () => {
             name: user.user_metadata?.name || '',
             email: user.email,
           });
+          // Fetch stats from user_stats table
+          const { data: statsData } = await supabase
+            .from('user_stats')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+          let quizzes = 0, level = 1, achievements = 0;
+          if (statsData) {
+            quizzes = (statsData.quizzes_created || 0) + (statsData.quizzes_completed || 0);
+            level = Math.floor(quizzes / 5) + 1;
+            achievements = statsData.achievements || 0;
+          }
+          setStats({ level, quizzes, achievements });
+          // Fetch avatar config from profiles table
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('avatar_config, email_verified')
+            .eq('id', user.id)
+            .single();
+          // Calculate profile completion
+          let completion = 0;
+          if (user.user_metadata?.name) completion += 20;
+          if (user.email && (profileData?.email_verified || user.email_confirmed_at)) completion += 20;
+          if (profileData?.avatar_config && Object.keys(profileData.avatar_config).length > 0) completion += 20;
+          if (quizzes > 0) completion += 20;
+          if (achievements > 0) completion += 20;
+          setProfileCompletion(completion);
         }
-        // Fetch stats (replace with real fetch if needed)
-        setStats({ level: 1, quizzes: 0, achievements: 0 });
       } catch (err) {
         toast('Failed to load profile', 'error');
       } finally {
@@ -79,7 +105,8 @@ const Profile = () => {
       width: 280,
       minHeight: '100vh',
       background: 'linear-gradient(120deg, #ede9fe 60%, #f8fafc 100%)',
-      boxShadow: '2px 0 16px #a5b4fc11',
+      boxShadow: '2px 0 24px #a5b4fc22',
+      borderRight: '2px solid #ede9fe',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -243,21 +270,93 @@ const Profile = () => {
           <div style={{ marginBottom: 32, textAlign: 'left' }}>
             <div style={{ fontWeight: 900, fontSize: 32, color: '#5b21b6', marginBottom: 4 }}>Welcome, {profile.name || 'User'}!</div>
             <div style={{ color: '#6366f1', fontWeight: 500, fontSize: 18, marginBottom: 8 }}>This is your personal profile hub. Complete your profile for a better experience!</div>
-            <div style={{ color: '#7c3aed', fontWeight: 600, fontSize: 16, marginBottom: 0 }}>Profile Completion: <span style={{ color: '#6366f1' }}>80%</span></div>
+            {/* Profile Completion Progress Bar */}
+            <div style={{ margin: '12px 0 24px 0' }}>
+              <div style={{ color: '#7c3aed', fontWeight: 600, fontSize: 16, marginBottom: 6 }}>
+                Profile Completion: <span style={{ color: '#6366f1' }}>{profileCompletion}%</span>
+              </div>
+              <div style={{
+                width: '100%',
+                height: 12,
+                background: '#ede9fe',
+                borderRadius: 8,
+                overflow: 'hidden',
+                boxShadow: '0 1px 4px #a5b4fc22'
+              }}>
+                <div style={{
+                  width: `${profileCompletion}%`,
+                  height: '100%',
+                  background: 'linear-gradient(90deg, #6D5BFF 0%, #FF6B81 100%)',
+                  borderRadius: 8,
+                  transition: 'width 0.5s cubic-bezier(.4,2,.6,1)'
+                }} />
+              </div>
+            </div>
           </div>
+          {/* Stats Cards with Hover Effects */}
           <div style={{ display: 'flex', gap: 24, marginBottom: 36 }}>
-            <div style={{ background: '#fff', borderRadius: 12, padding: '14px 28px', fontWeight: 700, color: '#7c3aed', fontSize: 18, boxShadow: '0 1px 4px #a5b4fc11' }}>🎉 Level {stats.level}</div>
-            <div style={{ background: '#fff', borderRadius: 12, padding: '14px 28px', fontWeight: 700, color: '#6366f1', fontSize: 18, boxShadow: '0 1px 4px #a5b4fc11' }}>🚀 {stats.quizzes} Quizzes</div>
-            <div style={{ background: '#fff', borderRadius: 12, padding: '14px 28px', fontWeight: 700, color: '#5b21b6', fontSize: 18, boxShadow: '0 1px 4px #a5b4fc11' }}>🏆 {stats.achievements} Achievements</div>
+            {[
+              { icon: '🎉', label: `Level ${stats.level}`, color: '#7c3aed' },
+              { icon: '🚀', label: `${stats.quizzes} Quizzes`, color: '#6366f1' },
+              { icon: '🏆', label: `${stats.achievements} Achievements`, color: '#5b21b6' }
+            ].map((item, idx) => (
+              <div
+                key={idx}
+                style={{
+                  background: '#fff',
+                  borderRadius: 16,
+                  padding: '18px 32px',
+                  fontWeight: 700,
+                  color: item.color,
+                  fontSize: 20,
+                  boxShadow: '0 2px 12px #a5b4fc22',
+                  transition: 'transform 0.18s, box-shadow 0.18s',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.transform = 'scale(1.06) translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 24px #a5b4fc33';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.transform = '';
+                  e.currentTarget.style.boxShadow = '0 2px 12px #a5b4fc22';
+                }}
+              >
+                <span style={{ fontSize: 28 }}>{item.icon}</span>
+                {item.label}
+              </div>
+            ))}
           </div>
           <form onSubmit={handleSave} style={{ zIndex: 1, position: 'relative', maxWidth: 480 }}>
             <div style={{ marginBottom: 22 }}>
               <label style={{ fontWeight: 800, fontSize: 18 }}>Name</label>
+              {/* Enhanced Input Field Example (Name) */}
               <input
                 type="text"
                 value={profile.name}
                 onChange={e => setProfile(p => ({ ...p, name: e.target.value }))}
-                style={{ width: '100%', padding: 16, borderRadius: 10, border: '1.5px solid #e0e0e0', fontSize: 18, marginTop: 8, background: '#fff' }}
+                style={{
+                  width: '100%',
+                  padding: 16,
+                  borderRadius: 12,
+                  border: '1.5px solid #e0e0e0',
+                  fontSize: 18,
+                  marginTop: 8,
+                  background: '#fff',
+                  boxShadow: '0 1px 4px #a5b4fc11',
+                  transition: 'border 0.2s, box-shadow 0.2s'
+                }}
+                onFocus={e => {
+                  e.target.style.border = '1.5px solid #7c3aed';
+                  e.target.style.boxShadow = '0 0 0 2px #ede9fe';
+                }}
+                onBlur={e => {
+                  e.target.style.border = '1.5px solid #e0e0e0';
+                  e.target.style.boxShadow = '0 1px 4px #a5b4fc11';
+                }}
                 disabled={loading}
                 autoFocus
               />
@@ -282,12 +381,25 @@ const Profile = () => {
                 disabled={loading}
               />
             </div>
+            {/* Animated Gradient Save Button */}
             <button
               type="submit"
-              style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 10, padding: '18px 0', fontWeight: 900, fontSize: 20, cursor: 'pointer', width: '100%', boxShadow: '0 2px 8px #6366f122', transition: 'background 0.2s', marginTop: 12, letterSpacing: '0.03em' }}
+              style={{
+                background: 'linear-gradient(90deg, #6D5BFF 0%, #FF6B81 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 12,
+                padding: '18px 0',
+                fontWeight: 900,
+                fontSize: 20,
+                cursor: 'pointer',
+                width: '100%',
+                boxShadow: '0 2px 12px #6D5BFF22',
+                transition: 'background 0.2s, transform 0.15s'
+              }}
+              onMouseOver={e => { e.target.style.transform = 'scale(1.03)'; }}
+              onMouseOut={e => { e.target.style.transform = ''; }}
               disabled={loading}
-              onMouseOver={e => { e.target.style.background = '#4338ca'; }}
-              onMouseOut={e => { e.target.style.background = '#6366f1'; }}
             >
               {loading ? <Spinner size={24} /> : 'Save Changes'}
             </button>

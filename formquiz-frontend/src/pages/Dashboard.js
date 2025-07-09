@@ -106,6 +106,7 @@ const Dashboard = () => {
     return savedTheme === 'dark';
   });
   const [expandedCardId, setExpandedCardId] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const toast = useToast();
 
@@ -284,6 +285,36 @@ const Dashboard = () => {
     setActiveTab(tab);
   };
 
+  // Handler for selecting/deselecting a card
+  const handleSelect = (id, checked) => {
+    setSelectedIds(prev => checked ? [...prev, id] : prev.filter(x => x !== id));
+  };
+  // Handler for select all
+  const handleSelectAll = () => {
+    const ids = currentData.map(item => item.id);
+    setSelectedIds(ids);
+  };
+  const handleDeselectAll = () => setSelectedIds([]);
+  // Bulk delete
+  const handleBulkDelete = async () => {
+    if (!window.confirm('Delete selected items?')) return;
+    if (activeTab === 'forms') {
+      for (const id of selectedIds) handleDeleteForm(id);
+    } else if (activeTab === 'quizzes') {
+      for (const id of selectedIds) await handleDeleteQuiz(id);
+    } // Add livequiz delete if needed
+    setSelectedIds([]);
+  };
+  // Bulk activate/deactivate
+  const handleBulkActivate = async (activate) => {
+    if (activeTab === 'forms') {
+      for (const id of selectedIds) await handlePublishToggle(id, activate);
+    } else if (activeTab === 'quizzes') {
+      for (const id of selectedIds) await handleQuizPublishToggle(id, activate);
+    }
+    setSelectedIds([]);
+  };
+
   return (
     <div className="dashboard-animated-layout" style={{ background: isDarkMode ? '#181c24' : '#f8f9fb', minHeight: '100vh' }}>
       <Navbar activeTab={activeTab} onToggle={handleTabToggle} />
@@ -373,61 +404,90 @@ const Dashboard = () => {
             {loading ? (
               <Skeleton count={4} height={60} />
             ) : currentData.length > 0 ? (
-              currentData.map((item, idx) => (
-                <motion.div
-                  key={item.id || idx}
-                  initial={{ opacity: 0, scale: 0.96, y: 18 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 18 }}
-                  transition={{
-                    duration: 0.32,
-                    type: 'spring',
-                  }}
-                  className="dashboard-animated-card"
-                >
-                  <MemoFormCardRow
-                    view={viewMode}
-                    name={item.title}
-                    timestamp={new Date(
-                      item.created_at
-                    ).toLocaleString()}
-                    sharedWith={item.shared_with || []}
-                    link={
-                      activeTab === 'forms'
-                        ? `/form/${item.id}`
-                        : activeTab === 'quizzes'
-                        ? `/userend?quizId=${item.id}`
-                        : `/join/${item.id}`
-                    }
-                    creator={username}
-                    formId={item.id}
-                    isForm={activeTab === 'forms'}
-                    onDelete={
-                      activeTab === 'forms'
-                        ? handleDeleteForm
-                        : handleDeleteQuiz
-                    }
-                    isPublished={item.is_published}
-                    onPublishToggle={
-                      activeTab === 'forms'
-                        ? handlePublishToggle
-                        : handleQuizPublishToggle
-                    }
-                    quizType={
-                      activeTab === 'quizzes'
-                        ? item.type || 'blank'
-                        : undefined
-                    }
-                    formType={
-                      activeTab === 'forms'
-                        ? item.type || 'Forms'
-                        : undefined
-                    }
-                    expanded={expandedCardId === item.id}
-                    setExpandedCardId={setExpandedCardId}
-                  />
-                </motion.div>
-              ))
+              <>
+                {selectedIds.length > 0 && (
+                  <div style={{
+                    position: 'fixed',
+                    bottom: 32,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    background: '#fff',
+                    borderRadius: 16,
+                    boxShadow: '0 4px 24px #a5b4fc33',
+                    padding: '16px 32px',
+                    zIndex: 200,
+                    display: 'flex',
+                    gap: 18,
+                    alignItems: 'center',
+                    fontWeight: 700
+                  }}>
+                    <span>{selectedIds.length} selected</span>
+                    <button onClick={handleBulkDelete} style={{ color: '#ef4444', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Delete</button>
+                    <button onClick={() => handleBulkActivate(true)} style={{ color: '#22c55e', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Activate</button>
+                    <button onClick={() => handleBulkActivate(false)} style={{ color: '#6366f1', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Deactivate</button>
+                    <button onClick={handleSelectAll} style={{ color: '#6366f1', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Select All</button>
+                    <button onClick={handleDeselectAll} style={{ color: '#6366f1', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Clear</button>
+                  </div>
+                )}
+                {currentData.map((item, idx) => (
+                  <motion.div
+                    key={item.id || idx}
+                    initial={{ opacity: 0, scale: 0.96, y: 18 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 18 }}
+                    transition={{
+                      duration: 0.32,
+                      type: 'spring',
+                    }}
+                    className="dashboard-animated-card"
+                  >
+                    <MemoFormCardRow
+                      view={viewMode}
+                      name={item.title}
+                      timestamp={new Date(
+                        item.created_at
+                      ).toLocaleString()}
+                      sharedWith={item.shared_with || []}
+                      link={
+                        activeTab === 'forms'
+                          ? `/form/${item.id}`
+                          : activeTab === 'quizzes'
+                          ? `/userend?quizId=${item.id}`
+                          : `/join/${item.id}`
+                      }
+                      creator={username}
+                      formId={item.id}
+                      isForm={activeTab === 'forms'}
+                      onDelete={
+                        activeTab === 'forms'
+                          ? handleDeleteForm
+                          : handleDeleteQuiz
+                      }
+                      isPublished={item.is_published}
+                      onPublishToggle={
+                        activeTab === 'forms'
+                          ? handlePublishToggle
+                          : handleQuizPublishToggle
+                      }
+                      quizType={
+                        activeTab === 'quizzes'
+                          ? item.type || 'blank'
+                          : undefined
+                      }
+                      formType={
+                        activeTab === 'forms'
+                          ? item.type || 'Forms'
+                          : undefined
+                      }
+                      expanded={expandedCardId === item.id}
+                      setExpandedCardId={setExpandedCardId}
+                      titleStyle={{ fontWeight: 400, color: '#222' }}
+                      selected={selectedIds.includes(item.id)}
+                      onSelect={handleSelect}
+                    />
+                  </motion.div>
+                ))}
+              </>
             ) : (
               <motion.div
                 className="dashboard-empty-message"

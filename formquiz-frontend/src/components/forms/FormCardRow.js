@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import './FormsCardRow.css';
 import { useNavigate } from 'react-router-dom';
-import { FaEye, FaChartBar, FaTimes, FaCopy, FaLink, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaEye, FaChartBar, FaTimes, FaCopy, FaLink, FaEdit, FaTrash, FaCheck } from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
 import ReactDOM from 'react-dom';
 
@@ -30,6 +30,9 @@ const FormCardRow = ({
   formType,
   expanded,
   setExpandedCardId,
+  titleStyle, // add this prop
+  selected = false, // add selected prop
+  onSelect, // add onSelect prop
 }) => {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
@@ -117,15 +120,87 @@ const FormCardRow = ({
     }
   };
 
+  // Update ActionButtons to be minimal:
   const ActionButtons = () => (
-    <div className="card-actions-big">
-      <button className="card-action-btn" title="Preview" onClick={handlePreview} tabIndex={-1}>
+    <div className="card-actions-big" style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+      <button
+        className="card-action-btn"
+        title="Preview"
+        onClick={handlePreview}
+        tabIndex={-1}
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: 6,
+          borderRadius: 6,
+          color: '#6366f1',
+          fontSize: 18,
+          cursor: 'pointer',
+          transition: 'background 0.15s, color 0.15s',
+        }}
+        onMouseOver={e => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.color = '#4f46e5'; }}
+        onMouseOut={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#6366f1'; }}
+      >
         <FaEye size={18} />
       </button>
-      <button className="card-action-btn" title="Results" onClick={handleResults} tabIndex={-1}>
+      <button
+        className="card-action-btn"
+        title="Results"
+        onClick={handleResults}
+        tabIndex={-1}
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: 6,
+          borderRadius: 6,
+          color: '#22c55e',
+          fontSize: 18,
+          cursor: 'pointer',
+          transition: 'background 0.15s, color 0.15s',
+        }}
+        onMouseOver={e => { e.currentTarget.style.background = '#e0f2fe'; e.currentTarget.style.color = '#16a34a'; }}
+        onMouseOut={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#22c55e'; }}
+      >
         <FaChartBar size={18} />
       </button>
-      <button className="card-action-btn delete" title="Delete" onClick={handleDelete} tabIndex={-1}>
+      <button
+        className="card-action-btn"
+        title="Link"
+        onClick={handleShare}
+        tabIndex={-1}
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: 6,
+          borderRadius: 6,
+          color: '#0ea5e9',
+          fontSize: 18,
+          cursor: 'pointer',
+          transition: 'background 0.15s, color 0.15s',
+        }}
+        onMouseOver={e => { e.currentTarget.style.background = '#e0f2fe'; e.currentTarget.style.color = '#0369a1'; }}
+        onMouseOut={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#0ea5e9'; }}
+      >
+        <FaLink size={18} />
+      </button>
+      <button
+        className="card-action-btn delete"
+        title="Delete"
+        onClick={handleDelete}
+        tabIndex={-1}
+        style={{
+          background: 'none',
+          border: 'none',
+          padding: 6,
+          borderRadius: 6,
+          color: '#ef4444',
+          fontSize: 18,
+          cursor: 'pointer',
+          transition: 'background 0.15s, color 0.15s',
+        }}
+        onMouseOver={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#b91c1c'; }}
+        onMouseOut={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#ef4444'; }}
+      >
         <FaTimes size={18} />
       </button>
     </div>
@@ -271,13 +346,38 @@ const FormCardRow = ({
           borderTopLeftRadius: 18,
           borderBottomLeftRadius: 18,
         }} />
-        {/* Always show toggle switch for all types (forms, quizzes, livequizzes) */}
-        <div style={{ position: 'absolute', top: 16, right: 18, zIndex: 2 }} onClick={e => e.stopPropagation()}>
+        {/* Top-right flex container for checkbox and toggle */}
+        <div className="formcard-topright-controls">
+          <div
+            className={`formcard-checkbox${selected ? ' selected' : ''}`}
+            onClick={e => {
+              e.stopPropagation();
+              onSelect && onSelect(formId, !selected);
+            }}
+            title="Select"
+            tabIndex={0}
+            aria-checked={selected}
+            role="checkbox"
+            onKeyDown={e => {
+              if (e.key === ' ' || e.key === 'Enter') {
+                e.preventDefault();
+                onSelect && onSelect(formId, !selected);
+              }
+            }}
+          >
+            {selected && <FaCheck color="#fff" size={16} style={{ transition: 'opacity 0.18s' }} />}
+          </div>
           <ToggleSwitch />
         </div>
         <div style={{ padding: '18px 18px 12px 28px', display: 'flex', flexDirection: 'column', flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontWeight: 700, fontSize: 20, color: '#3730a3', letterSpacing: -0.5 }}>{name}</span>
+            {/* Multi-select button (circle) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              {/* Title */}
+              <div className="form-card-title" style={titleStyle || { fontWeight: 400, color: '#222' }}>{name}</div>
+            </div>
+            {/* Toggle Switch */}
+            <ToggleSwitch />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
             <span style={{
@@ -364,6 +464,25 @@ const FormCardRow = ({
           position: 'relative',
         }}
       >
+        {/* Checkbox for both views */}
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={e => onSelect && onSelect(formId, e.target.checked)}
+          style={{
+            marginLeft: 18,
+            marginRight: 18,
+            width: 18,
+            height: 18,
+            accentColor: '#6366f1',
+            cursor: 'pointer',
+            boxShadow: selected ? '0 0 0 2px #6366f1' : 'none',
+            background: selected ? '#ede9fe' : '#fff',
+            borderRadius: 4,
+            border: '1.5px solid #e0e0e0',
+          }}
+          title="Select for bulk actions"
+        />
         {/* Accent bar */}
         <div style={{
           width: 5,
