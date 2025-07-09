@@ -403,15 +403,7 @@ export default function AdminPage() {
       )}
       <div className={`w-full ${presentationMode ? 'h-full flex flex-col justify-center items-center' : 'max-w-4xl mx-auto p-2 sm:p-6'}`}
         style={presentationMode ? { maxWidth: '100vw', maxHeight: '100vh', padding: 0, marginTop: '4.5rem' } : {}}>
-        <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
-          <h1 className="text-3xl font-bold text-blue-700 tracking-tight">Quiz Admin</h1>
-          <button
-            onClick={() => setPresentationMode(m => !m)}
-            className={`px-4 py-2 rounded-lg font-semibold shadow transition-all duration-200 ${presentationMode ? 'bg-gray-700 text-white hover:bg-gray-800' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
-          >
-            {presentationMode ? 'Exit Presentation Mode' : 'Presentation Mode'}
-          </button>
-        </div>
+        {/* Removed redundant Quiz Admin and Exit Presentation Mode from leaderboard area */}
         {/* Quiz Start Flow: After creating session, show code, participant list, and Start Quiz button */}
         {waitingToStart && session && !presentationMode ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
@@ -500,27 +492,41 @@ export default function AdminPage() {
           <div className="space-y-8">
             {/* Show leaderboard only, hide question/response containers when leaderboard is visible */}
             {showLeaderboard ? (
-              <div className="flex flex-col items-center justify-center min-h-[50vh] w-full">
-                <div className="w-full max-w-lg mx-auto bg-white/80 rounded-xl shadow-lg p-6 animate-fade-in">
-                  <h3 className="text-2xl font-bold text-blue-700 mb-4 text-center">Top 5 Leaderboard</h3>
-                  <ol className="space-y-2 mb-6">
-                    {participants
-                      .map(p => ({ ...p, score: participantScores[p.id] || 0 }))
-                      .sort((a, b) => b.score - a.score)
-                      .slice(0, 5)
-                      .map((p, idx) => (
-                        <li key={p.id} className="flex items-center justify-between bg-blue-50 rounded-lg px-4 py-2 shadow-sm">
-                          <span className="font-semibold text-lg text-gray-800">
-                            {idx + 1}. {p.username || 'Anonymous'}
-                          </span>
-                          <span className="font-bold text-blue-700 text-lg">{p.score}</span>
-                        </li>
-                      ))}
+              <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
+                <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-12 animate-fade-in border border-gray-200">
+                  <h3 className="text-3xl font-bold text-gray-800 mb-8 text-center tracking-wide">Leaderboard</h3>
+                  <ol className="space-y-3 mb-8">
+                    {(() => {
+                      const sorted = participants
+                        .map(p => ({ ...p, score: participantScores[p.id] || 0 }))
+                        .sort((a, b) => b.score - a.score)
+                        .slice(0, 5);
+                      const rows = [];
+                      for (let i = 0; i < 5; i++) {
+                        const p = sorted[i];
+                        rows.push(
+                          <li key={p ? p.id : `empty-${i}`}
+                            className={`flex items-center justify-between px-8 py-5 rounded-xl border transition-all ${p ? 'bg-gray-50 border-gray-300' : 'bg-gray-100 border-gray-200'}`}
+                            style={{ minHeight: 64 }}
+                          >
+                            <span className="text-2xl font-bold w-10 text-center text-gray-500">{i + 1}</span>
+                            <span className={`flex-1 text-xl font-medium ml-6 ${p ? 'text-gray-800' : 'text-gray-400 italic'}`}>{p ? (p.username || 'Anonymous') : '—'}</span>
+                            <span className={`text-xl font-semibold w-20 text-right ${p ? 'text-gray-700' : 'text-gray-300'}`}>{p ? p.score : '—'}</span>
+                          </li>
+                        );
+                      }
+                      return rows;
+                    })()}
                   </ol>
-                  <div className="flex justify-center">
+                  <div className="flex justify-center mt-4">
                     <button
-                      onClick={startQuestion}
-                      className="px-6 py-2 bg-green-500 text-white rounded-lg font-semibold shadow hover:bg-green-600 transition-all text-lg"
+                      onClick={async () => {
+                        setShowLeaderboard(false);
+                        setShowCorrect(true);
+                        setQuizPhase('question');
+                      }}
+                      className="px-8 py-3 bg-gray-700 text-white rounded-xl font-bold text-xl shadow hover:bg-gray-800 transition-all"
+                      style={{ minWidth: '160px' }}
                     >
                       Next
                     </button>
