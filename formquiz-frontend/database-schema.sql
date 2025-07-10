@@ -22,13 +22,60 @@ CREATE TABLE IF NOT EXISTS user_stats (
   UNIQUE(user_id)
 );
 
+-- Create quizzes table
+CREATE TABLE IF NOT EXISTS quizzes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  customization_settings JSONB DEFAULT '{}',
+  is_active BOOLEAN DEFAULT true,
+  is_shared BOOLEAN DEFAULT false,
+  is_published BOOLEAN DEFAULT false,
+  form_url TEXT,
+  created_by TEXT,
+  current_slide_index INTEGER DEFAULT 0,
+  mode TEXT DEFAULT 'static',
+  form_id UUID,
+  start_time TIMESTAMP WITH TIME ZONE,
+  end_time TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create slides table
+CREATE TABLE IF NOT EXISTS slides (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quiz_id UUID REFERENCES quizzes(id) ON DELETE CASCADE,
+  session_code TEXT,
+  slide_index INTEGER NOT NULL,
+  question TEXT NOT NULL,
+  type TEXT DEFAULT 'multiple',
+  options TEXT[] DEFAULT '{}',
+  correct_answers INTEGER[] DEFAULT '{}',
+  background TEXT DEFAULT '#ffffff',
+  text_color TEXT DEFAULT '#000000',
+  font_size INTEGER DEFAULT 20,
+  font_family TEXT DEFAULT 'Inter, Arial, sans-serif',
+  timer_duration INTEGER DEFAULT 30,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Create indexes for better performance
 CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON profiles(id);
 CREATE INDEX IF NOT EXISTS idx_user_stats_user_id ON user_stats(user_id);
+CREATE INDEX IF NOT EXISTS idx_quizzes_user_id ON quizzes(user_id);
+CREATE INDEX IF NOT EXISTS idx_quizzes_created_by ON quizzes(created_by);
+CREATE INDEX IF NOT EXISTS idx_slides_quiz_id ON slides(quiz_id);
+CREATE INDEX IF NOT EXISTS idx_slides_slide_index ON slides(slide_index);
+CREATE INDEX IF NOT EXISTS idx_slides_session_code ON slides(session_code);
 
 -- Enable Row Level Security (RLS)
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_stats ENABLE ROW LEVEL SECURITY;
+ALTER TABLE quizzes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE slides ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies for profiles table
 CREATE POLICY "Users can view own profile" ON profiles
@@ -55,6 +102,59 @@ CREATE POLICY "Users can insert own stats" ON user_stats
 
 CREATE POLICY "Users can delete own stats" ON user_stats
   FOR DELETE USING (auth.uid() = user_id);
+
+-- Create RLS policies for quizzes table
+CREATE POLICY "Users can view own quizzes" ON quizzes
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view published quizzes" ON quizzes
+  FOR SELECT USING (is_published = true);
+
+CREATE POLICY "Users can insert own quizzes" ON quizzes
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own quizzes" ON quizzes
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own quizzes" ON quizzes
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- Create RLS policies for slides table
+CREATE POLICY "Users can view slides" ON slides
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM quizzes 
+      WHERE quizzes.id = slides.quiz_id 
+      AND (quizzes.user_id = auth.uid() OR quizzes.is_published = true)
+    )
+  );
+
+CREATE POLICY "Users can insert slides" ON slides
+  FOR INSERT WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM quizzes 
+      WHERE quizzes.id = slides.quiz_id 
+      AND quizzes.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can update slides" ON slides
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM quizzes 
+      WHERE quizzes.id = slides.quiz_id 
+      AND quizzes.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can delete slides" ON slides
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM quizzes 
+      WHERE quizzes.id = slides.quiz_id 
+      AND quizzes.user_id = auth.uid()
+    )
+  );
 
 -- Create function to automatically create profile on user signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()

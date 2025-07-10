@@ -549,10 +549,10 @@ export default function Quiz() {
       dbSlides = dbSlidesData || [];
     }
     const dbSlideIds = dbSlides.map(s => s.id);
-    const localSlideIds = slides.filter(s => s.id).map(s => s.id);
+    const localSlideIds = slides.filter(s => s.id && typeof s.id === 'string' && s.id.length > 20).map(s => s.id); // Only consider valid UUIDs
     // 2. Compute slides to update, insert, delete
-    const slidesToUpdate = slides.filter(s => s.id && dbSlideIds.includes(s.id));
-    const slidesToInsert = slides.filter(s => !s.id);
+    const slidesToUpdate = slides.filter(s => s.id && typeof s.id === 'string' && s.id.length > 20 && dbSlideIds.includes(s.id));
+    const slidesToInsert = slides.filter(s => !s.id || typeof s.id !== 'string' || s.id.length <= 20); // Include slides with temporary IDs
     const slidesToDelete = dbSlideIds.filter(id => !localSlideIds.includes(id));
     console.log('Slides to update:', slidesToUpdate);
     console.log('Slides to insert:', slidesToInsert);
@@ -569,7 +569,7 @@ export default function Quiz() {
       text_color: typeof slide.textColor === 'string' ? slide.textColor : '',
       font_size: typeof slide.fontSize === 'number' ? slide.fontSize : 20,
       font_family: typeof slide.fontFamily === 'string' ? slide.fontFamily : (textStyles[0]?.value || 'Arial'),
-      ...(slide.id ? { id: slide.id } : {}),
+      ...(slide.id && typeof slide.id === 'string' && slide.id.length > 20 ? { id: slide.id } : {}), // Only include valid UUIDs
     });
     // 4. Perform DB operations
     // a) Update existing slides

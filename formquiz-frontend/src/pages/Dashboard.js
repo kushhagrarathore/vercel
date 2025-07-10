@@ -240,8 +240,44 @@ const Dashboard = () => {
     setExpandedCardId(newStatus ? formId : null);
   };
 
-  const handleDeleteForm = (formId) => {
-    setForms((prev) => prev.filter((f) => f.id !== formId));
+  const handleDeleteForm = async (formId) => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      // First delete all questions associated with this form
+      const { error: questionsError } = await supabase
+        .from('questions')
+        .delete()
+        .eq('form_id', formId);
+
+      if (questionsError) {
+        console.error('Error deleting questions:', questionsError);
+        toast('Failed to delete form questions', 'error');
+        return;
+      }
+
+      // Then delete the form itself
+      const { error: formError } = await supabase
+        .from('forms')
+        .delete()
+        .eq('id', formId)
+        .eq('user_id', user?.id);
+
+      if (formError) {
+        console.error('Error deleting form:', formError);
+        toast('Failed to delete form', 'error');
+        return;
+      }
+
+      // Update UI state
+      setForms((prev) => prev.filter((f) => f.id !== formId));
+      toast('Form deleted successfully!', 'success');
+    } catch (err) {
+      console.error('Error deleting form:', err);
+      toast('Failed to delete form', 'error');
+    }
   };
 
   const handleDeleteQuiz = async (quizId) => {
@@ -299,7 +335,7 @@ const Dashboard = () => {
   const handleBulkDelete = async () => {
     if (!window.confirm('Delete selected items?')) return;
     if (activeTab === 'forms') {
-      for (const id of selectedIds) handleDeleteForm(id);
+      for (const id of selectedIds) await handleDeleteForm(id);
     } else if (activeTab === 'quizzes') {
       for (const id of selectedIds) await handleDeleteQuiz(id);
     } // Add livequiz delete if needed

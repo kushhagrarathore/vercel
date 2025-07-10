@@ -261,7 +261,7 @@ const QuizResultsPage = () => {
         <h2 style={{ fontWeight: 700, fontSize: '1.3rem', margin: '10px 0 2px 0' }}>Quiz Results</h2>
         <div className="quiz-title">{quizTitle}</div>
         <div className="quiz-results-summary">
-          {responses.length} Responses · Average Score: {averageScore}%
+          {responses.length} Responses · Average Score: {averageScore}
           {lastUpdated && (
             <span style={{ marginLeft: 10, color: '#888', fontWeight: 400, fontSize: '0.98rem' }}>
               · Updated {Math.round((Date.now() - lastUpdated.getTime()) / 3600000) || 1}h ago

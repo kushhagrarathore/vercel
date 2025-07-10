@@ -1,18 +1,16 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaRobot, FaSpinner, FaTimes } from 'react-icons/fa';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from './Toast';
-import { generateQuestions } from '../utils/generateQuestions';
-import { supabase } from '../supabase';
 import { QRCodeSVG } from 'qrcode.react';
+import { supabase } from '../supabase';
+import { generateQuestions } from '../utils/generateQuestions';
+import { useToast } from './Toast';
 
 const AIGenerationModal = ({ isOpen, onClose }) => {
   const [topic, setTopic] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [quizUrl, setQuizUrl] = useState('');
-  const navigate = useNavigate();
   const toast = useToast();
 
   const handleGenerate = async () => {
@@ -56,32 +54,11 @@ const AIGenerationModal = ({ isOpen, onClose }) => {
         toast('Quiz generated successfully!', 'success');
         // Extract quiz_id from the first question (all should have the same quiz_id)
         const quizId = result.data && result.data.length > 0 ? result.data[0].quiz_id : undefined;
-        // Save quiz to Supabase
-        const { data: quizInsert, error: quizError } = await supabase
-          .from('quizzes')
-          .insert([
-            {
-              id: quizId,
-              title: topic.trim(),
-              description: `AI generated quiz on ${topic.trim()}`,
-              is_active: true,
-              is_published: false,
-              created_at: new Date().toISOString(),
-              customization_settings: {},
-            },
-          ]);
-        if (quizError) {
-          throw new Error('Failed to save quiz to Supabase');
+        
+        if (!quizId) {
+          throw new Error('No quiz ID found in generated data');
         }
-        // Save questions to Supabase
-        for (const q of result.data) {
-          const { error: qError } = await supabase
-            .from('questions')
-            .insert([{ ...q, form_id: null, quiz_id: quizId }]);
-          if (qError) {
-            throw new Error('Failed to save questions to Supabase');
-          }
-        }
+        
         // Generate and save quiz URL
         const url = `/quiz/${quizId}`;
         await supabase.from('quizzes').update({ form_url: url }).eq('id', quizId);
