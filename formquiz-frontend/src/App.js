@@ -25,6 +25,7 @@ import Leaderboard from './pages/livequiz/Leaderboard'; // Atharva branch
 import LiveQuiz from './pages/livequiz/LiveQuiz'; // Atharva branch
 import AdminPage from './pages/livequiz/AdminPage';
 import QuizResultsPage from './pages/livequiz/ResultsPage';
+import LiveQuizDetails from './pages/livequiz/LiveQuizDetails';
 
 function App() {
   return (
@@ -67,6 +68,7 @@ function App() {
             <Route path="/join/:quizId" element={<JoinQuiz />} />
             <Route path="/live/leaderboard/:quizId" element={<Leaderboard />} />
             <Route path="/live-quiz" element={<LiveQuiz />} />
+            <Route path="/livequiz/details/:id" element={<LiveQuizDetails />} />
 
             {/* Profile */}
             <Route path="/profile" element={<Profile />} />
