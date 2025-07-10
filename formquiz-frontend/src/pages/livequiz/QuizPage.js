@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../supabase/client';
+import { useSearchParams } from 'react-router-dom';
+import { supabase } from '../../supabase.js';
 import { useQuiz } from '../../pages/livequiz/QuizContext';
 
 export default function QuizPage() {
   const { session, setSession } = useQuiz();
   const [username, setUsername] = useState('');
   const [sessionCode, setSessionCode] = useState('');
+  const [searchParams] = useSearchParams();
   const [participant, setParticipant] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
@@ -18,6 +20,15 @@ export default function QuizPage() {
   const [pointsEarned, setPointsEarned] = useState(null);
   const [liveScore, setLiveScore] = useState(null);
   const [cumulativeScore, setCumulativeScore] = useState(0);
+
+  // Auto-fill session code from URL query param 'code' on mount
+  useEffect(() => {
+    const codeFromUrl = searchParams.get('code');
+    if (codeFromUrl && !sessionCode) {
+      setSessionCode(codeFromUrl);
+    }
+    // eslint-disable-next-line
+  }, [searchParams]);
 
   useEffect(() => {
     if (!participant?.id) return;
@@ -39,14 +50,15 @@ export default function QuizPage() {
     }
   }, [timeLeft, quizPhase]);
 
+  // Show feedback/results screen for 2.5s after answering, before moving to next question or waiting
   useEffect(() => {
     if (!showCorrect) return;
-    if (timeLeft === 0 && selectedAnswer !== null) {
+    if (selectedAnswer !== null) {
       // Refetch participant score after timer ends
       async function fetchScore() {
         if (!participant?.id) return;
         const { data, error } = await supabase
-          .from('session_participants')
+          .from('lq_session_participants')
           .select('score')
           .eq('id', participant.id)
           .single();
@@ -56,10 +68,11 @@ export default function QuizPage() {
       const timeout = setTimeout(() => {
         setPointsEarned(null);
         setSelectedAnswer(null);
+        // Optionally, move to waiting or next question here if needed
       }, 2500); // 2.5s delay before reset
       return () => clearTimeout(timeout);
     }
-  }, [showCorrect, timeLeft, selectedAnswer]);
+  }, [showCorrect, selectedAnswer]);
 
   useEffect(() => {
     if (!participant?.id) return;
@@ -67,7 +80,7 @@ export default function QuizPage() {
       .channel('participant-score-' + participant.id)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'session_participants', filter: `id=eq.${participant.id}` },
+        { event: '*', schema: 'public', table: 'lq_session_participants', filter: `id=eq.${participant.id}` },
         (payload) => {
           if (payload.new && typeof payload.new.score === 'number') {
             setLiveScore(payload.new.score);
@@ -84,7 +97,7 @@ export default function QuizPage() {
     if (!showCorrect || !participant?.id) return;
     async function fetchScore() {
       const { data, error } = await supabase
-        .from('session_participants')
+        .from('lq_session_participants')
         .select('score')
         .eq('id', participant.id)
         .single();
@@ -97,7 +110,7 @@ export default function QuizPage() {
     async function fetchCumulativeScore() {
       if (!participant?.id || !session?.id) return;
       const { data, error } = await supabase
-        .from('live_responses')
+        .from('lq_live_responses')
         .select('points_awarded')
         .eq('participant_id', participant.id)
         .eq('session_id', session.id);
@@ -110,11 +123,12 @@ export default function QuizPage() {
   }, [participant?.id, session?.id, showCorrect]);
 
   function setupRealtimeSubscriptions() {
+    if (!session?.id) return () => {};
     const sessionChannel = supabase
-      .channel('session-updates')
+      .channel('session-updates-' + session.id)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'sessions' },
+        { event: '*', schema: 'public', table: 'lq_sessions', filter: `id=eq.${session.id}` },
         handleSessionUpdate
       )
       .subscribe();
@@ -128,11 +142,12 @@ export default function QuizPage() {
     console.log('handleSessionUpdate payload:', payload);
     const sessionData = payload.new;
     if (!sessionData) return;
+    // If phase changes to 'question', transition to quiz view
     setQuizPhase(sessionData.phase);
     setTimerWarning(false);
-    if (sessionData.current_question_id) {
+    if (sessionData.phase === 'question' && sessionData.current_question_id) {
       const { data: questionData } = await supabase
-        .from('questions')
+        .from('lq_questions')
         .select('*')
         .eq('id', sessionData.current_question_id)
         .single();
@@ -154,7 +169,7 @@ export default function QuizPage() {
         }
         setSelectedAnswer(null); // Reset selected answer for new question
       }
-    } else {
+    } else if (sessionData.phase !== 'question') {
       setCurrentQuestion(null);
       setTimeLeft(0);
       setSelectedAnswer(null);
@@ -168,20 +183,28 @@ export default function QuizPage() {
 
     try {
       setLoading(true);
-      // First, get the session
+      setError("");
+      console.log('[joinQuiz] Attempting to join with code:', sessionCode);
+      // First, get the session (validate against lq_sessions table and code column)
       const { data: sessionData, error: sessionError } = await supabase
-        .from('sessions')
+        .from('lq_sessions')
         .select('*')
         .eq('code', sessionCode.toUpperCase())
         .eq('is_live', true)
         .single();
 
-      if (sessionError) throw new Error('Invalid session code');
+      if (!sessionData || sessionError) {
+        console.error('[joinQuiz] Invalid session code or error:', sessionError);
+        setError('Invalid session code');
+        setLoading(false);
+        return;
+      }
       setSession(sessionData);
+      console.log('[joinQuiz] Session found:', sessionData);
 
       // Then, create participant
       const { data: participantData, error: participantError } = await supabase
-        .from('session_participants')
+        .from('lq_session_participants')
         .insert([
           {
             session_id: sessionData.id,
@@ -192,17 +215,29 @@ export default function QuizPage() {
         .select()
         .single();
 
-      if (participantError) throw participantError;
+      if (participantError) {
+        console.error('[joinQuiz] Error creating participant:', participantError);
+        setError('Could not join session. Please try again.');
+        setLoading(false);
+        return;
+      }
       setParticipant(participantData);
+      console.log('[joinQuiz] Participant created:', participantData);
 
       // Get current question if exists
       if (sessionData.current_question_id) {
-        const { data: questionData } = await supabase
-          .from('questions')
+        const { data: questionData, error: questionError } = await supabase
+          .from('lq_questions')
           .select('*')
           .eq('id', sessionData.current_question_id)
           .single();
 
+        if (questionError) {
+          console.error('[joinQuiz] Error fetching current question:', questionError);
+          setError('Could not load current question.');
+          setLoading(false);
+          return;
+        }
         if (questionData) {
           setCurrentQuestion(questionData);
           if (sessionData.timer_end) {
@@ -210,12 +245,15 @@ export default function QuizPage() {
             const now = new Date();
             setTimeLeft(Math.max(0, Math.floor((end - now) / 1000)));
           }
+          console.log('[joinQuiz] Current question loaded:', questionData);
         }
       }
 
       setQuizPhase(sessionData.phase);
+      console.log('[joinQuiz] Quiz phase set:', sessionData.phase);
     } catch (err) {
-      setError(err.message);
+      console.error('[joinQuiz] Unexpected error:', err);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -231,7 +269,7 @@ export default function QuizPage() {
       const points = isCorrect ? Math.max(100, timeLeft * 10) : 0;
       setPointsEarned(points);
 
-      await supabase.from('live_responses').insert([
+      await supabase.from('lq_live_responses').insert([
         {
           session_id: session.id,
           participant_id: participant.id,
@@ -245,7 +283,7 @@ export default function QuizPage() {
       if (isCorrect) {
         // Restore previous update logic: add points to participant.score
         await supabase
-          .from('session_participants')
+          .from('lq_session_participants')
           .update({ score: participant.score + points })
           .eq('id', participant.id);
       }
@@ -397,8 +435,29 @@ export default function QuizPage() {
         </div>
       )}
 
-      {/* After timer ends, show result */}
-      {quizPhase === 'question' && currentQuestion && timeLeft === 0 && (
+      {/* Feedback/Results screen after answering, before moving to next question */}
+      {quizPhase === 'question' && currentQuestion && showCorrect && selectedAnswer !== null && (
+        <div className="flex flex-col items-center justify-center
+          w-full
+          max-w-[95vw] sm:max-w-xl md:max-w-2xl
+          min-h-[50vh] sm:min-h-[22rem] md:min-h-[26rem]
+          bg-white/80 rounded-xl shadow-lg
+          p-4 sm:p-8
+          animate-fade-in
+          transition-all duration-500">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 text-center">{selectedAnswer === currentQuestion.correct_answer_index ? 'Correct!' : 'Incorrect'}</h2>
+          <div className="mt-4 text-center">
+            {selectedAnswer === currentQuestion.correct_answer_index ? (
+              <span className="text-green-600 font-bold text-xl animate-pop">You got it right!</span>
+            ) : (
+              <span className="text-red-600 font-bold text-xl animate-pop">The correct answer was: <span className="underline">{currentQuestion.options[currentQuestion.correct_answer_index]}</span></span>
+            )}
+            <div className="mt-2 text-blue-700 font-semibold text-lg">Points earned: {pointsEarned}</div>
+          </div>
+        </div>
+      )}
+      {/* After timer ends, show time's up if user did not answer */}
+      {quizPhase === 'question' && currentQuestion && showCorrect && selectedAnswer === null && timeLeft === 0 && (
         <div className="flex flex-col items-center justify-center
           w-full
           max-w-[95vw] sm:max-w-xl md:max-w-2xl
@@ -408,19 +467,7 @@ export default function QuizPage() {
           animate-fade-in
           transition-all duration-500">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 text-center">Time's up!</h2>
-          {selectedAnswer !== null && (
-            <div className="mt-4 text-center">
-              {selectedAnswer === currentQuestion.correct_answer_index ? (
-                <span className="text-green-600 font-bold text-xl animate-pop">Correct!</span>
-              ) : (
-                <span className="text-red-600 font-bold text-xl animate-pop">Incorrect. The correct answer was: <span className="underline">{currentQuestion.options[currentQuestion.correct_answer_index]}</span></span>
-              )}
-              <div className="mt-2 text-blue-700 font-semibold text-lg">Points earned: {pointsEarned}</div>
-            </div>
-          )}
-          {selectedAnswer === null && (
-            <div className="mt-4 text-gray-600 text-lg">You did not answer in time.</div>
-          )}
+          <div className="mt-4 text-gray-600 text-lg">You did not answer in time.</div>
         </div>
       )}
 
