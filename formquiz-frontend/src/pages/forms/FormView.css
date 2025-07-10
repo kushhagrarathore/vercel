@@ -8,7 +8,7 @@ body {
   max-width: 800px;
   margin: 60px auto 0 auto;
   padding: 36px 32px 32px 32px;
-  background: #fff;
+  background: ffffff(0.25);
   border-radius: 18px;
   box-shadow: 0 8px 32px rgba(44, 62, 80, 0.13);
   font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
