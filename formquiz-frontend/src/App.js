@@ -27,6 +27,7 @@ import AdminPage from './pages/livequiz/AdminPage';
 import QuizResultsPage from './pages/livequiz/ResultsPage';
 import React, { useEffect, useState } from 'react';
 import { supabase } from './supabase/client';
+import QuestionsPage from './pages/livequiz/QuestionsPage';
 
 // RequireAuth component for protected routes
 function RequireAuth({ children }) {
@@ -91,6 +92,7 @@ function App() {
             <Route path="/join/:quizId" element={<RequireAuth><JoinQuiz /></RequireAuth>} />
             <Route path="/live/leaderboard/:quizId" element={<RequireAuth><Leaderboard /></RequireAuth>} />
             <Route path="/live-quiz" element={<RequireAuth><LiveQuiz /></RequireAuth>} />
+            <Route path="/livequiz/questions/:quizId" element={<RequireAuth><QuestionsPage /></RequireAuth>} />
             {/* Profile */}
             <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
             {/* Live Quiz Admin */}

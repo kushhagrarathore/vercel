@@ -475,6 +475,7 @@ const Dashboard = () => {
                       transition={{ duration: 0.32, type: 'spring' }}
                       className="dashboard-animated-card"
                       style={{ position: 'relative', borderLeft: '6px solid #a78bfa', background: '#fff', borderRadius: 18, boxShadow: '0 2px 12px #a5b4fc22', padding: 18, minHeight: 120, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 8 }}
+                      onClick={() => navigate(`/livequiz/questions/${item.id}`)}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                         <span style={{ fontWeight: 700, fontSize: 18 }}>{item.title || 'Untitled Live Quiz'}</span>

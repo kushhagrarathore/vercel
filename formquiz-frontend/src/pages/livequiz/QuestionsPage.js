@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../supabase.js';
 import QuestionPreview from './QuestionPreview';
 
 export default function QuestionsPage() {
+  const { quizId } = useParams();
   const [questions, setQuestions] = useState([]);
   const [form, setForm] = useState({
     question_text: '',
@@ -72,8 +73,13 @@ export default function QuestionsPage() {
   }, [customSidebarOpen]);
 
   useEffect(() => {
-    fetchQuestions();
-  }, []);
+    if (quizId) {
+      fetchQuizAndQuestions(quizId);
+    } else {
+      fetchQuestions();
+    }
+    // eslint-disable-next-line
+  }, [quizId]);
 
   async function fetchQuestions() {
     try {
@@ -100,6 +106,49 @@ export default function QuestionsPage() {
           correct_answer_index: 0,
           timer: 20,
         });
+        setIsEditingExisting(false);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchQuizAndQuestions(quizId) {
+    setLoading(true);
+    try {
+      // Fetch quiz title
+      const { data: quizData, error: quizError } = await supabase
+        .from('lq_quizzes')
+        .select('*')
+        .eq('id', quizId)
+        .single();
+      if (quizError) throw quizError;
+      setQuizName(quizData.title);
+      setSelectedQuizId(quizId);
+
+      // Fetch questions
+      const { data: questionsData, error: questionsError } = await supabase
+        .from('lq_questions')
+        .select('*')
+        .eq('quiz_id', quizId)
+        .order('created_at', { ascending: true });
+      if (questionsError) throw questionsError;
+      setQuestions(questionsData || []);
+      if (questionsData && questionsData.length > 0) {
+        setForm({ ...questionsData[0] });
+        setSelectedQuestionIdx(0);
+        setIsEditingExisting(true);
+      } else {
+        setForm({
+          question_text: '',
+          options: ['', ''],
+          correct_answer_index: 0,
+          timer: 20,
+          settings: { ...settingsDefaults },
+        });
+        setSelectedQuestionIdx(null);
         setIsEditingExisting(false);
       }
     } catch (err) {
