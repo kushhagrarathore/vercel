@@ -50,16 +50,22 @@ export default function QuestionPreview({
 
   return (
     <div
-      className="fixed inset-0 w-screen h-screen flex flex-col items-center justify-center overflow-hidden z-40"
+      className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden"
       style={{
         background: pageBg,
         backgroundSize: c.imageUrl ? 'cover' : undefined,
         backgroundPosition: c.imageUrl ? 'center' : undefined,
+        maxWidth: '100%',
+        maxHeight: '100%',
+        border: '1.5px solid #e5e7eb',
+        boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)',
+        borderRadius: '1.5rem',
       }}
     >
-      {/* Top bar */}
-      <div className="fixed top-0 left-0 w-full z-50 bg-white/90 shadow-md flex items-center justify-between px-8 py-3 gap-4"
-        style={{ minHeight: '4.5rem', backdropFilter: 'blur(8px)' }}
+      {/* Fixed Top Bar (inside preview) */}
+      <div
+        className="absolute top-0 left-0 w-full z-20 bg-white/90 shadow-md flex items-center justify-between px-8 py-3 gap-4"
+        style={{ minHeight: '4.5rem', backdropFilter: 'blur(8px)', borderTopLeftRadius: '1.5rem', borderTopRightRadius: '1.5rem' }}
       >
         <span className="text-lg md:text-2xl font-bold text-blue-700 tracking-wider">Quiz Code: <span className="text-gray-800">{quizCode}</span></span>
         <span className="text-base md:text-xl font-semibold text-gray-700">Q{questionNumber} of {totalQuestions}</span>
@@ -198,15 +204,7 @@ export default function QuestionPreview({
               </div>
             </div>
             {/* Next Button - bottom right, floating */}
-            <div className="fixed bottom-10 right-16 z-50">
-              <button
-                className="flex items-center gap-2 px-10 py-5 bg-green-600 text-white rounded-2xl font-bold text-2xl shadow-xl hover:bg-green-700 transition-all border-2 border-green-700 opacity-60 cursor-not-allowed"
-                style={{ minWidth: '200px', fontWeight: 700 }}
-                disabled
-              >
-                Next <span className="ml-2 text-3xl">➡</span>
-              </button>
-            </div>
+            {/* Removed fixed/bottom preview and full screen preview logic */}
           </>
         ) : (
           /* Results Screen */
@@ -236,15 +234,7 @@ export default function QuestionPreview({
               </div>
             </div>
             {/* Next Button - bottom right, floating */}
-            <div className="fixed bottom-10 right-16 z-50">
-              <button
-                className="flex items-center gap-2 px-10 py-5 bg-green-600 text-white rounded-2xl font-bold text-2xl shadow-xl hover:bg-green-700 transition-all border-2 border-green-700 opacity-60 cursor-not-allowed"
-                style={{ minWidth: '200px', fontWeight: 700 }}
-                disabled
-              >
-                Next <span className="ml-2 text-3xl">➡</span>
-              </button>
-            </div>
+            {/* Removed fixed/bottom preview and full screen preview logic */}
           </div>
         )}
       </div>
