@@ -466,62 +466,85 @@ const Dashboard = () => {
                   </div>
                 )}
                 {currentData.map((item, idx) => (
-                  <motion.div
-                    key={item.id || idx}
-                    initial={{ opacity: 0, scale: 0.96, y: 18 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 18 }}
-                    transition={{
-                      duration: 0.32,
-                      type: 'spring',
-                    }}
-                    className="dashboard-animated-card"
-                  >
-                    <MemoFormCardRow
-                      view={viewMode}
-                      name={item.title}
-                      timestamp={new Date(
-                        item.created_at
-                      ).toLocaleString()}
-                      sharedWith={item.shared_with || []}
-                      link={
-                        activeTab === 'forms'
-                          ? `/form/${item.id}`
-                          : activeTab === 'quizzes'
-                          ? `/userend?quizId=${item.id}`
-                          : `/join/${item.id}`
-                      }
-                      creator={username}
-                      formId={item.id}
-                      isForm={activeTab === 'forms'}
-                      onDelete={
-                        activeTab === 'forms'
-                          ? handleDeleteForm
-                          : handleDeleteQuiz
-                      }
-                      isPublished={item.is_published}
-                      onPublishToggle={
-                        activeTab === 'forms'
-                          ? handlePublishToggle
-                          : handleQuizPublishToggle
-                      }
-                      quizType={
-                        activeTab === 'quizzes'
-                          ? item.type || 'blank'
-                          : undefined
-                      }
-                      formType={
-                        activeTab === 'forms'
-                          ? item.type || 'Forms'
-                          : undefined
-                      }
-                      expanded={expandedCardId === item.id}
-                      setExpandedCardId={setExpandedCardId}
-                      titleStyle={{ fontWeight: 400, color: '#222' }}
-                      selected={selectedIds.includes(item.id)}
-                      onSelect={handleSelect}
-                    />
-                  </motion.div>
+                  activeTab === 'livequiz' ? (
+                    <motion.div
+                      key={item.id || idx}
+                      initial={{ opacity: 0, scale: 0.96, y: 18 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 18 }}
+                      transition={{ duration: 0.32, type: 'spring' }}
+                      className="dashboard-animated-card"
+                      style={{ position: 'relative', borderLeft: '6px solid #a78bfa', background: '#fff', borderRadius: 18, boxShadow: '0 2px 12px #a5b4fc22', padding: 18, minHeight: 120, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 8 }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                        <span style={{ fontWeight: 700, fontSize: 18 }}>{item.title || 'Untitled Live Quiz'}</span>
+                        <span style={{ background: '#fde68a', color: '#b45309', fontWeight: 600, fontSize: 13, borderRadius: 8, padding: '2px 10px', marginLeft: 6 }}>Draft</span>
+                        <span style={{ background: '#a78bfa', color: '#fff', fontWeight: 600, fontSize: 13, borderRadius: 8, padding: '2px 10px', marginLeft: 4 }}>Live</span>
+                      </div>
+                      <div style={{ color: '#555', fontSize: 15, wordBreak: 'break-all', marginBottom: 4 }}>Code: {item.code || item.id}</div>
+                      <div style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>Created: {item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A'}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
+                        <button title="View" style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); navigate(`/livequiz/details/${item.id}`); }}><i className="fa fa-eye" /></button>
+                        <button title="Results" style={{ background: 'none', border: 'none', color: '#22c55e', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); navigate(`/livequiz/details/${item.id}`); }}><i className="fa fa-bar-chart" /></button>
+                        <button title="Link" style={{ background: 'none', border: 'none', color: '#0ea5e9', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(window.location.origin + `/livequiz/details/${item.id}`); }}><i className="fa fa-link" /></button>
+                        <button title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); if (window.confirm('Delete this live quiz?')) {/* TODO: implement delete */} }}><i className="fa fa-trash" /></button>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key={item.id || idx}
+                      initial={{ opacity: 0, scale: 0.96, y: 18 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 18 }}
+                      transition={{ duration: 0.32, type: 'spring' }}
+                      className="dashboard-animated-card"
+                    >
+                      <MemoFormCardRow
+                        view={viewMode}
+                        name={item.title}
+                        timestamp={new Date(
+                          item.created_at
+                        ).toLocaleString()}
+                        sharedWith={item.shared_with || []}
+                        link={
+                          activeTab === 'forms'
+                            ? `/form/${item.id}`
+                            : activeTab === 'quizzes'
+                            ? `/userend?quizId=${item.id}`
+                            : `/join/${item.id}`
+                        }
+                        creator={username}
+                        formId={item.id}
+                        isForm={activeTab === 'forms'}
+                        onDelete={
+                          activeTab === 'forms'
+                            ? handleDeleteForm
+                            : handleDeleteQuiz
+                        }
+                        isPublished={item.is_published}
+                        onPublishToggle={
+                          activeTab === 'forms'
+                            ? handlePublishToggle
+                            : handleQuizPublishToggle
+                        }
+                        quizType={
+                          activeTab === 'quizzes'
+                            ? item.type || 'blank'
+                            : undefined
+                        }
+                        formType={
+                          activeTab === 'forms'
+                            ? item.type || 'Forms'
+                            : undefined
+                        }
+                        expanded={expandedCardId === item.id}
+                        setExpandedCardId={setExpandedCardId}
+                        titleStyle={{ fontWeight: 400, color: '#222' }}
+                        selected={selectedIds.includes(item.id)}
+                        onSelect={handleSelect}
+                      />
+                    </motion.div>
+                  )
                 ))}
               </>
             ) : (

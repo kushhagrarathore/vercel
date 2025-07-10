@@ -255,12 +255,56 @@ const QuizResultsPage = () => {
   const lastUpdated = responses.length > 0 ? new Date(Math.max(...responses.map(r => new Date(r.submitted_at)))) : null;
 
   return (
-    <div className="quiz-results-container">
-      <div className="quiz-results-header">
-        <button className="back-btn" onClick={() => navigate('/dashboard')}>← Back to Dashboard</button>
-        <h2 style={{ fontWeight: 700, fontSize: '1.3rem', margin: '10px 0 2px 0' }}>Quiz Results</h2>
-        <div className="quiz-title">{quizTitle}</div>
-        <div className="quiz-results-summary">
+    <div style={{
+      minHeight: '100vh',
+      width: '100vw',
+      background: 'linear-gradient(120deg, #e0e7ff 0%, #f8fafc 100%)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
+      padding: 0,
+    }}>
+      <div style={{
+        width: '100%',
+        maxWidth: 1400,
+        margin: '0 auto',
+        padding: '48px 40px 0 40px',
+        textAlign: 'left',
+        position: 'relative',
+        background: 'none',
+        boxShadow: 'none',
+      }}>
+        <button
+          onClick={() => navigate(-1)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            background: 'rgba(99,102,241,0.10)',
+            color: '#6366f1',
+            border: 'none',
+            borderRadius: 10,
+            padding: '10px 22px',
+            fontWeight: 700,
+            fontSize: '1.08rem',
+            boxShadow: '0 2px 8px #a5b4fc22',
+            cursor: 'pointer',
+            transition: 'background 0.18s, color 0.18s, box-shadow 0.18s',
+            marginBottom: 28,
+            outline: 'none',
+          }}
+          onMouseOver={e => { e.currentTarget.style.background = '#6366f1'; e.currentTarget.style.color = '#fff'; }}
+          onMouseOut={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.10)'; e.currentTarget.style.color = '#6366f1'; }}
+          onFocus={e => { e.currentTarget.style.boxShadow = '0 0 0 3px #a5b4fc55'; }}
+          onBlur={e => { e.currentTarget.style.boxShadow = '0 2px 8px #a5b4fc22'; }}
+        >
+          <span style={{ fontSize: 18, display: 'inline-block', marginRight: 4 }}>&larr;</span> Back
+        </button>
+        <h2 style={{ marginBottom: '32px', fontWeight: 800, fontSize: '2.3rem', color: '#39397a', letterSpacing: '-1px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span role="img" aria-label="clipboard">📋</span> Quiz Results: <span style={{ color: '#39397a' }}>{quizTitle}</span>
+        </h2>
+        <div style={{ marginBottom: 32, fontSize: '1.18rem', color: '#374151', fontWeight: 600, background: '#f3f4f6', borderRadius: 14, padding: '18px 24px', display: 'inline-block', boxShadow: '0 2px 8px #a5b4fc11' }}>
           {responses.length} Responses · Average Score: {averageScore}
           {lastUpdated && (
             <span style={{ marginLeft: 10, color: '#888', fontWeight: 400, fontSize: '0.98rem' }}>
@@ -268,130 +312,125 @@ const QuizResultsPage = () => {
             </span>
           )}
         </div>
-        <div style={{ fontWeight: 600, margin: '18px 0 8px 0', fontSize: '1.08rem' }}>Individual Responses</div>
       </div>
-      <ol className="responses-list">
-        {responses.map((resp, idx) => (
-          <li
-            key={resp.id || idx}
-            className="response-card"
-          >
-            <div className="response-info">
-              <span
-                className="response-name"
-                style={{ cursor: 'pointer', textDecoration: 'underline' }}
-                onClick={async () => {
-                  setLoadingResponse(true);
-                  let questionsToUse = questions;
-                  // Always fetch questions if not loaded
-                  if (!questions || questions.length === 0) {
-                    setLoadingQuestions(true);
-                    const { data: qData, error: qError } = await supabase
-                      .from('questions')
-                      .select('*')
-                      .eq('form_id', quizId)
-                      .order('order_index');
-                    setLoadingQuestions(false);
-                    if (qError) {
-                      setLoadingResponse(false);
-                      alert('Failed to fetch questions');
-                      return;
-                    }
-                    setQuestions(qData);
-                    questionsToUse = qData;
-                  }
-                  // Fetch response
-                  const { data: respData, error } = await supabase
-                    .from('quiz_responses')
-                    .select('*')
-                    .eq('id', resp.id)
-                    .single();
-                  setLoadingResponse(false);
-                  if (error) {
-                    alert('Failed to fetch response');
-                    return;
-                  }
-                  setSelectedResponse(respData);
-                }}
-              >
-                {resp.username || resp.user_id || 'Anonymous'}
-              </span>
-              <span className="response-time">Submitted {formatTimeAgo(resp.submitted_at)}</span>
-            </div>
-            <span className="response-score">{resp.score ?? 0}</span>
-          </li>
-        ))}
-      </ol>
-      <button className="export-btn" onClick={handleExportResults}>Export Results</button>
-      {(loadingResponse || loadingQuestions) && (
-        <div className="modal-bg"><div className="modal-content"><div>Loading response...</div></div></div>
-      )}
-      {selectedResponse && !loadingResponse && !loadingQuestions && (
-        <div className="modal-bg" onClick={() => { setSelectedResponse(null); setShowDetails(false); }}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => { setSelectedResponse(null); setShowDetails(false); }}>&times;</button>
-            <h3 style={{ fontWeight: 700, fontSize: '1.15rem', marginBottom: 8 }}>
-              {selectedResponse.username || selectedResponse.user_id || 'Anonymous'}'s Answers
-            </h3>
-            <div style={{ color: '#2563eb', fontWeight: 600, marginBottom: 8 }}>
-              Score: {selectedResponse.score ?? 0} / {questions.length}
-            </div>
-            <div style={{ width: '100%', maxWidth: 700, margin: '0 auto', background: 'none', boxShadow: 'none', padding: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: '1.15rem', margin: '18px 0 12px 0' }}>Your Responses</div>
-              {questions.map((q, idx) => {
-                let userAnswer = null;
-                if (Array.isArray(selectedResponse.answers)) {
-                  userAnswer = selectedResponse.answers.find(
-                    a => a.questionId === q.id || a.question_id === q.id
-                  ) || selectedResponse.answers[idx];
-                }
-                const correct = Array.isArray(q.correct_answers) ? q.correct_answers : [];
-                return (
-                  <div key={q.id || idx} style={{ marginBottom: 22 }}>
-                    <div style={{ fontWeight: 600, marginBottom: 4 }}>
-                      Q{idx + 1}: {q.question_text}
-                    </div>
-                    {q.options && Array.isArray(q.options) && q.options.length > 0 ? (
-                      <ul style={{ listStyle: 'none', paddingLeft: 0, margin: 0 }}>
-                        {q.options.map((opt, optIdx) => {
-                          const isSelected = userAnswer && userAnswer.selectedIndex === optIdx;
-                          const isCorrect = correct.includes(optIdx);
-                          return (
-                            <li key={optIdx} style={{
-                              display: 'block',
-                              marginBottom: 2,
-                              color: isSelected
-                                ? (isCorrect ? '#7c3aed' : '#e11d48')
-                                : (isCorrect ? '#7c3aed' : '#23272f'),
-                              fontWeight: isSelected ? 600 : 400,
-                              fontSize: '1rem',
-                            }}>
-                              <span>{opt}</span>
-                              {isSelected && isCorrect && <span style={{marginLeft:4}}>✔️</span>}
-                              {isSelected && !isCorrect && <span style={{marginLeft:4}}>❌</span>}
-                              {!isSelected && isCorrect && <span style={{marginLeft:4}}>✔️</span>}
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    ) : (
-                      <div style={{ marginLeft: 12 }}>
-                        <span style={{
-                          color: userAnswer && userAnswer.text && correct.some(ans => typeof ans === 'string' && ans.trim().toLowerCase() === userAnswer.text.trim().toLowerCase()) ? '#7c3aed' : '#e11d48',
-                          fontWeight: 600,
-                          fontSize: '1rem',
-                        }}>
-                          {userAnswer && userAnswer.text ? userAnswer.text : 'Not answered'} {userAnswer && userAnswer.text && correct.some(ans => typeof ans === 'string' && ans.trim().toLowerCase() === userAnswer.text.trim().toLowerCase()) ? '✔️' : userAnswer && userAnswer.text ? '❌' : ''}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+      {responses.length === 0 ? (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+          <div style={{
+            background: 'rgba(255,255,255,0.55)',
+            boxShadow: '0 8px 32px 0 rgba(44,62,80,0.13)',
+            border: '1.5px solid #e0e7ef',
+            borderRadius: 24,
+            minWidth: 320,
+            minHeight: 80,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.18rem',
+            color: '#7b7b9d',
+            fontWeight: 500,
+            textAlign: 'center',
+            backdropFilter: 'blur(8px)',
+            margin: '0 auto',
+            animation: 'fadeInCard 0.7s',
+          }}>
+            No responses submitted yet.
           </div>
         </div>
+      ) : (
+        <div style={{
+          width: '100%',
+          maxWidth: 1400,
+          margin: '0 auto',
+          padding: '0 40px 56px 40px',
+          overflowX: 'auto',
+        }}>
+          <table style={{
+            width: '100%',
+            borderCollapse: 'separate',
+            borderSpacing: 0,
+            background: 'rgba(255,255,255,0.85)',
+            borderRadius: 18,
+            boxShadow: '0 8px 32px 0 rgba(44,62,80,0.13)',
+            overflow: 'hidden',
+            fontSize: '1.1rem',
+            animation: 'fadeInCard 0.7s',
+          }}>
+            <thead>
+              <tr style={{ background: 'linear-gradient(90deg, #e0e7ff 0%, #a5b4fc 100%)', color: '#39397a', fontWeight: 700 }}>
+                <th style={{ padding: '12px 14px', textAlign: 'left', borderBottom: '2px solid #e0e7ef', fontWeight: 800 }}>User</th>
+                <th style={{ padding: '12px 14px', textAlign: 'left', borderBottom: '2px solid #e0e7ef', fontWeight: 800 }}>Submitted At</th>
+                <th style={{ padding: '12px 14px', textAlign: 'left', borderBottom: '2px solid #e0e7ef', fontWeight: 800 }}>Score</th>
+                {questions.map(q => (
+                  <th key={q.id} style={{ padding: '12px 14px', textAlign: 'left', borderBottom: '2px solid #e0e7ef', fontWeight: 800 }}>{q.question_text}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {responses.map((resp, idx) => {
+                let answersObj = {};
+                try {
+                  answersObj = typeof resp.answers === 'string' ? JSON.parse(resp.answers) : resp.answers;
+                } catch (e) {
+                  answersObj = {};
+                }
+                // For quiz, answers may be array of {questionId, selectedIndex, text}
+                const answerMap = Array.isArray(answersObj)
+                  ? Object.fromEntries(answersObj.map(a => [a.questionId || a.question_id, a.selectedIndex !== undefined ? (q => q.options && q.options[a.selectedIndex] ? q.options[a.selectedIndex] : '-') : a.text || '-']))
+                  : answersObj;
+                return (
+                  <tr key={resp.id || idx} style={{
+                    background: idx % 2 === 0 ? 'rgba(99,102,241,0.04)' : 'rgba(255,255,255,0.95)',
+                    transition: 'background 0.2s, box-shadow 0.2s',
+                    borderRadius: 12,
+                    boxShadow: '0 1px 4px #a5b4fc11',
+                    cursor: 'pointer',
+                  }}
+                  onMouseOver={e => { e.currentTarget.style.background = '#e0e7ff'; }}
+                  onMouseOut={e => { e.currentTarget.style.background = idx % 2 === 0 ? 'rgba(99,102,241,0.04)' : 'rgba(255,255,255,0.95)'; }}
+                  >
+                    <td style={{ padding: '12px 14px', fontWeight: 600, color: '#6366f1', borderBottom: '1px solid #e0e7ef', borderRight: '1px solid #f3f4f6' }}>{resp.username || resp.user_id || 'Anonymous'}</td>
+                    <td style={{ padding: '12px 14px', color: '#7b7b9d', borderBottom: '1px solid #e0e7ef', borderRight: '1px solid #f3f4f6' }}>{new Date(resp.submitted_at).toLocaleString()}</td>
+                    <td style={{ padding: '12px 14px', color: '#2563eb', fontWeight: 700, borderBottom: '1px solid #e0e7ef', borderRight: '1px solid #f3f4f6', textAlign: 'right' }}>{resp.score ?? '-'}</td>
+                    {questions.map(q => (
+                      <td key={q.id} style={{ padding: '12px 14px', color: '#39397a', borderBottom: '1px solid #e0e7ef' }}>
+                        {(() => {
+                          if (Array.isArray(resp.answers)) {
+                            const found = resp.answers.find(a => (a.questionId || a.question_id) === q.id);
+                            if (found) {
+                              if (found.selectedIndex !== undefined && q.options && q.options[found.selectedIndex]) {
+                                return q.options[found.selectedIndex];
+                              } else if (found.text) {
+                                return found.text;
+                              }
+                            }
+                            return <span style={{ color: '#bbb' }}>-</span>;
+                          } else if (resp.answers && resp.answers[q.id]) {
+                            return resp.answers[q.id];
+                          } else {
+                            return <span style={{ color: '#bbb' }}>-</span>;
+                          }
+                        })()}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
+      <div style={{ height: 32 }} />
+      <button className="export-btn" onClick={handleExportResults} style={{ marginTop: 32 }}>Export Results</button>
+      <style>{`
+        @keyframes fadeInCard {
+          from { opacity: 0; transform: translateY(24px) scale(0.98); }
+          to { opacity: 1; transform: none; }
+        }
+        @media (max-width: 700px) {
+          table { font-size: 0.98rem; }
+          th, td { padding: 6px 4px !important; }
+        }
+      `}</style>
     </div>
   );
 };
