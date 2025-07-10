@@ -214,6 +214,7 @@ const JoinQuiz = () => {
     setJoining(true);
     // Debug: log the code being checked
     console.log('Attempting to join room code:', roomCode);
+    // Fetch the session first
     const { data, error } = await supabase
       .from('sessions')
       .select('*')
@@ -225,6 +226,24 @@ const JoinQuiz = () => {
       setLiveQuiz(null);
       setJoining(false);
       fetchAvailableRooms(); // Show available rooms for debugging
+      return;
+    }
+    // Fetch the quiz's published status
+    const { data: quizData, error: quizError } = await supabase
+      .from('quizzes')
+      .select('is_published')
+      .eq('id', data.quiz_id)
+      .single();
+    if (quizError || !quizData) {
+      setError('Quiz not found.');
+      setLiveQuiz(null);
+      setJoining(false);
+      return;
+    }
+    if (!quizData.is_published) {
+      setError('This quiz is not published yet.');
+      setLiveQuiz(null);
+      setJoining(false);
       return;
     }
     // Register participant immediately, even if quiz not started

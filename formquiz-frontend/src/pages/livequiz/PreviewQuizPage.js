@@ -26,7 +26,19 @@ const PreviewQuizPage = () => {
         try {
           const { slides, globalSettings, quizTitle } = JSON.parse(draft);
           setQuiz({ title: quizTitle, customization_settings: globalSettings });
-          setSlides(Array.isArray(slides) ? slides : []);
+          // Ensure slides have the correct structure for preview
+          const formattedSlides = Array.isArray(slides) ? slides
+            .filter(slide => slide.question && slide.question.trim() !== '') // Only include slides with questions
+            .map(slide => ({
+              id: slide.id,
+              question: slide.question || slide.name || '',
+              options: Array.isArray(slide.options) ? slide.options.filter(opt => opt && opt.trim() !== '') : [],
+              type: slide.type || 'multiple',
+              background: slide.background || '#ffffff',
+              textColor: slide.textColor || '#000000',
+              fontFamily: slide.fontFamily || 'Inter, Arial, sans-serif',
+            })) : [];
+          setSlides(formattedSlides);
         } catch (err) {
           setError('Failed to load preview data.');
         }
@@ -48,6 +60,11 @@ const PreviewQuizPage = () => {
             setLoading(false);
             return;
           }
+          if (!quizData.is_published) {
+            setError('This quiz is not published yet.');
+            setLoading(false);
+            return;
+          }
           setQuiz(quizData);
           const { data: slidesData, error: slidesError } = await supabase
             .from('slides')
@@ -60,7 +77,19 @@ const PreviewQuizPage = () => {
             setLoading(false);
             return;
           }
-          setSlides(slidesData);
+          // Format slides from database to match expected structure
+          const formattedSlides = slidesData
+            .filter(slide => slide.question && slide.question.trim() !== '') // Only include slides with questions
+            .map(slide => ({
+              id: slide.id,
+              question: slide.question || slide.name || '',
+              options: Array.isArray(slide.options) ? slide.options.filter(opt => opt && opt.trim() !== '') : [],
+              type: slide.type || 'multiple',
+              background: slide.background || '#ffffff',
+              textColor: slide.text_color || '#000000',
+              fontFamily: slide.font_family || 'Inter, Arial, sans-serif',
+            }));
+          setSlides(formattedSlides);
         } catch (err) {
           setError('Failed to load quiz. Please check your connection.');
         } finally {
@@ -98,7 +127,13 @@ const PreviewQuizPage = () => {
   const TopRightButton = (
     <button
       onClick={() => {
-        navigate(`/quiz/edit/${quizId}`);
+        if (quizId === 'preview') {
+          // For preview mode, go back to dashboard since we don't have a saved quiz ID
+          navigate('/dashboard');
+        } else {
+          // For saved quizzes, go back to edit
+          navigate(`/quiz/edit/${quizId}`);
+        }
       }}
       style={{
         background: customization.nextButtonColor || '#2563eb',
@@ -120,7 +155,7 @@ const PreviewQuizPage = () => {
         gap: 8,
       }}
     >
-      <span style={{ fontSize: 18, marginRight: 6 }}>←</span> Back to Edit
+      <span style={{ fontSize: 18, marginRight: 6 }}>←</span> {quizId === 'preview' ? 'Back to Dashboard' : 'Back to Edit'}
     </button>
   );
 
@@ -137,6 +172,7 @@ const PreviewQuizPage = () => {
         quizTitle={quiz.title}
         questionNumber={current + 1}
         questionText={slide.question}
+        options={slide.options || []} // Pass the slide options
         selected={null}
         onSelect={null} // Disable answer selection
         showNextButton={!isLast}

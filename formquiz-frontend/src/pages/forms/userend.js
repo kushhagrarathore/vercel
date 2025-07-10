@@ -90,6 +90,11 @@ export default function LiveQuizUser() {
         setLoading(false);
         return;
       }
+      if (!quizData.is_published) {
+        setError('This quiz is not published yet.');
+        setLoading(false);
+        return;
+      }
       setQuizTitle(quizData.title || 'Quiz');
       if (quizData.customization_settings) {
         let custom = quizData.customization_settings;

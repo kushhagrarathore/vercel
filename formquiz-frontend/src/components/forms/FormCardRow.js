@@ -110,6 +110,10 @@ const FormCardRow = ({
 
   const handlePreviewOnly = (e) => {
     e.stopPropagation();
+    if (!isPublished) {
+      alert('This quiz is in draft mode. Please publish to preview or share.');
+      return;
+    }
     if (isForm) {
       navigate(`/preview/${formId}?mode=preview`);
     } else {
@@ -291,7 +295,7 @@ const FormCardRow = ({
             <span style={{ fontSize: 12, color: accentColor, fontWeight: 600, background: 'rgba(99,102,241,0.07)', borderRadius: 8, padding: '2px 8px' }}>{typeLabel}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8 }}>
-            <button className="card-action-btn edit" title="Preview" onClick={handlePreviewOnly} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 18, cursor: 'pointer' }}>
+            <button className="card-action-btn edit" title={isPublished ? 'Preview' : 'Publish to preview'} onClick={handlePreviewOnly} tabIndex={-1} style={{ background: 'none', border: 'none', color: isPublished ? '#6366f1' : '#aaa', fontSize: 18, cursor: isPublished ? 'pointer' : 'not-allowed' }} disabled={!isPublished}>
               <FaEye />
             </button>
             <button className="card-action-btn share" title={copied ? 'Copied!' : fullLink} onClick={handleShare} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: 18, cursor: 'pointer' }}>
@@ -302,8 +306,8 @@ const FormCardRow = ({
             </button>
           </div>
         </div>
-        {/* Always show the link for all cards */}
-        {fullLink && (
+        {/* Only show the link if published */}
+        {isPublished && fullLink && (
           <div style={{ fontSize: 13, color: '#18181a', marginTop: 6, wordBreak: 'break-all', background: '#f3f4f6', borderRadius: 8, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 6 }} className="card-url-link">
             <FaLink style={{ fontSize: 14 }} />
             <a href={fullLink} target="_blank" rel="noopener noreferrer" style={{ color: '#18181a', textDecoration: 'underline', fontWeight: 500 }}>
@@ -381,7 +385,7 @@ const FormCardRow = ({
         }}>{isPublished ? 'Published' : 'Draft'}</span>
         <span style={{ fontSize: 12, color: accentColor, fontWeight: 600, background: 'rgba(99,102,241,0.07)', borderRadius: 8, padding: '2px 8px', marginLeft: 10 }}>{typeLabel}</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginLeft: 18 }}>
-          <button className="card-action-btn edit" title="Preview" onClick={handlePreviewOnly} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 18, cursor: 'pointer' }}>
+          <button className="card-action-btn edit" title={isPublished ? 'Preview' : 'Publish to preview'} onClick={handlePreviewOnly} tabIndex={-1} style={{ background: 'none', border: 'none', color: isPublished ? '#6366f1' : '#aaa', fontSize: 18, cursor: isPublished ? 'pointer' : 'not-allowed' }} disabled={!isPublished}>
             <FaEye />
           </button>
           <button className="card-action-btn share" title={copied ? 'Copied!' : fullLink} onClick={handleShare} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: 18, cursor: 'pointer' }}>
@@ -390,11 +394,14 @@ const FormCardRow = ({
           <button className="card-action-btn delete" title="Delete" onClick={handleDelete} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#f87171', fontSize: 18, cursor: 'pointer' }}>
             <FaTrash />
           </button>
-          <div style={{ marginLeft: 18 }}>
-            <a href={fullLink} target="_blank" rel="noopener noreferrer" style={{ color: '#18181a', textDecoration: 'underline', fontWeight: 500, fontSize: 13, wordBreak: 'break-all' }}>
-              {fullLink}
-            </a>
-          </div>
+          {/* Only show the link if published */}
+          {isPublished && (
+            <div style={{ marginLeft: 18 }}>
+              <a href={fullLink} target="_blank" rel="noopener noreferrer" style={{ color: '#18181a', textDecoration: 'underline', fontWeight: 500, fontSize: 13, wordBreak: 'break-all' }}>
+                {fullLink}
+              </a>
+            </div>
+          )}
         </div>
         {/* Toggle Switch for all types */}
         <div style={{ position: 'absolute', top: 16, right: 18, zIndex: 2 }} onClick={e => e.stopPropagation()}>

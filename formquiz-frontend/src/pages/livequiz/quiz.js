@@ -174,9 +174,19 @@ function calculateScore(slides, userAnswers) {
 export default function Quiz() {
   const { quizId } = useParams();
   const location = useLocation();
+  
+  // Helper function to generate UUID
+  const generateUUID = () => {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0;
+      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  };
+  
   const [title, setTitle] = useState("Untitled Presentation");
   const [slides, setSlides] = useState([{
-    id: Date.now() + Math.random(),
+    id: generateUUID(),
     name: "Slide 1",
     type: "multiple",
     question: "",
@@ -267,7 +277,7 @@ export default function Quiz() {
       const aiQuestions = location.state.questions;
       const quizId = location.state.quizId;
       const formattedSlides = aiQuestions.map((q, index) => ({
-        id: q.id || Date.now() + index,
+        id: q.id || generateUUID(),
         name: q.question || `Question ${index + 1}`,
         type: 'multiple',
         question: q.question || '',
@@ -407,6 +417,7 @@ export default function Quiz() {
 
   const addSlide = (type = slides[selectedSlide]?.type || 'multiple') => {
     let newSlide = {
+      id: generateUUID(), // Generate proper UUID
       name: `Slide ${slides.length + 1}`,
       type,
       question: '',
@@ -552,7 +563,7 @@ export default function Quiz() {
     const localSlideIds = slides.filter(s => s.id).map(s => s.id);
     // 2. Compute slides to update, insert, delete
     const slidesToUpdate = slides.filter(s => s.id && dbSlideIds.includes(s.id));
-    const slidesToInsert = slides.filter(s => !s.id);
+    const slidesToInsert = slides.filter(s => !s.id || !dbSlideIds.includes(s.id));
     const slidesToDelete = dbSlideIds.filter(id => !localSlideIds.includes(id));
     console.log('Slides to update:', slidesToUpdate);
     console.log('Slides to insert:', slidesToInsert);
@@ -590,13 +601,15 @@ export default function Quiz() {
     if (slidesToInsert.length > 0) {
       const slidesInsertArr = slidesToInsert.map((slide, idx) => slideToDb(slide, slides.indexOf(slide)));
       console.log('Inserting slides:', slidesInsertArr);
-      const { error: insertError } = await supabase
+      const { data: insertedSlides, error: insertError } = await supabase
         .from('slides')
-        .insert(slidesInsertArr);
+        .insert(slidesInsertArr)
+        .select();
       if (insertError) {
         setNotification('Failed to insert new slides: ' + insertError.message);
         return;
       }
+      console.log('Inserted slides:', insertedSlides);
     }
     // c) Delete removed slides
     if (slidesToDelete.length > 0) {
@@ -621,9 +634,9 @@ export default function Quiz() {
       return;
     }
     console.log('Slides after save:', allSlides);
-    // Only keep slides with a valid id
-    const validSlides = (allSlides || []).filter(s => s.id);
-    setSlides(validSlides.map(s => ({
+    
+    // Map all slides from database to local format, ensuring we don't lose any slides
+    const updatedSlides = (allSlides || []).map(s => ({
       id: s.id,
       name: s.question || s.name || '',
       type: s.type || 'multiple',
@@ -633,13 +646,32 @@ export default function Quiz() {
       background: s.background || '#ffffff',
       textColor: s.text_color || '#000000',
       fontFamily: s.font_family || textStyles[0].value,
-    })));
+    }));
+    
+    // Ensure we have at least one slide
+    if (updatedSlides.length === 0) {
+      // If no slides were saved, create a default slide
+      const defaultSlide = {
+        id: generateUUID(),
+        name: "Slide 1",
+        type: "multiple",
+        question: "",
+        options: ["", ""],
+        correctAnswers: [],
+        background: "#ffffff",
+        textColor: "#000000",
+        fontFamily: textStyles[0].value,
+      };
+      updatedSlides.push(defaultSlide);
+    }
+    
+    setSlides(updatedSlides);
     // Reset selectedSlide if out of bounds
-    setSelectedSlide(prev => (validSlides.length === 0 ? 0 : Math.min(prev, validSlides.length - 1)));
+    setSelectedSlide(prev => (updatedSlides.length === 0 ? 0 : Math.min(prev, updatedSlides.length - 1)));
     setNotification('Quiz and slides saved to Supabase!');
     setShowModal(true);
     setTimeout(() => setNotification(null), 3000);
-    setInitialStateNow(slides, title);
+    setInitialStateNow(updatedSlides, title);
   };
 
   return (
@@ -731,11 +763,24 @@ export default function Quiz() {
             {isDarkMode ? <FiSun /> : <FiMoon />}
           </Button>
           <Button
-            className="rounded-full px-4 py-2 font-semibold flex items-center gap-2 shadow-md"
-            style={{ background: 'var(--button)', color: '#fff' }}
+            className={`rounded-full px-4 py-2 font-semibold flex items-center gap-2 shadow-md ${
+              !publishedQuizId && !quizId ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+            style={{ 
+              background: (!publishedQuizId && !quizId) ? '#9ca3af' : 'var(--button)', 
+              color: '#fff' 
+            }}
             onClick={() => {
-              if (!quizId) {
-                // Save draft to localStorage for preview
+              // Only allow preview if quiz has been saved
+              if (!publishedQuizId && !quizId) {
+                setNotification('Please save the quiz first before previewing.');
+                setTimeout(() => setNotification(null), 3000);
+                return;
+              }
+              
+              const quizIdToUse = publishedQuizId || quizId;
+              if (!publishedQuizId && !quizId) {
+                // Save draft to localStorage for preview (unsaved quiz)
                 localStorage.setItem('quizDraft', JSON.stringify({
                   slides,
                   quizTitle: title,
@@ -747,10 +792,12 @@ export default function Quiz() {
                 }));
                 window.open('/quiz/preview/preview', '_blank');
               } else {
-                window.open(`/quiz/preview/${quizId}`, '_blank');
+                // Use saved quiz ID for preview
+                window.open(`/quiz/preview/${quizIdToUse}`, '_blank');
               }
             }}
-            title="Preview as Admin"
+            title={(!publishedQuizId && !quizId) ? "Save quiz first to preview" : "Preview as Admin"}
+            disabled={!publishedQuizId && !quizId}
           >
             <FiEye /> Preview
           </Button>
