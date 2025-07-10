@@ -1,20 +1,23 @@
 /* Customization Panel Container */
 .customization-panel {
-  width: 300px;
-  padding: 20px;
-  border-left: 1px solid #e0e0e0;
-  background-color: #f9f9f9;
-  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.05);
-  overflow-y: auto; /* Enable scrolling if content overflows */
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #333;
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-radius: 18px;
+  box-shadow: 0 4px 24px 0 rgba(44,62,80,0.10);
+  padding: 28px 22px;
+  max-width: 340px;
+  width: 100%;
+  font-family: 'Inter', Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  border: 1.5px solid rgba(255,255,255,0.25);
 }
 
 /* Section Styling */
 .customization-section {
-  margin-bottom: 25px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
+  margin-bottom: 22px;
 }
 
 .customization-section:last-child {
@@ -23,13 +26,20 @@
   padding-bottom: 0;
 }
 
-.customization-section h4 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  color: #555;
-  font-size: 1.1em;
-  border-bottom: 1px solid #f0f0f0;
-  padding-bottom: 8px;
+.customization-section-title {
+  font-size: 1.12rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: #2d314d;
+  letter-spacing: -0.5px;
+}
+
+.customization-label {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 7px;
+  color: #3b3b6d;
+  display: block;
 }
 
 /* Row Layouts */
@@ -529,4 +539,56 @@ gap: 6px;
 .template-card-preview {
   margin-bottom: 12px;
 }
+}
+
+input[type="color"] {
+  border: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  margin-right: 12px;
+  cursor: pointer;
+  background: #f7fafc;
+  box-shadow: 0 1px 4px rgba(44,62,80,0.07);
+}
+
+.customization-file-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.customization-file-input input[type="file"] {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 1rem;
+  background: #f7fafc;
+  color: #2d314d;
+  cursor: pointer;
+}
+
+.customization-panel input,
+.customization-panel select {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 1rem;
+  margin-bottom: 10px;
+  background: #f7fafc;
+  color: #2d314d;
+}
+
+.customization-panel input:focus,
+.customization-panel select:focus {
+  outline: none;
+  border-color: #2563eb;
+}
+
+@media (max-width: 600px) {
+  .customization-panel {
+    max-width: 100vw;
+    padding: 14px 4vw;
+  }
 }
