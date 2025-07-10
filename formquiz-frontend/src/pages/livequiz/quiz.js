@@ -643,10 +643,7 @@ export default function Quiz() {
   };
 
   return (
-    <div className={`min-h-screen p-4 transition-colors duration-300`} style={{
-      background: 'var(--bg)',
-      color: 'var(--text)'
-    }}>
+    <div className="quizbuilder-bg">
       {notification && (
         <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 9999 }}>
           <div style={{ background: '#2563eb', color: '#fff', padding: '12px 32px', borderRadius: 8, fontWeight: 600, boxShadow: '0 2px 12px rgba(0,0,0,0.10)' }}>
@@ -671,12 +668,7 @@ export default function Quiz() {
       )}
 
       {/* Top Bar */}
-      <div className="flex justify-between items-center mb-8 px-6 py-4 rounded-2xl shadow-lg border" style={{
-        background: 'var(--card)',
-        color: 'var(--text)',
-        borderWidth: 2,
-        borderColor: isDarkMode ? '#fff' : 'var(--border)'
-      }}>
+      <div className="quizbuilder-header">
         {/* Left: Back Button and Title */}
         <div className="flex items-center gap-4">
           <Button
@@ -689,7 +681,7 @@ export default function Quiz() {
             Back
           </Button>
           <Input
-            className="text-2xl font-bold border-none shadow-none focus:ring-0 focus:outline-none w-full max-w-lg bg-transparent"
+            className="quizbuilder-header-title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Untitled Quiz"
@@ -767,314 +759,301 @@ export default function Quiz() {
       
       {/* Tab Content */}
       {activeTab === 'edit' ? (
-        <div className="grid grid-cols-5 gap-6">
+        <div className="quizbuilder-main-layout">
           {/* Left Panel: Slides List */}
-          <div className="col-span-1 flex flex-col h-full">
-            <div className="rounded-2xl shadow-md p-4 flex flex-col min-h-[500px] border" style={{ background: 'var(--card)', color: 'var(--text)', borderWidth: 2, borderColor: isDarkMode ? '#fff' : 'var(--border)' }}>
-              <Button
-                className="w-full mb-4 font-semibold rounded-lg py-2 border-none flex items-center justify-center gap-2"
-                style={{ background: 'var(--button-hover)', color: 'var(--button)' }}
-                onClick={() => setAddSlidePopupOpen(true)}
-              >
-                + Add Slide
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </Button>
-              {addSlidePopupOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30" onClick={() => setAddSlidePopupOpen(false)}>
-                  <div className="bg-white rounded-xl shadow-2xl p-6 min-w-[260px] max-w-[90vw] relative" style={{ background: 'var(--card)', borderColor: 'var(--border)' }} onClick={e => e.stopPropagation()}>
-                    <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-xl font-bold" onClick={() => setAddSlidePopupOpen(false)} title="Close">×</button>
-                    <div className="font-semibold text-lg mb-4 text-center">Select Question Type</div>
-                    <div className="flex flex-col gap-2">
-                      {questionTypes.map(qt => (
-                        <button
-                          key={qt.value}
-                          className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium"
-                          style={{ color: 'var(--text)', background: 'var(--card)' }}
-                          onClick={() => {
-                            addSlide(qt.value);
-                            setAddSlidePopupOpen(false);
-                          }}
-                        >
-                          {qt.label}
-                        </button>
-                      ))}
-                    </div>
+          <aside className="quizbuilder-sidebar">
+            <Button
+              className="w-full mb-4 font-semibold rounded-lg py-2 border-none flex items-center justify-center gap-2"
+              style={{ background: 'var(--button-hover)', color: 'var(--button)' }}
+              onClick={() => setAddSlidePopupOpen(true)}
+            >
+              + Add Slide
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </Button>
+            {addSlidePopupOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30" onClick={() => setAddSlidePopupOpen(false)}>
+                <div className="bg-white rounded-xl shadow-2xl p-6 min-w-[260px] max-w-[90vw] relative" style={{ background: 'var(--card)', borderColor: 'var(--border)' }} onClick={e => e.stopPropagation()}>
+                  <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-xl font-bold" onClick={() => setAddSlidePopupOpen(false)} title="Close">×</button>
+                  <div className="font-semibold text-lg mb-4 text-center">Select Question Type</div>
+                  <div className="flex flex-col gap-2">
+                    {questionTypes.map(qt => (
+                      <button
+                        key={qt.value}
+                        className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+                        style={{ color: 'var(--text)', background: 'var(--card)' }}
+                        onClick={() => {
+                          addSlide(qt.value);
+                          setAddSlidePopupOpen(false);
+                        }}
+                      >
+                        {qt.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              )}
-              <div className="flex-1">
-                <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd} modifiers={[]}>
-                  <SortableContext items={slides.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                    {slides.map((slide, i) => (
-                      <SortableSlideItem key={slide.id} id={slide.id}>
-                        <div
-                          className={`flex items-center gap-2 min-h-[40px] mb-2 px-2 py-2 rounded-lg cursor-pointer transition border-2 ${i === selectedSlide ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-100'}`}
-                          style={{ background: i === selectedSlide ? 'var(--button-hover)' : 'var(--card)', color: 'var(--text)', borderWidth: 2, borderColor: isDarkMode ? '#fff' : (i === selectedSlide ? 'var(--button)' : 'var(--border)') }}
-                        >
-                          <span
-                            className="text-xs font-bold w-8 text-center"
-                            style={{ color: 'var(--accent)' }}
-                            onPointerDown={e => { e.stopPropagation(); setSelectedSlide(i); }}
-                          >{(i+1).toString().padStart(2, '0')}</span>
-                          {editingName === slide.id ? (
-                            <input
-                              type="text"
-                              value={slide.name}
-                              autoFocus
-                              onChange={e => {
-                                const updatedSlides = [...slides];
-                                updatedSlides[i].name = e.target.value;
-                                setSlides(updatedSlides);
-                              }}
-                              onBlur={e => { e.stopPropagation(); setEditingName(null); }}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter') { e.stopPropagation(); setEditingName(null); }
-                              }}
-                              className="flex-1 bg-transparent border-none outline-none text-sm font-medium"
-                              style={{ color: 'var(--text)' }}
-                              onPointerDown={e => e.stopPropagation()}
-                            />
-                          ) : (
-                            <span
-                              className="flex-1 text-sm font-medium"
-                              style={{ color: 'var(--text)' }}
-                              onPointerDown={e => { e.stopPropagation(); setSelectedSlide(i); }}
-                            >{slide.name}</span>
-                          )}
-                          <button className="p-1 hover:text-blue-600" style={{ color: 'var(--text-secondary)' }} title="Edit slide name" onPointerDown={e => { e.stopPropagation(); setEditingName(slide.id); }}><FiEdit2 /></button>
-                          <button className="p-1 hover:text-red-600" style={{ color: '#f87171' }} onPointerDown={e => { e.stopPropagation(); deleteSlide(i); }} title="Delete slide"><FiTrash2 /></button>
-                        </div>
-                      </SortableSlideItem>
-                    ))}
-                  </SortableContext>
-                </DndContext>
               </div>
+            )}
+            <div className="flex-1">
+              <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd} modifiers={[]}>
+                <SortableContext items={slides.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                  {slides.map((slide, i) => (
+                    <SortableSlideItem key={slide.id} id={slide.id}>
+                      <div
+                        className={`quizbuilder-slide-item${i === selectedSlide ? ' selected' : ''}`}
+                        style={{ background: i === selectedSlide ? 'var(--button-hover)' : 'var(--card)', color: 'var(--text)', borderWidth: 2, borderColor: isDarkMode ? '#fff' : (i === selectedSlide ? 'var(--button)' : 'var(--border)') }}
+                      >
+                        <span
+                          className="text-xs font-bold w-8 text-center"
+                          style={{ color: 'var(--accent)' }}
+                          onPointerDown={e => { e.stopPropagation(); setSelectedSlide(i); }}
+                        >{(i+1).toString().padStart(2, '0')}</span>
+                        {editingName === slide.id ? (
+                          <input
+                            type="text"
+                            value={slide.name}
+                            autoFocus
+                            onChange={e => {
+                              const updatedSlides = [...slides];
+                              updatedSlides[i].name = e.target.value;
+                              setSlides(updatedSlides);
+                            }}
+                            onBlur={e => { e.stopPropagation(); setEditingName(null); }}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') { e.stopPropagation(); setEditingName(null); }
+                            }}
+                            className="flex-1 bg-transparent border-none outline-none text-sm font-medium"
+                            style={{ color: 'var(--text)' }}
+                            onPointerDown={e => e.stopPropagation()}
+                          />
+                        ) : (
+                          <span
+                            className="flex-1 text-sm font-medium"
+                            style={{ color: 'var(--text)' }}
+                            onPointerDown={e => { e.stopPropagation(); setSelectedSlide(i); }}
+                          >{slide.name}</span>
+                        )}
+                        <button className="p-1 hover:text-blue-600" style={{ color: 'var(--text-secondary)' }} title="Edit slide name" onPointerDown={e => { e.stopPropagation(); setEditingName(slide.id); }}><FiEdit2 /></button>
+                        <button className="p-1 hover:text-red-600" style={{ color: '#f87171' }} onPointerDown={e => { e.stopPropagation(); deleteSlide(i); }} title="Delete slide"><FiTrash2 /></button>
+                      </div>
+                    </SortableSlideItem>
+                  ))}
+                </SortableContext>
+              </DndContext>
             </div>
-          </div>
+          </aside>
 
           {/* Center Panel: Slide Editor */}
-          <div className="col-span-3 flex flex-col items-center">
-            <div className="rounded-2xl shadow-xl border w-full max-w-2xl p-8" style={{ background: 'var(--card)', color: 'var(--text)', borderWidth: 2, borderColor: isDarkMode ? '#fff' : 'var(--border)' }}>
-              <div className="font-semibold mb-2" style={{ color: 'var(--accent)' }}>Slide {selectedSlide + 1} of {slides.length}</div>
-              <div className="flex gap-3 mb-4">
-                {questionTypes.map(qt => (
-                  <button
-                    key={qt.value}
-                    className={`slide-type-btn${currentSlide?.type === qt.value ? ' active' : ''}`}
-                    style={{ padding: '6px 14px', fontSize: 14, borderRadius: 8, border: 'none', fontWeight: 600, background: currentSlide?.type === qt.value ? '#2563eb' : '#f7f8fa', color: currentSlide?.type === qt.value ? '#fff' : '#2563eb' }}
-                    onClick={() => {
-                      if (qt.value === 'true_false') {
-                        updateSlide('type', 'true_false');
-                        updateSlide('options', ['True', 'False']);
-                        updateSlide('correctAnswers', []);
-                      } else if (qt.value === 'one_word') {
-                        updateSlide('type', 'one_word');
-                        updateSlide('options', []);
-                        updateSlide('correctAnswers', []);
-                      } else {
-                        updateSlide('type', 'multiple');
-                        if (!Array.isArray(currentSlide?.options) || currentSlide?.options.length < 2) {
-                          updateSlide('options', ['', '']);
-                        }
-                        updateSlide('correctAnswers', []);
-                      }
-                    }}
-                  >
-                    {qt.label}
-                  </button>
-                ))}
-              </div>
-              <Input
-                placeholder="Your first question?"
-                value={currentSlide?.question}
-                onChange={(e) => updateSlide("question", e.target.value)}
-                className="text-lg font-semibold w-full mb-6 border rounded-lg px-4 py-3 focus:outline-none focus:ring-2"
-                style={{ color: currentSlide?.textColor, background: 'var(--bg)', borderColor: 'var(--border)', fontFamily: currentSlide?.fontFamily || textStyles[0].value }}
-              />
-              {/* Render input UI based on type */}
-              {currentSlide?.type === 'multiple' && (
-                <div className="space-y-3">
-                  {currentSlide?.options.map((opt, i) => {
-                    const isCorrect = currentSlide?.correctAnswers.includes(i);
-                    return (
-                      <div key={i} className="flex items-center gap-2 rounded-lg px-4 py-2 border" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
-                        <input
-                          type="checkbox"
-                          name={`correct-answer-${selectedSlide}`}
-                          checked={isCorrect}
-                          onChange={() => {
-                            let newAnswers = currentSlide?.correctAnswers.includes(i)
-                              ? currentSlide?.correctAnswers.filter(idx => idx !== i)
-                              : [i];
-                            updateSlide('correctAnswers', newAnswers);
-                          }}
-                          className="accent-blue-600"
-                        />
-                        <input
-                          type="text"
-                          value={opt}
-                          onChange={(e) => updateOption(i, e.target.value)}
-                          placeholder={`Option ${i + 1}`}
-                          className="flex-1 bg-transparent border-none outline-none text-base px-2"
-                          style={{ color: currentSlide?.textColor, fontFamily: currentSlide?.fontFamily || textStyles[0].value }}
-                        />
-                        {currentSlide?.options.length > 2 && (
-                          <button onClick={() => removeOption(i)} className="hover:text-red-600 px-2 py-1 text-lg" style={{ color: '#f87171' }} title="Delete option"><FiTrash2 /></button>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {currentSlide?.options.length < 4 ? (
-                    <Button variant="outline" className="w-full mt-2 border-2 rounded-lg py-2" style={{ borderColor: 'var(--button)', color: 'var(--button)', background: 'var(--button-hover)' }} onClick={() => {
-                      const updatedSlides = [...slides];
-                      updatedSlides[selectedSlide].options.push("");
-                      setSlides(updatedSlides);
-                    }}>+ Add Option</Button>
-                  ) : null}
-                </div>
-              )}
-              {currentSlide?.type === 'true_false' && (
-                <div className="space-y-3">
-                  {['True', 'False'].map((opt, i) => {
-                    const isCorrect = currentSlide?.correctAnswers.includes(i);
-                    return (
-                      <div key={i} className="flex items-center gap-2 rounded-lg px-4 py-2 border" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
-                        <input
-                          type="checkbox"
-                          name={`correct-answer-${selectedSlide}`}
-                          checked={isCorrect}
-                          onChange={() => {
-                            let newAnswers = currentSlide?.correctAnswers.includes(i)
-                              ? currentSlide?.correctAnswers.filter(idx => idx !== i)
-                              : [i];
-                            updateSlide('correctAnswers', newAnswers);
-                          }}
-                          className="accent-blue-600"
-                        />
-                        <input
-                          type="text"
-                          value={opt}
-                          disabled
-                          className="flex-1 bg-transparent border-none outline-none text-base px-2 text-gray-500"
-                          style={{ color: currentSlide?.textColor, fontFamily: currentSlide?.fontFamily || textStyles[0].value }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              {currentSlide?.type === 'one_word' && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 rounded-lg px-4 py-2 border" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
-                    <span className="font-semibold mr-2">Correct Answer:</span>
-                    <input
-                      type="text"
-                      value={currentSlide?.correctAnswers[0] || ''}
-                      onChange={e => updateSlide('correctAnswers', [e.target.value])}
-                      placeholder="Enter the correct answer"
-                      className="flex-1 bg-transparent border-none outline-none text-base px-2"
-                      style={{ color: currentSlide?.textColor, fontFamily: currentSlide?.fontFamily || textStyles[0].value }}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Right Panel: Customization */}
-          <div className="col-span-1">
-            <div className="rounded-2xl shadow-xl border p-6 flex flex-col gap-6" style={{
-              background: isDarkMode ? 'linear-gradient(135deg, rgba(36,37,54,0.95) 60%, rgba(60,60,80,0.95) 100%)' : 'linear-gradient(135deg, #fff 60%, #f3f4f6 100%)',
-              color: 'var(--text)',
-              borderWidth: 2,
-              borderColor: isDarkMode ? '#fff' : 'var(--border)',
-              borderRadius: 20,
-              boxShadow: isDarkMode ? '0 4px 32px 0 rgba(0,0,0,0.35)' : '0 4px 24px 0 rgba(37,99,235,0.08)'
-            }}>
-              {/* Text Style Section */}
-              <div>
-                <div className="font-semibold mb-2" style={{ color: 'var(--text)' }}>Text Style</div>
-                <select
-                  className="w-full border rounded-lg p-3 mb-4 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                  style={{ background: isDarkMode ? '#232336' : '#f9fafb', color: 'var(--text)', borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
-                  value={currentSlide?.fontFamily || textStyles[0].value}
-                  onChange={e => updateSlide('fontFamily', e.target.value)}
-                >
-                  {textStyles.map(style => (
-                    <option key={style.value} value={style.value} style={{ fontFamily: style.value }}>{style.label}</option>
-                  ))}
-                </select>
-              </div>
-              {/* Color Section */}
-              <div>
-                <div className="font-semibold mb-2" style={{ color: 'var(--text)' }}>Colors</div>
-                <div className="flex items-end gap-6 mb-2">
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Text</span>
-                    <div
-                      className="w-8 h-8 rounded-full mb-1 border-2 shadow cursor-pointer"
-                      style={{ background: currentSlide?.textColor, borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
-                      onClick={() => setOpenColorPicker(openColorPicker === 'text' ? null : 'text')}
-                    />
-                    {openColorPicker === 'text' && (
-                      <Input
-                        type="color"
-                        value={currentSlide?.textColor}
-                        onChange={e => { updateSlide('textColor', e.target.value); setOpenColorPicker(null); }}
-                        className="w-10 h-10 p-0 border-2 rounded-lg bg-transparent cursor-pointer shadow-sm mt-1"
-                        style={{ background: 'none', borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
-                        autoFocus
-                        onBlur={() => setOpenColorPicker(null)}
-                      />
-                    )}
-                  </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>BG</span>
-                    <div
-                      className="w-8 h-8 rounded-full mb-1 border-2 shadow cursor-pointer"
-                      style={{ background: currentSlide?.background, borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
-                      onClick={() => setOpenColorPicker(openColorPicker === 'bg' ? null : 'bg')}
-                    />
-                    {openColorPicker === 'bg' && (
-                      <Input
-                        type="color"
-                        value={currentSlide?.background}
-                        onChange={e => { updateSlide('background', e.target.value); setOpenColorPicker(null); }}
-                        className="w-10 h-10 p-0 border-2 rounded-lg bg-transparent cursor-pointer shadow-sm mt-1"
-                        style={{ background: 'none', borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
-                        autoFocus
-                        onBlur={() => setOpenColorPicker(null)}
-                      />
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 mb-4">
-                <Button
-                  className="px-3 py-1 rounded bg-blue-600 text-white text-sm font-semibold"
+          <main className="quizbuilder-editor-card" style={{ width: '100%', maxWidth: '700px', margin: '0 auto' }}>
+            <div className="font-semibold mb-2" style={{ color: 'var(--accent)' }}>Slide {selectedSlide + 1} of {slides.length}</div>
+            <div className="flex gap-3 mb-4">
+              {questionTypes.map(qt => (
+                <button
+                  key={qt.value}
+                  className={`quizbuilder-question-type-btn${currentSlide?.type === qt.value ? ' active' : ''}`}
+                  style={{ padding: '6px 14px', fontSize: 14, borderRadius: 8, border: 'none', fontWeight: 600, background: currentSlide?.type === qt.value ? '#2563eb' : '#f7f8fa', color: currentSlide?.type === qt.value ? '#fff' : '#2563eb' }}
                   onClick={() => {
-                    // Apply current style to all slides
-                    setSlides(slides.map(slide => ({
-                      ...slide,
-                      fontFamily: currentSlide?.fontFamily || textStyles[0].value,
-                      textColor: currentSlide?.textColor || '#000000',
-                      background: currentSlide?.background || '#ffffff',
-                    })));
-                    // Set as default for new slides
-                    setDefaultSlideStyle({
-                      fontFamily: currentSlide?.fontFamily || textStyles[0].value,
-                      textColor: currentSlide?.textColor || '#000000',
-                      background: currentSlide?.background || '#ffffff',
-                    });
+                    if (qt.value === 'true_false') {
+                      updateSlide('type', 'true_false');
+                      updateSlide('options', ['True', 'False']);
+                      updateSlide('correctAnswers', []);
+                    } else if (qt.value === 'one_word') {
+                      updateSlide('type', 'one_word');
+                      updateSlide('options', []);
+                      updateSlide('correctAnswers', []);
+                    } else {
+                      updateSlide('type', 'multiple');
+                      if (!Array.isArray(currentSlide?.options) || currentSlide?.options.length < 2) {
+                        updateSlide('options', ['', '']);
+                      }
+                      updateSlide('correctAnswers', []);
+                    }
                   }}
                 >
-                  Apply Style to All Slides
-                </Button>
+                  {qt.label}
+                </button>
+              ))}
+            </div>
+            <Input
+              placeholder="Your first question?"
+              value={currentSlide?.question}
+              onChange={(e) => updateSlide("question", e.target.value)}
+              className="quizbuilder-question-input"
+              style={{ color: currentSlide?.textColor, background: 'var(--bg)', borderColor: 'var(--border)', fontFamily: currentSlide?.fontFamily || textStyles[0].value }}
+            />
+            {/* Render input UI based on type */}
+            {currentSlide?.type === 'multiple' && (
+              <div className="space-y-3">
+                {currentSlide?.options.map((opt, i) => {
+                  const isCorrect = currentSlide?.correctAnswers.includes(i);
+                  return (
+                    <div key={i} className="quizbuilder-option-row" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
+                      <input
+                        type="checkbox"
+                        name={`correct-answer-${selectedSlide}`}
+                        checked={isCorrect}
+                        onChange={() => {
+                          let newAnswers = currentSlide?.correctAnswers.includes(i)
+                            ? currentSlide?.correctAnswers.filter(idx => idx !== i)
+                            : [i];
+                          updateSlide('correctAnswers', newAnswers);
+                        }}
+                        className="accent-blue-600"
+                      />
+                      <input
+                        type="text"
+                        value={opt}
+                        onChange={(e) => updateOption(i, e.target.value)}
+                        placeholder={`Option ${i + 1}`}
+                        className="quizbuilder-question-input"
+                        style={{ color: currentSlide?.textColor, fontFamily: currentSlide?.fontFamily || textStyles[0].value }}
+                      />
+                      {currentSlide?.options.length > 2 && (
+                        <button onClick={() => removeOption(i)} className="hover:text-red-600 px-2 py-1 text-lg" style={{ color: '#f87171' }} title="Delete option"><FiTrash2 /></button>
+                      )}
+                    </div>
+                  );
+                })}
+                {currentSlide?.options.length < 4 ? (
+                  <Button variant="outline" className="quizbuilder-add-option-btn w-full mt-2" style={{ borderColor: 'var(--button)', color: 'var(--button)', background: 'var(--button-hover)' }} onClick={() => {
+                    const updatedSlides = [...slides];
+                    updatedSlides[selectedSlide].options.push("");
+                    setSlides(updatedSlides);
+                  }}>+ Add Option</Button>
+                ) : null}
+              </div>
+            )}
+            {currentSlide?.type === 'true_false' && (
+              <div className="space-y-3">
+                {['True', 'False'].map((opt, i) => {
+                  const isCorrect = currentSlide?.correctAnswers.includes(i);
+                  return (
+                    <div key={i} className="quizbuilder-option-row" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
+                      <input
+                        type="checkbox"
+                        name={`correct-answer-${selectedSlide}`}
+                        checked={isCorrect}
+                        onChange={() => {
+                          let newAnswers = currentSlide?.correctAnswers.includes(i)
+                            ? currentSlide?.correctAnswers.filter(idx => idx !== i)
+                            : [i];
+                          updateSlide('correctAnswers', newAnswers);
+                        }}
+                        className="accent-blue-600"
+                      />
+                      <input
+                        type="text"
+                        value={opt}
+                        disabled
+                        className="quizbuilder-question-input"
+                        style={{ color: currentSlide?.textColor, fontFamily: currentSlide?.fontFamily || textStyles[0].value }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {currentSlide?.type === 'one_word' && (
+              <div className="space-y-3">
+                <div className="quizbuilder-option-row" style={{ background: 'var(--bg)', borderColor: 'var(--border)' }}>
+                  <span className="font-semibold mr-2">Correct Answer:</span>
+                  <input
+                    type="text"
+                    value={currentSlide?.correctAnswers[0] || ''}
+                    onChange={e => updateSlide('correctAnswers', [e.target.value])}
+                    placeholder="Enter the correct answer"
+                    className="quizbuilder-question-input"
+                    style={{ color: currentSlide?.textColor, fontFamily: currentSlide?.fontFamily || textStyles[0].value }}
+                  />
+                </div>
+              </div>
+            )}
+          </main>
+
+          {/* Right Panel: Customization */}
+          <aside className="quizbuilder-right-panel" style={{ background: isDarkMode ? 'linear-gradient(135deg, rgba(36,37,54,0.95) 60%, rgba(60,60,80,0.95) 100%)' : 'linear-gradient(135deg, #fff 60%, #f3f4f6 100%)', color: 'var(--text)' }}>
+            {/* Text Style Section */}
+            <div>
+              <div className="font-semibold mb-2" style={{ color: 'var(--text)' }}>Text Style</div>
+              <select
+                className="w-full border rounded-lg p-3 mb-4 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                style={{ background: isDarkMode ? '#232336' : '#f9fafb', color: 'var(--text)', borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
+                value={currentSlide?.fontFamily || textStyles[0].value}
+                onChange={e => updateSlide('fontFamily', e.target.value)}
+              >
+                {textStyles.map(style => (
+                  <option key={style.value} value={style.value} style={{ fontFamily: style.value }}>{style.label}</option>
+                ))}
+              </select>
+            </div>
+            {/* Color Section */}
+            <div>
+              <div className="font-semibold mb-2" style={{ color: 'var(--text)' }}>Colors</div>
+              <div className="flex items-end gap-6 mb-2">
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Text</span>
+                  <div
+                    className="w-8 h-8 rounded-full mb-1 border-2 shadow cursor-pointer"
+                    style={{ background: currentSlide?.textColor, borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
+                    onClick={() => setOpenColorPicker(openColorPicker === 'text' ? null : 'text')}
+                  />
+                  {openColorPicker === 'text' && (
+                    <Input
+                      type="color"
+                      value={currentSlide?.textColor}
+                      onChange={e => { updateSlide('textColor', e.target.value); setOpenColorPicker(null); }}
+                      className="w-10 h-10 p-0 border-2 rounded-lg bg-transparent cursor-pointer shadow-sm mt-1"
+                      style={{ background: 'none', borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
+                      autoFocus
+                      onBlur={() => setOpenColorPicker(null)}
+                    />
+                  )}
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>BG</span>
+                  <div
+                    className="w-8 h-8 rounded-full mb-1 border-2 shadow cursor-pointer"
+                    style={{ background: currentSlide?.background, borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
+                    onClick={() => setOpenColorPicker(openColorPicker === 'bg' ? null : 'bg')}
+                  />
+                  {openColorPicker === 'bg' && (
+                    <Input
+                      type="color"
+                      value={currentSlide?.background}
+                      onChange={e => { updateSlide('background', e.target.value); setOpenColorPicker(null); }}
+                      className="w-10 h-10 p-0 border-2 rounded-lg bg-transparent cursor-pointer shadow-sm mt-1"
+                      style={{ background: 'none', borderColor: isDarkMode ? '#fff' : 'var(--border)' }}
+                      autoFocus
+                      onBlur={() => setOpenColorPicker(null)}
+                    />
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+            <div className="flex items-center gap-2 mb-4">
+              <Button
+                className="px-3 py-1 rounded bg-blue-600 text-white text-sm font-semibold"
+                onClick={() => {
+                  // Apply current style to all slides
+                  setSlides(slides.map(slide => ({
+                    ...slide,
+                    fontFamily: currentSlide?.fontFamily || textStyles[0].value,
+                    textColor: currentSlide?.textColor || '#000000',
+                    background: currentSlide?.background || '#ffffff',
+                  })));
+                  // Set as default for new slides
+                  setDefaultSlideStyle({
+                    fontFamily: currentSlide?.fontFamily || textStyles[0].value,
+                    textColor: currentSlide?.textColor || '#000000',
+                    background: currentSlide?.background || '#ffffff',
+                  });
+                }}
+              >
+                Apply Style to All Slides
+              </Button>
+            </div>
+          </aside>
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow p-6">

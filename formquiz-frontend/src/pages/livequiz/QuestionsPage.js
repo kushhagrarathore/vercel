@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase.js';
 import QuestionPreview from './QuestionPreview';
+import './QuestionsPage.css';
 
 export default function QuestionsPage() {
   const [questions, setQuestions] = useState([]);
@@ -399,12 +400,12 @@ export default function QuestionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="quizbuilder-bg">
       {/* Navigation Buttons */}
-      <div className="flex justify-between items-center px-6 py-4 bg-white shadow sticky top-0 z-30">
+      <div className="quizbuilder-header">
         <div className="flex items-center gap-4">
           <button
-            className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 font-semibold"
+            style={{background: 'none', border: 'none', color: '#6366f1', fontWeight: 700, fontSize: 17, cursor: 'pointer', borderRadius: 10, padding: '8px 18px'}}
             onClick={() => navigate('/dashboard')}
           >
             ← Back to Dashboard
@@ -423,13 +424,13 @@ export default function QuestionsPage() {
             }
           }}
           placeholder="Untitled Quiz"
-            className={`ml-4 text-xl font-semibold truncate max-w-xs border-none focus:ring-0 focus:outline-none p-0 m-0 transition-all duration-300 ${titleInputGlow ? 'ring-2 ring-amber-400 ring-offset-2 border-amber-400' : ''} ${titleInputBg ? 'bg-amber-100/70' : 'bg-transparent'}`}
+          className="quizbuilder-header-title"
           style={{ minWidth: '120px' }}
         />
         </div>
         <div className="flex items-center gap-4">
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold"
+            style={{background: 'linear-gradient(135deg, #6366f1 0%, #a78bfa 100%)', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 17, padding: '10px 24px', marginRight: 8, cursor: 'pointer', boxShadow: '0 2px 8px #a5b4fc33'}} 
             onClick={() => navigate('/Admin')}
           >
             Start Quiz →
@@ -437,7 +438,7 @@ export default function QuestionsPage() {
           <button
             type="button"
             onClick={handleCreateOrSaveQuiz}
-            className={`px-5 py-2 ${selectedQuizId ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-600 hover:bg-green-700'} text-white rounded transition-colors whitespace-nowrap`}
+            className="quizbuilder-style-btn"
             disabled={loading}
           >
             {loading ? (selectedQuizId ? 'Saving...' : 'Creating...') : (selectedQuizId ? 'Save' : 'Create Quiz')}
@@ -466,12 +467,12 @@ export default function QuestionsPage() {
           </div>
         )}
       {/* Layout: Sidebar + Main + (optional) Right Panel */}
-      <div className="flex flex-row w-full">
+      <div className="quizbuilder-main-layout">
         {/* Fixed, full-height Sidebar with native drag-and-drop */}
-        <aside className="fixed top-[4.5rem] left-0 h-[calc(100vh-4.5rem)] w-60 min-w-[12rem] bg-white shadow-lg flex flex-col justify-between z-10">
-          <div className="overflow-y-auto flex-1 p-4">
-            <h2 className="text-lg font-bold mb-3">Questions</h2>
-            <ul className="space-y-2">
+        <aside className="quizbuilder-sidebar">
+          <div>
+            <h2 className="quizbuilder-sidebar-title">Questions</h2>
+            <ul className="quizbuilder-slide-list">
               {questions.map((q, idx) => (
                 <li
                   key={q.id}
@@ -480,26 +481,27 @@ export default function QuestionsPage() {
                   onDragEnter={() => handleDragEnter(idx)}
                   onDragEnd={handleDragEnd}
                   onDragOver={e => e.preventDefault()}
-                  className={`w-full text-left px-3 py-2 rounded transition-colors flex items-center gap-2 cursor-move select-none ${selectedQuestionIdx === idx ? 'bg-blue-100 font-bold' : 'hover:bg-gray-100'}`}
+                  className={`quizbuilder-slide-item${selectedQuestionIdx === idx ? ' selected' : ''}`}
                   onClick={() => handleSidebarClick(idx)}
+                  style={{cursor: 'move'}}
                 >
-                  <span className="text-xs font-semibold text-gray-500 mr-2">Q{idx + 1}</span>
-                  <span className="truncate flex-1">{q.question_text || `Question ${idx + 1}`}</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#6366f1', marginRight: 8 }}>Q{idx + 1}</span>
+                  <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.question_text || `Question ${idx + 1}`}</span>
                   <button
                     type="button"
-                    className="ml-2 text-red-500 hover:text-red-700 p-1 rounded"
+                    style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: 16, cursor: 'pointer', borderRadius: 8, padding: 2, marginLeft: 4 }}
                     title="Delete Question"
                     onClick={e => { e.stopPropagation(); handleDeleteQuestion(idx); }}
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
                 </li>
               ))}
             </ul>
           </div>
-          <div className="p-4 border-t">
+          <div style={{ borderTop: '1.5px solid #e0e7ef', marginTop: 18, paddingTop: 18 }}>
             <button
-              className="w-full py-2 bg-green-500 text-white rounded hover:bg-green-600"
+              className="quizbuilder-add-slide-btn"
               onClick={handleAddQuestion}
             >
               + Add Question
@@ -507,65 +509,55 @@ export default function QuestionsPage() {
           </div>
         </aside>
         {/* Responsive container for main content and right sidebar */}
-        <div
-          className={`flex flex-row flex-1 transition-all duration-300 ml-60 ${customSidebarOpen ? 'mr-80' : ''}`}
-          style={{ minHeight: 'calc(100vh - 4.5rem)', overflowY: 'auto' }}
-        >
-          {/* Main Content: Only show selected question for editing, or the add form if none selected */}
-          <main
-            className={`flex-1 p-8 transition-all duration-300 flex flex-col items-center justify-start`}
-            style={{
-              maxWidth: customSidebarOpen ? 'calc(100vw - 15rem - 20rem)' : 'calc(100vw - 15rem)',
-              width: '100%',
-              overflowY: 'auto',
-            }}
-          >
+        <div style={{ display: 'flex', flex: 1, gap: 32 }}>
+          <main className="quizbuilder-editor-card">
             {successMessage && (
-              <div className="mb-4 p-2 bg-green-100 text-green-800 rounded">{successMessage}</div>
+              <div style={{ marginBottom: 16, padding: 8, background: '#d1fae5', color: '#047857', borderRadius: 10, fontWeight: 600 }}>{successMessage}</div>
             )}
             {/* If a question is selected, show it for editing. Otherwise, show the add form. */}
-            <form onSubmit={handleSubmit} className="mb-8 w-full flex flex-col items-center">
-              <div className="bg-white/80 rounded-xl shadow-lg p-6 max-w-2xl w-full mx-auto">
-                <h2 className="text-2xl font-bold text-blue-700 mb-4 text-center">{isEditingExisting ? `Q${selectedQuestionIdx + 1} Preview & Edit` : 'Add New Question'}</h2>
-                <div className="mb-4">
-                  <label className="block mb-2 font-semibold text-gray-700">Question Text</label>
+            <form onSubmit={handleSubmit} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 32 }}>
+              <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 2px 12px #a5b4fc22', padding: 32, width: '100%', maxWidth: 600, margin: '0 auto' }}>
+                <h2 className="quizbuilder-editor-title" style={{ textAlign: 'center', marginBottom: 24 }}>{isEditingExisting ? `Q${selectedQuestionIdx + 1} Preview & Edit` : 'Add New Question'}</h2>
+                <div style={{ marginBottom: 18 }}>
+                  <label style={{ fontWeight: 600, color: '#444', marginBottom: 6, display: 'block' }}>Question Text</label>
                   <input
                     type="text"
                     value={form.question_text}
                     onChange={(e) => setForm({ ...form, question_text: e.target.value })}
-                    className="w-full p-3 border rounded-lg text-lg shadow-sm focus:ring-2 focus:ring-blue-300"
+                    className="quizbuilder-question-input"
                     required
                   />
                 </div>
-                <div className="mb-4">
-                  <label className="block mb-2 font-semibold text-gray-700">Options</label>
-                  <ul className="ml-4 mt-2 space-y-2">
+                <div style={{ marginBottom: 18 }}>
+                  <label style={{ fontWeight: 600, color: '#444', marginBottom: 6, display: 'block' }}>Options</label>
+                  <ul className="quizbuilder-options-list" style={{ marginLeft: 0, marginTop: 8 }}>
                     {form.options.map((option, index) => (
-                      <li key={index} className="flex items-center gap-2">
+                      <li key={index} className="quizbuilder-option-row" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <input
                           type="text"
                           value={option}
                           onChange={(e) => handleOptionChange(index, e.target.value)}
-                          className="flex-1 p-2 border rounded-lg text-base shadow-sm"
+                          className="quizbuilder-question-input"
                           placeholder={`Option ${index + 1}`}
                           required
+                          style={{ flex: 1, minWidth: 0, marginBottom: 0 }}
                         />
                         <input
                           type="radio"
                           name="correct_answer"
                           checked={form.correct_answer_index === index}
                           onChange={() => setForm({ ...form, correct_answer_index: index })}
-                          className="ml-2"
+                          style={{ marginLeft: 8 }}
                         />
-                        <span className={form.correct_answer_index === index ? 'text-green-600 font-bold' : 'text-gray-500'}>
+                        <span style={{ color: form.correct_answer_index === index ? '#22c55e' : '#bbb', fontWeight: 700, fontSize: 18, marginLeft: 2 }}>
                           {form.correct_answer_index === index ? '✓' : ''}
                         </span>
                         <button
                           type="button"
                           onClick={() => removeOption(index)}
-                          className="ml-2 px-2 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 disabled:opacity-50"
+                          className="quizbuilder-add-option-btn"
                           disabled={form.options.length <= 2}
-                          style={{ display: form.options.length > 2 ? 'inline-block' : 'none' }}
+                          style={{ display: form.options.length > 2 ? 'inline-block' : 'none', background: '#fee2e2', color: '#ef4444', fontWeight: 700, fontSize: 15, padding: '6px 12px', marginLeft: 2 }}
                           aria-label="Remove Option"
                         >
                           Remove
@@ -576,20 +568,20 @@ export default function QuestionsPage() {
                   <button
                     type="button"
                     onClick={addOption}
-                    className="mt-4 px-4 py-2 bg-gray-200 rounded-lg font-semibold hover:bg-gray-300 disabled:opacity-50"
+                    className="quizbuilder-add-option-btn"
                     disabled={form.options.length >= 4}
-                    style={{ display: form.options.length < 4 ? 'inline-block' : 'none' }}
+                    style={{ display: form.options.length < 4 ? 'inline-block' : 'none', marginTop: 12 }}
                   >
                     Add Option
                   </button>
                 </div>
-                <div className="mb-4">
-                  <label className="block mb-2 font-semibold text-gray-700">Timer (seconds)</label>
+                <div style={{ marginBottom: 18 }}>
+                  <label style={{ fontWeight: 600, color: '#444', marginBottom: 6, display: 'block' }}>Timer (seconds)</label>
                   <input
                     type="number"
                     value={form.timer}
                     onChange={(e) => setForm({ ...form, timer: parseInt(e.target.value) })}
-                    className="w-full p-3 border rounded-lg text-lg shadow-sm"
+                    className="quizbuilder-timer-input"
                     min="5"
                     max="60"
                     required
@@ -598,7 +590,8 @@ export default function QuestionsPage() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 bg-blue-500 text-white rounded-lg font-bold text-lg shadow hover:bg-blue-600 disabled:bg-gray-400 mt-2"
+                  className="quizbuilder-style-btn"
+                  style={{ width: '100%', marginTop: 12, fontSize: 18 }}
                 >
                   {loading ? (isEditingExisting ? 'Saving...' : 'Adding...') : (isEditingExisting ? 'Save Changes' : 'Add Question')}
                 </button>
@@ -635,16 +628,16 @@ export default function QuestionsPage() {
             )}
           </main>
           {/* Customization panel */}
-          <aside className={`fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-80 min-w-[16rem] bg-white shadow-lg z-20 transition-transform duration-300 ${customSidebarOpen ? 'translate-x-0' : 'translate-x-full'} flex flex-col`}>
+          <aside className="quizbuilder-right-panel">
             <button
-              className="absolute -left-10 top-4 bg-blue-500 text-white rounded-l px-3 py-2 shadow hover:bg-blue-600 focus:outline-none"
+              style={{ position: 'absolute', left: -40, top: 16, background: 'linear-gradient(135deg, #6366f1 0%, #a78bfa 100%)', color: '#fff', border: 'none', borderRadius: '10px 0 0 10px', fontWeight: 700, fontSize: 15, padding: '8px 12px', boxShadow: '0 2px 8px #a5b4fc33', cursor: 'pointer' }}
               onClick={() => setCustomSidebarOpen((open) => !open)}
               aria-label={customSidebarOpen ? 'Close Customization Panel' : 'Open Customization Panel'}
             >
               {customSidebarOpen ? '→' : '←'}
             </button>
             <div className="overflow-y-auto flex-1 p-6 space-y-6">
-              <h3 className="text-lg font-bold mb-4 text-blue-700">Customize Question</h3>
+              <h3 className="quizbuilder-right-title" style={{ marginBottom: 18 }}>Customize Question</h3>
               {/* Tab Menu */}
               <div className="flex mb-6 border-b border-gray-200">
                 <button
