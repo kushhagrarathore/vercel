@@ -3,16 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import Spinner from '../components/Spinner';
 import { useToast } from '../components/Toast';
+import { FiUser, FiSettings, FiShield, FiFileText, FiLock, FiLogOut, FiTrash2, FiCamera, FiX } from 'react-icons/fi';
 
 const SIDEBAR_SECTIONS = [
-  { label: 'Profile', group: 'Settings' },
-  { label: 'Account', group: 'Settings' },
-  { label: 'Privacy', group: 'Settings' },
-  { label: 'Terms of Service', group: 'Legal' },
-  { label: 'Privacy Policy', group: 'Legal' },
-  { label: 'Cookie Policy', group: 'Legal' },
-  { label: 'Log out', group: 'Account' },
-  { label: 'Delete Account', group: 'Account' },
+  { label: 'Profile', group: 'Settings', icon: <FiUser /> },
+  { label: 'Account', group: 'Settings', icon: <FiSettings /> },
+  { label: 'Privacy', group: 'Settings', icon: <FiShield /> },
+  { label: 'Terms of Service', group: 'Legal', icon: <FiFileText /> },
+  { label: 'Privacy Policy', group: 'Legal', icon: <FiFileText /> },
+  { label: 'Cookie Policy', group: 'Legal', icon: <FiFileText /> },
+  { label: 'Log out', group: 'Account', icon: <FiLogOut /> },
+  { label: 'Delete Account', group: 'Account', icon: <FiTrash2 /> },
 ];
 
 const Profile = () => {
@@ -25,6 +26,9 @@ const Profile = () => {
   const [deleteError, setDeleteError] = useState('');
   const toast = useToast();
   const navigate = useNavigate();
+  const [profilePic, setProfilePic] = useState(null);
+  const [profilePicUrl, setProfilePicUrl] = useState('');
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Simulated stats (replace with real fetch if needed)
   const [stats, setStats] = useState({ level: 1, quizzes: 0, achievements: 0 });
@@ -67,6 +71,13 @@ const Profile = () => {
           if (quizzes > 0) completion += 20;
           if (achievements > 0) completion += 20;
           setProfileCompletion(completion);
+          // Fetch profile picture URL if exists
+          const { data: profileAvatarData } = await supabase
+            .from('profiles')
+            .select('avatar_url')
+            .eq('id', user.id)
+            .single();
+          if (profileAvatarData?.avatar_url) setProfilePicUrl(profileAvatarData.avatar_url);
         }
       } catch (err) {
         toast('Failed to load profile', 'error');
@@ -116,146 +127,134 @@ const Profile = () => {
       height: '100vh',
       gap: 0,
     }}>
+      {/* Back to Dashboard Button */}
       <button
         onClick={() => navigate('/dashboard')}
         style={{
-          alignSelf: 'flex-start',
-          background: '#ede9fe',
-          color: '#5b21b6',
+          width: '100%',
+          background: 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)',
+          color: '#fff',
           border: 'none',
-          borderRadius: 8,
-          padding: '10px 22px',
-          fontWeight: 700,
-          fontSize: 16,
+          borderRadius: 10,
+          padding: '12px 0',
+          fontWeight: 800,
+          fontSize: 17,
           cursor: 'pointer',
+          marginBottom: 24,
           boxShadow: '0 2px 8px #a5b4fc22',
-          marginBottom: 32,
           transition: 'background 0.2s, color 0.2s',
+          letterSpacing: '0.01em',
         }}
-        onMouseOver={e => { e.target.style.background = '#c7d2fe'; e.target.style.color = '#3730a3'; }}
-        onMouseOut={e => { e.target.style.background = '#ede9fe'; e.target.style.color = '#5b21b6'; }}
+        onMouseOver={e => { e.target.style.background = 'linear-gradient(90deg, #6366f1 0%, #a084ee 100%)'; }}
+        onMouseOut={e => { e.target.style.background = 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)'; }}
       >
-        ← Dashboard
+        ← Back to Dashboard
       </button>
+      {/* Humanoid Icon or Profile Pic */}
+      <div style={{
+        width: 62,
+        height: 62,
+        borderRadius: '50%',
+        background: profilePicUrl ? 'linear-gradient(135deg, #fff 0%, #f3f4f6 100%)' : 'linear-gradient(135deg, #a084ee 0%, #4f8cff 100%)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 10,
+        boxShadow: '0 4px 18px #a5b4fc33, 0 1.5px 6px #a084ee22',
+        border: '3px solid #ede9fe',
+        position: 'relative',
+      }}>
+        {profilePicUrl ? (
+          <img src={profilePicUrl} alt="Profile" style={{ width: 54, height: 54, borderRadius: '50%', objectFit: 'cover', boxShadow: '0 2px 8px #a5b4fc22' }} />
+        ) : (
+          <FiUser size={32} color="#fff" />
+        )}
+        {/* Camera/Remove Button */}
+        <label htmlFor="profile-pic-upload" style={{ position: 'absolute', bottom: -8, right: -8, background: '#fff', borderRadius: '50%', boxShadow: '0 1px 4px #a5b4fc22', padding: 4, cursor: 'pointer', border: '1.5px solid #a084ee', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <FiCamera size={16} color="#7c3aed" />
+          <input id="profile-pic-upload" type="file" accept="image/*" style={{ display: 'none' }} onChange={async e => {
+            const file = e.target.files[0];
+            if (file) {
+              setProfilePic(file);
+              // Upload to Supabase Storage
+              const fileExt = file.name.split('.').pop();
+              const fileName = `${profile.email.replace(/[^a-zA-Z0-9]/g, '')}_${Date.now()}.${fileExt}`;
+              const { data, error } = await supabase.storage.from('profile-pics').upload(fileName, file, { upsert: true });
+              if (!error) {
+                const url = supabase.storage.from('profile-pics').getPublicUrl(fileName).publicUrl;
+                setProfilePicUrl(url);
+                // Save URL to profile
+                await supabase.from('profiles').update({ avatar_url: url }).eq('id', profile.id);
+              }
+            }
+          }} />
+        </label>
+        {profilePicUrl && (
+          <button onClick={async () => {
+            setProfilePicUrl('');
+            await supabase.from('profiles').update({ avatar_url: null }).eq('id', profile.id);
+          }} style={{ position: 'absolute', top: -8, right: -8, background: '#fff', borderRadius: '50%', boxShadow: '0 1px 4px #a5b4fc22', padding: 4, border: '1.5px solid #a084ee', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} title="Remove Picture">
+            <FiX size={14} color="#a084ee" />
+          </button>
+        )}
+      </div>
       <div style={{ textAlign: 'center', marginBottom: 14 }}>
         <div style={{ fontWeight: 900, fontSize: 22, color: '#5b21b6', marginBottom: 2 }}>{profile.name || 'Your Name'}</div>
-        <div style={{ color: '#6366f1', fontWeight: 500, fontSize: 14 }}>{profile.email}</div>
+        <div style={{ color: '#6366f1', fontWeight: 500, fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+          {profile.email}
+          {/* Verified badge */}
+          {profile.email && <span style={{ marginLeft: 4, color: '#22c55e', fontWeight: 700, fontSize: 15 }} title="Verified">✔</span>}
+        </div>
       </div>
       <div style={{ width: '100%', margin: '22px 0 10px 0', borderTop: '1.5px solid #e0e0e0' }} />
-      {/* Settings group */}
+      {/* Sidebar Sections with Icons */}
       <div style={{ width: '100%', marginBottom: 18 }}>
-        <div style={{ fontWeight: 700, color: '#7c3aed', marginBottom: 10, fontSize: 16 }}>Settings</div>
-        {SIDEBAR_SECTIONS.filter(s => s.group === 'Settings').map(({ label }) => (
-          <div
-            key={label}
-            onClick={() => setSelectedSection(label)}
-            style={{
-              color: selectedSection === label ? '#5b21b6' : '#444',
-              fontSize: 15,
-              marginBottom: 8,
-              cursor: 'pointer',
-              opacity: 0.88,
-              borderRadius: 6,
-              padding: '7px 10px',
-              background: selectedSection === label ? '#ede9fe' : 'transparent',
-              fontWeight: selectedSection === label ? 700 : 500,
-              transition: 'background 0.18s, color 0.18s',
-            }}
-            onMouseOver={e => { e.target.style.background = '#ede9fe'; e.target.style.color = '#5b21b6'; }}
-            onMouseOut={e => { if (selectedSection !== label) { e.target.style.background = 'transparent'; e.target.style.color = '#444'; }}}
-          >
-            {label}
+        {['Settings', 'Legal', 'Account'].map(group => (
+          <div key={group} style={{ marginBottom: 10 }}>
+            <div style={{ fontWeight: 700, color: '#7c3aed', marginBottom: 10, fontSize: 16 }}>{group}</div>
+            {SIDEBAR_SECTIONS.filter(s => s.group === group).map(({ label, icon }) => (
+              <div
+                key={label}
+                onClick={async () => {
+                  if (label === 'Log out') {
+                    setSelectedSection(label);
+                    setShowLogoutModal(true);
+                  } else if (label === 'Delete Account') {
+                    setSelectedSection(label);
+                    setShowDeleteModal(true);
+                  } else if (label === 'View Plans') {
+                    navigate('/plan');
+                  } else {
+                    setSelectedSection(label);
+                  }
+                }}
+                style={{
+                  color: selectedSection === label ? '#4f8cff' : '#444',
+                  fontSize: 15,
+                  marginBottom: 8,
+                  cursor: 'pointer',
+                  opacity: 0.92,
+                  borderRadius: 8,
+                  padding: '9px 14px',
+                  background: selectedSection === label ? 'rgba(99,102,241,0.08)' : 'transparent',
+                  fontWeight: selectedSection === label ? 700 : 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  transition: 'background 0.18s, color 0.18s',
+                }}
+                onMouseOver={e => { e.target.style.background = '#ede9fe'; e.target.style.color = '#4f8cff'; }}
+                onMouseOut={e => { if (selectedSection !== label) { e.target.style.background = 'transparent'; e.target.style.color = '#444'; }}}
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') e.currentTarget.click(); }}
+                aria-label={label}
+              >
+                <span style={{ fontSize: 18, color: selectedSection === label ? '#4f8cff' : '#a084ee', display: 'flex', alignItems: 'center' }}>{icon}</span>
+                {label}
+              </div>
+            ))}
           </div>
         ))}
-        {/* View Plans button */}
-        <div
-          onClick={() => navigate('/plan')}
-          style={{
-            color: '#6366f1',
-            fontWeight: 700,
-            fontSize: 15,
-            cursor: 'pointer',
-            opacity: 0.95,
-            borderRadius: 6,
-            padding: '7px 10px',
-            background: '#f3f4f6',
-            marginTop: 8,
-            marginBottom: 8,
-            transition: 'background 0.18s, color 0.18s',
-            boxShadow: '0 1px 4px #a5b4fc11',
-          }}
-          onMouseOver={e => { e.target.style.background = '#ede9fe'; e.target.style.color = '#5b21b6'; }}
-          onMouseOut={e => { e.target.style.background = '#f3f4f6'; e.target.style.color = '#6366f1'; }}
-        >
-          View Plans
-        </div>
-      </div>
-      {/* Legal group */}
-      <div style={{ width: '100%', marginBottom: 18 }}>
-        <div style={{ fontWeight: 700, color: '#7c3aed', marginBottom: 10, fontSize: 16 }}>Legal</div>
-        {SIDEBAR_SECTIONS.filter(s => s.group === 'Legal').map(({ label }) => (
-          <div
-            key={label}
-            onClick={() => setSelectedSection(label)}
-            style={{
-              color: selectedSection === label ? '#5b21b6' : '#444',
-              fontSize: 15,
-              marginBottom: 8,
-              cursor: 'pointer',
-              opacity: 0.88,
-              borderRadius: 6,
-              padding: '7px 10px',
-              background: selectedSection === label ? '#ede9fe' : 'transparent',
-              fontWeight: selectedSection === label ? 700 : 500,
-              transition: 'background 0.18s, color 0.18s',
-            }}
-            onMouseOver={e => { e.target.style.background = '#ede9fe'; e.target.style.color = '#5b21b6'; }}
-            onMouseOut={e => { if (selectedSection !== label) { e.target.style.background = 'transparent'; e.target.style.color = '#444'; }}}
-          >
-            {label}
-          </div>
-        ))}
-      </div>
-      {/* Account group */}
-      <div style={{ width: '100%', marginTop: 'auto', marginBottom: 0 }}>
-        <div style={{ fontWeight: 700, color: '#7c3aed', marginBottom: 10, fontSize: 16 }}>Account</div>
-        <div
-          style={{
-            color: '#e11d48',
-            fontWeight: 600,
-            fontSize: 15,
-            cursor: 'pointer',
-            marginBottom: 10,
-            opacity: 0.93,
-            borderRadius: 6,
-            padding: '7px 10px',
-            transition: 'background 0.18s, color 0.18s',
-            background: selectedSection === 'Log out' ? '#fee2e2' : 'transparent',
-          }}
-          onClick={async () => { setSelectedSection('Log out'); await supabase.auth.signOut(); navigate('/login'); }}
-          onMouseOver={e => { e.target.style.background = '#fee2e2'; e.target.style.color = '#b91c1c'; }}
-          onMouseOut={e => { if (selectedSection !== 'Log out') { e.target.style.background = 'transparent'; e.target.style.color = '#e11d48'; }}}
-        >
-          Log out
-        </div>
-        <div
-          style={{
-            color: '#b91c1c',
-            fontWeight: 600,
-            fontSize: 15,
-            cursor: 'pointer',
-            opacity: 0.85,
-            borderRadius: 6,
-            padding: '7px 10px',
-            transition: 'background 0.18s, color 0.18s',
-            background: selectedSection === 'Delete Account' ? '#fee2e2' : 'transparent',
-          }}
-          onClick={() => setShowDeleteModal(true)}
-          onMouseOver={e => { e.target.style.background = '#fee2e2'; e.target.style.color = '#7f1d1d'; }}
-          onMouseOut={e => { if (selectedSection !== 'Delete Account') { e.target.style.background = 'transparent'; e.target.style.color = '#b91c1c'; }}}
-        >
-          Delete Account
-        </div>
       </div>
     </div>
   );
@@ -599,6 +598,21 @@ const Profile = () => {
     }}>
       {sidebar}
       {main}
+      {/* Log out confirmation modal */}
+      {showLogoutModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(30,34,45,0.18)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(60,60,100,0.13)', padding: 32, minWidth: 320, maxWidth: 360, position: 'relative', width: '90vw', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <h3 style={{ fontWeight: 900, fontSize: 20, color: '#7c3aed', marginBottom: 12 }}>Confirm Logout</h3>
+            <p style={{ color: '#6366f1', fontWeight: 600, fontSize: 15, marginBottom: 18, textAlign: 'center' }}>
+              Are you sure you want to log out?
+            </p>
+            <div style={{ display: 'flex', gap: 12, width: '100%' }}>
+              <button style={{ flex: 1, background: '#f3f4f6', color: '#444', border: 'none', borderRadius: 8, padding: '12px 0', fontWeight: 700, fontSize: 16, cursor: 'pointer' }} onClick={() => setShowLogoutModal(false)}>Cancel</button>
+              <button style={{ flex: 1, background: 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)', color: '#fff', border: 'none', borderRadius: 8, padding: '12px 0', fontWeight: 900, fontSize: 16, cursor: 'pointer' }} onClick={async () => { setShowLogoutModal(false); await supabase.auth.signOut(); localStorage.clear(); sessionStorage.clear(); navigate('/login'); }}>Log out</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
