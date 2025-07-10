@@ -431,10 +431,11 @@ export default function QuestionsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation Buttons */}
-      <div className="flex justify-between items-center px-6 py-4 bg-white shadow sticky top-0 z-30">
+      <div className="flex justify-between items-center px-10 py-5 bg-white rounded-b-2xl shadow-md sticky top-0 z-30 border-b border-gray-100" style={{minHeight:'4.5rem'}}>
         <div className="flex items-center gap-4">
           <button
-            className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 font-semibold"
+            className="text-blue-400 font-bold text-base hover:underline focus:outline-none"
+            style={{background:'none',border:'none',padding:0}}
             onClick={() => navigate('/dashboard')}
           >
             ← Back to Dashboard
@@ -453,13 +454,45 @@ export default function QuestionsPage() {
             }
           }}
           placeholder="Untitled Quiz"
-            className={`ml-4 text-xl font-semibold truncate max-w-xs border-none focus:ring-0 focus:outline-none p-0 m-0 transition-all duration-300 ${titleInputGlow ? 'ring-2 ring-amber-400 ring-offset-2 border-amber-400' : ''} ${titleInputBg ? 'bg-amber-100/70' : 'bg-transparent'}`}
-          style={{ minWidth: '120px' }}
+            className={`ml-4 text-3xl font-bold truncate max-w-xs border-none focus:ring-0 focus:outline-none p-0 m-0 transition-all duration-300 text-gray-500 ${titleInputGlow ? 'ring-2 ring-amber-400 ring-offset-2 border-amber-400' : ''} ${titleInputBg ? 'bg-amber-100/70' : 'bg-transparent'}`}
+          style={{ minWidth: '120px', letterSpacing: '-0.01em' }}
         />
         </div>
         <div className="flex items-center gap-4">
           <button
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold"
+            className="px-6 py-2 rounded-xl font-bold text-white transition-colors"
+            style={{
+              background: 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)',
+              boxShadow: 'none',
+              border: 'none',
+              fontSize: '1.15rem',
+              marginRight: '0.5rem',
+            }}
+            onClick={() => {
+              if (selectedQuizId) {
+                navigate(`/quiz/preview/${selectedQuizId}`);
+              } else {
+                // Save current quiz draft to localStorage as 'slides' for PreviewQuizPage
+                localStorage.setItem('quizDraft', JSON.stringify({
+                  slides: questions, // lq_questions as slides
+                  quizTitle: quizName,
+                  globalSettings: form.settings || {},
+                }));
+                navigate('/quiz/preview/preview');
+              }
+            }}
+          >
+            Preview
+          </button>
+          <button
+            className="px-6 py-2 rounded-xl font-bold text-white transition-colors"
+            style={{
+              background: 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)',
+              boxShadow: 'none',
+              border: 'none',
+              fontSize: '1.15rem',
+              marginRight: '0.5rem',
+            }}
             onClick={() => navigate('/Admin')}
           >
             Start Quiz →
@@ -467,7 +500,14 @@ export default function QuestionsPage() {
           <button
             type="button"
             onClick={handleCreateOrSaveQuiz}
-            className={`px-5 py-2 ${selectedQuizId ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-600 hover:bg-green-700'} text-white rounded transition-colors whitespace-nowrap`}
+            className={`px-6 py-2 rounded-xl font-bold text-white transition-colors whitespace-nowrap`}
+            style={{
+              background: selectedQuizId ? '#facc15' : 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)',
+              color: selectedQuizId ? '#222' : '#fff',
+              boxShadow: 'none',
+              border: 'none',
+              fontSize: '1.15rem',
+            }}
             disabled={loading}
           >
             {loading ? (selectedQuizId ? 'Saving...' : 'Creating...') : (selectedQuizId ? 'Save' : 'Create Quiz')}
@@ -498,9 +538,9 @@ export default function QuestionsPage() {
       {/* Layout: Sidebar + Main + (optional) Right Panel */}
       <div className="flex flex-row w-full">
         {/* Fixed, full-height Sidebar with native drag-and-drop */}
-        <aside className="fixed top-[4.5rem] left-0 h-[calc(100vh-4.5rem)] w-60 min-w-[12rem] bg-white shadow-lg flex flex-col justify-between z-10">
+        <aside className="fixed top-[4.5rem] left-0 h-[calc(100vh-4.5rem)] w-64 min-w-[13rem] bg-white rounded-2xl shadow-xl flex flex-col justify-between z-20 border border-gray-100" style={{margin:'1.5rem 0 1.5rem 1.5rem',padding:'0.5rem 0'}}>
           <div className="overflow-y-auto flex-1 p-4">
-            <h2 className="text-lg font-bold mb-3">Questions</h2>
+            <h2 className="text-lg font-bold mb-3 text-purple-700">Questions</h2>
             <ul className="space-y-2">
               {questions.map((q, idx) => (
                 <li
@@ -510,14 +550,14 @@ export default function QuestionsPage() {
                   onDragEnter={() => handleDragEnter(idx)}
                   onDragEnd={handleDragEnd}
                   onDragOver={e => e.preventDefault()}
-                  className={`w-full text-left px-3 py-2 rounded transition-colors flex items-center gap-2 cursor-move select-none ${selectedQuestionIdx === idx ? 'bg-blue-100 font-bold' : 'hover:bg-gray-100'}`}
+                 className={`w-full text-left px-3 py-2 rounded-xl transition-colors flex items-center gap-2 cursor-move select-none ${selectedQuestionIdx === idx ? 'bg-blue-50 font-bold text-blue-700' : 'hover:bg-gray-50'}`}
                   onClick={() => handleSidebarClick(idx)}
                 >
-                  <span className="text-xs font-semibold text-gray-500 mr-2">Q{idx + 1}</span>
+                  <span className="text-xs font-semibold text-gray-400 mr-2">Q{idx + 1}</span>
                   <span className="truncate flex-1">{q.question_text || `Question ${idx + 1}`}</span>
                   <button
                     type="button"
-                    className="ml-2 text-red-500 hover:text-red-700 p-1 rounded"
+                   className="ml-2 text-red-400 hover:text-red-600 p-1 rounded-full bg-red-50 hover:bg-red-100"
                     title="Delete Question"
                     onClick={e => { e.stopPropagation(); handleDeleteQuestion(idx); }}
                   >
@@ -527,9 +567,18 @@ export default function QuestionsPage() {
               ))}
             </ul>
           </div>
-          <div className="p-4 border-t">
+          <div className="p-4 border-t border-gray-100">
             <button
-              className="w-full py-2 bg-green-500 text-white rounded hover:bg-green-600"
+              className="w-full px-6 py-3 rounded-2xl font-bold text-white"
+              style={{
+                background: 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)',
+                boxShadow: 'none',
+                border: 'none',
+                fontSize: '1.12rem',
+                letterSpacing: '-0.01em',
+                marginTop: '0.5rem',
+                marginBottom: '0.5rem',
+              }}
               onClick={handleAddQuestion}
             >
               + Add Question
@@ -555,164 +604,118 @@ export default function QuestionsPage() {
             )}
             {/* If a question is selected, show it for editing. Otherwise, show the add form. */}
             <form onSubmit={handleSubmit} className="mb-8 w-full flex flex-col items-center">
-              <div className="bg-white/80 rounded-xl shadow-lg p-6 max-w-2xl w-full mx-auto">
-                <h2 className="text-2xl font-bold text-blue-700 mb-4 text-center">{isEditingExisting ? `Q${selectedQuestionIdx + 1} Preview & Edit` : 'Add New Question'}</h2>
-                <div className="mb-4">
+              <div
+                className="shadow-2xl max-w-2xl w-full mx-auto flex flex-col gap-10 justify-center items-center"
+                style={{
+                  background: form.settings?.backgroundColor || settingsDefaults.backgroundColor,
+                  borderRadius: (form.settings?.borderRadius || settingsDefaults.borderRadius) * 0.7,
+                  color: form.settings?.textColor || settingsDefaults.textColor,
+                  fontFamily: form.settings?.fontFamily || settingsDefaults.fontFamily,
+                  fontSize: form.settings?.fontSize || settingsDefaults.fontSize,
+                  fontWeight: form.settings?.bold ? 'bold' : 'normal',
+                  fontStyle: form.settings?.italic ? 'italic' : 'normal',
+                  boxShadow: form.settings?.shadow ?? settingsDefaults.shadow ? '0 4px 16px 0 rgba(0,0,0,0.08)' : 'none',
+                  padding: '2.5rem 2.5rem 3.5rem 2.5rem',
+                  margin: '2.5rem',
+                  textAlign: form.settings?.alignment || settingsDefaults.alignment,
+                  transition: 'all 0.3s',
+                  boxSizing: 'border-box',
+                  overflow: 'visible',
+                  minHeight: '520px',
+                  maxHeight: '700px',
+                }}
+              >
+                <h2 className="text-3xl font-bold text-blue-700 mb-6 text-center tracking-tight">{isEditingExisting ? `Q${selectedQuestionIdx + 1} Preview & Edit` : 'Add New Question'}</h2>
+                <div className="mb-6 w-full px-2">
                   <label className="block mb-2 font-semibold text-gray-700">Question Text</label>
                   <input
                     type="text"
                     value={form.question_text}
                     onChange={(e) => setForm({ ...form, question_text: e.target.value })}
-                    className="w-full p-3 border rounded-lg text-lg shadow-sm focus:ring-2 focus:ring-blue-300"
+                    className="w-full p-4 border border-gray-200 rounded-lg text-lg shadow-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-300 transition-all"
                     required
                   />
                 </div>
-                <div className="mb-4">
+                <div className="mb-6 w-full px-2">
                   <label className="block mb-2 font-semibold text-gray-700">Options</label>
-                  <ul className="ml-4 mt-2 space-y-2">
+                  <div className={`grid gap-6 w-full ${form.options.length === 2 ? 'grid-cols-2' : form.options.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`} style={{paddingLeft:'0.5rem',paddingRight:'0.5rem'}}>
                     {form.options.map((option, index) => (
-                      <li key={index} className="flex items-center gap-2">
+                      <div key={index} className={`relative flex items-center px-4 py-2 rounded-full border transition-all duration-200 ${form.correct_answer_index === index ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-gray-50'} group`}
+                        style={{
+                          color: form.settings?.textColor || settingsDefaults.textColor,
+                          fontFamily: form.settings?.fontFamily || settingsDefaults.fontFamily,
+                          fontSize: form.settings?.fontSize || settingsDefaults.fontSize,
+                          fontWeight: form.settings?.bold ? 'bold' : 'normal',
+                          fontStyle: form.settings?.italic ? 'italic' : 'normal',
+                          minHeight: '56px',
+                          position: 'relative',
+                          boxShadow: 'none',
+                          marginBottom: '0.5rem',
+                        }}
+                      >
                         <input
                           type="text"
                           value={option}
                           onChange={(e) => handleOptionChange(index, e.target.value)}
-                          className="flex-1 p-2 border rounded-lg text-base shadow-sm"
+                          className="flex-1 bg-transparent border-none outline-none px-2 py-2 text-base font-semibold rounded-full focus:ring-0 focus:outline-none"
                           placeholder={`Option ${index + 1}`}
                           required
                         />
-                        <input
-                          type="radio"
-                          name="correct_answer"
-                          checked={form.correct_answer_index === index}
-                          onChange={() => setForm({ ...form, correct_answer_index: index })}
-                          className="ml-2"
-                        />
-                        <span className={form.correct_answer_index === index ? 'text-green-600 font-bold' : 'text-gray-500'}>
-                          {form.correct_answer_index === index ? '✓' : ''}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeOption(index)}
-                          className="ml-2 px-2 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 disabled:opacity-50"
-                          disabled={form.options.length <= 2}
-                          style={{ display: form.options.length > 2 ? 'inline-block' : 'none' }}
-                          aria-label="Remove Option"
-                        >
-                          Remove
-                        </button>
-                      </li>
+                        <div className="flex items-center gap-2" style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)' }}>
+                          <button
+                            type="button"
+                            onClick={() => setForm({ ...form, correct_answer_index: index })}
+                            className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all duration-150 ${form.correct_answer_index === index ? 'bg-purple-500 text-white border-purple-500' : 'bg-white text-gray-400 border-gray-200 group-hover:border-blue-300'}`}
+                            title="Mark as Correct"
+                            style={{ position: 'relative' }}
+                          >
+                            {form.correct_answer_index === index ? '\u2713' : ''}
+                          </button>
+                          {form.options.length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() => removeOption(index)}
+                              className="w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center transition-all"
+                              aria-label="Remove Option"
+                              style={{
+                                boxShadow: 'none',
+                                border: 'none',
+                                padding: 0,
+                                marginRight: 0,
+                              }}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="#ef4444" strokeWidth={2}>
+                                <circle cx="12" cy="12" r="11" fill="#fef2f2" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 8l8 8M8 16l8-8" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
+                  <div className="flex justify-end mt-3">
                   <button
                     type="button"
                     onClick={addOption}
-                    className="mt-4 px-4 py-2 bg-gray-200 rounded-lg font-semibold hover:bg-gray-300 disabled:opacity-50"
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 disabled:opacity-50 transition-colors"
                     disabled={form.options.length >= 4}
-                    style={{ display: form.options.length < 4 ? 'inline-block' : 'none' }}
+                    style={{ display: form.options.length < 4 ? 'inline-block' : 'none', boxShadow: 'none', border: 'none' }}
                   >
                     Add Option
                   </button>
-                </div>
-                <div className="mb-4">
-                  <label className="block mb-2 font-semibold text-gray-700">Timer (seconds)</label>
-                  <input
-                    type="number"
-                    value={form.timer}
-                    onChange={(e) => setForm({ ...form, timer: parseInt(e.target.value) })}
-                    className="w-full p-3 border rounded-lg text-lg shadow-sm"
-                    min="5"
-                    max="60"
-                    required
-                  />
+                  </div>
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 bg-blue-500 text-white rounded-lg font-bold text-lg shadow hover:bg-blue-600 disabled:bg-gray-400 mt-2"
+                  className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-lg hover:bg-blue-700 disabled:bg-gray-300 mt-2 transition-colors"
+                  style={{ boxShadow: 'none', border: 'none', marginTop: '1.5rem', marginBottom: '3rem' }}
                 >
-                  {loading ? (isEditingExisting ? 'Saving...' : 'Adding...') : (isEditingExisting ? 'Save Changes' : 'Add Question')}
+                  {loading ? (isEditingExisting ? 'Saving...' : 'Adding...') : (isEditingExisting ? 'Save Changes' : 'Save Question')}
                 </button>
               </div>
             </form>
-            {/* Live Preview - only show if customization sidebar is open */}
-            {customSidebarOpen && form && (
-              <div ref={previewRef} className="mt-8 w-full flex flex-col items-center">
-                <div className="flex w-full justify-between items-center mb-2">
-                  <span className="text-lg font-bold text-gray-700">Live Preview</span>
-                  <button
-                    type="button"
-                    className="px-4 py-2 rounded-lg font-semibold shadow transition-all duration-200 bg-blue-500 text-white hover:bg-blue-600 ml-auto"
-                    onClick={() => setIsFullScreenPreview(true)}
-                  >
-                    Full Screen Preview
-                  </button>
-                </div>
-                {/* Preview Container with max size, scaling, border, and shadow */}
-                <div
-                  className="flex items-center justify-center"
-                  style={{
-                    width: '100%',
-                    maxWidth: '900px',
-                    maxHeight: '500px',
-                    minHeight: '0',
-                    minWidth: '0',
-                    overflow: 'hidden',
-                    border: '1.5px solid #e5e7eb',
-                    boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)',
-                    borderRadius: '1.5rem',
-                    background: '#f8fafc',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: '800px',
-                      height: '450px',
-                      maxWidth: '100%',
-                      maxHeight: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transform: 'scale(0.95)',
-                      transformOrigin: 'top center',
-                    }}
-                  >
-                    <div style={{ width: '100%', height: '100%' }}>
-                      <QuestionPreview question={form} customizations={form.settings} />
-                    </div>
-                  </div>
-                </div>
-                {/* Full Screen Modal */}
-                {isFullScreenPreview && (
-                  <div
-                    style={{
-                      position: 'fixed',
-                      top: 0,
-                      left: 0,
-                      width: '100vw',
-                      height: '100vh',
-                      zIndex: 9999,
-                      background: 'rgba(0,0,0,0.85)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    <div style={{ position: 'absolute', top: 32, right: 48, zIndex: 10000 }}>
-                      <button
-                        type="button"
-                        className="px-5 py-2 bg-gray-700 text-white rounded-lg font-semibold shadow hover:bg-gray-900 text-base border border-gray-900"
-                        onClick={() => setIsFullScreenPreview(false)}
-                      >
-                        Close
-                      </button>
-                    </div>
-                    <div style={{ width: '90vw', height: '90vh', maxWidth: 1200, maxHeight: 800, background: '#fff', borderRadius: 24, overflow: 'hidden', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <QuestionPreview question={form} customizations={form.settings} />
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
           </main>
           {/* Customization panel */}
           <aside className={`fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-80 min-w-[16rem] bg-white shadow-lg z-20 transition-transform duration-300 ${customSidebarOpen ? 'translate-x-0' : 'translate-x-full'} flex flex-col`}>
@@ -862,6 +865,20 @@ export default function QuestionsPage() {
                     <input type="number" min="0" max="64" value={form.settings?.padding || settingsDefaults.padding} onChange={e => setForm(f => ({ ...f, settings: { ...f.settings, padding: parseInt(e.target.value) } }))} className="w-full border rounded p-1" />
                     <label className="block font-medium mt-3 mb-1">Margin</label>
                     <input type="number" min="0" max="64" value={form.settings?.margin || settingsDefaults.margin} onChange={e => setForm(f => ({ ...f, settings: { ...f.settings, margin: parseInt(e.target.value) } }))} className="w-full border rounded p-1" />
+                  </div>
+                  {/* Timer Section */}
+                  <div className="mb-6">
+                    <h4 className="font-semibold text-blue-600 mb-2">Timer</h4>
+                    <label className="block font-medium mb-1">Timer (seconds)</label>
+                    <input
+                      type="number"
+                      value={form.timer}
+                      onChange={e => setForm(f => ({ ...f, timer: parseInt(e.target.value) }))}
+                      className="w-full p-3 border rounded-lg text-lg shadow-sm"
+                      min="5"
+                      max="60"
+                      required
+                    />
                   </div>
                 </>
               )}
