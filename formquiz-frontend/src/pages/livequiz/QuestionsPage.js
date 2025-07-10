@@ -11,6 +11,7 @@ export default function QuestionsPage() {
     options: ['', ''],
     correct_answer_index: 0,
     timer: 20,
+    settings: {},
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -52,6 +53,25 @@ export default function QuestionsPage() {
     italic: false,
   };
 
+  // Global customization state for 'Apply to All'
+  const [globalCustomization, setGlobalCustomization] = useState(settingsDefaults);
+
+  // 3. Add right sidebar state
+  const [customSidebarOpen, setCustomSidebarOpen] = useState(true);
+
+  // Full screen preview state
+  const [isFullScreenPreview, setIsFullScreenPreview] = useState(false);
+
+  // Ref for preview container (must be after customSidebarOpen is defined)
+  const previewRef = useRef(null);
+
+  // Scroll to preview when customization sidebar opens (must be after customSidebarOpen is defined)
+  useEffect(() => {
+    if (customSidebarOpen && previewRef.current) {
+      previewRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [customSidebarOpen]);
+
   useEffect(() => {
     fetchQuestions();
   }, []);
@@ -92,18 +112,16 @@ export default function QuestionsPage() {
 
   // 2. Add settings state for the form
   function getSettings(obj) {
-    return { ...settingsDefaults, ...(obj?.settings || obj || {}) };
+    // Use globalCustomization as base if set
+    return { ...globalCustomization, ...(obj?.settings || obj || {}) };
   }
-
-  // 3. Add right sidebar state
-  const [customSidebarOpen, setCustomSidebarOpen] = useState(true);
 
   // 4. Update form state to always include settings
   useEffect(() => {
     if (selectedQuestionIdx !== null && questions[selectedQuestionIdx]) {
       setForm({ ...questions[selectedQuestionIdx], settings: getSettings(questions[selectedQuestionIdx].settings) });
     }
-  }, [selectedQuestionIdx]);
+  }, [selectedQuestionIdx, globalCustomization]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -261,7 +279,7 @@ export default function QuestionsPage() {
       options: ['', ''],
       correct_answer_index: 0,
       timer: 20,
-      settings: { ...settingsDefaults },
+      settings: { ...globalCustomization },
     });
     setSelectedQuestionIdx(null);
     setIsEditingExisting(false);
@@ -394,6 +412,18 @@ export default function QuestionsPage() {
     setHasUnsavedChanges(true);
     // eslint-disable-next-line
   }, [quizName, questions, form]);
+
+  // --- APPLY TO ALL LOGIC ---
+  const handleApplyToAll = () => {
+    // Save current form.settings as the new globalCustomization
+    const newCustomization = { ...form.settings };
+    setGlobalCustomization(newCustomization);
+    // Apply to all questions
+    const updatedQuestions = questions.map(q => ({ ...q, settings: { ...newCustomization } }));
+    setQuestions(updatedQuestions);
+    // If editing a question, update its form as well
+    setForm(f => ({ ...f, settings: { ...newCustomization } }));
+  };
 
   if (error) {
     return <div className="p-4 text-red-500">Error: {error}</div>;
@@ -597,33 +627,83 @@ export default function QuestionsPage() {
                 </button>
               </div>
             </form>
-            {/* Live Preview */}
-            {form && (
-              <div className="mt-8 w-full flex flex-col items-center">
+            {/* Live Preview - only show if customization sidebar is open */}
+            {customSidebarOpen && form && (
+              <div ref={previewRef} className="mt-8 w-full flex flex-col items-center">
                 <div className="flex w-full justify-between items-center mb-2">
-                  <h3 className="text-lg font-bold text-gray-700">Live Preview</h3>
+                  <span className="text-lg font-bold text-gray-700">Live Preview</span>
                   <button
                     type="button"
-                    className={`px-4 py-2 rounded-lg font-semibold shadow transition-all duration-200 ${fullScreenPreview ? 'bg-gray-700 text-white hover:bg-gray-800' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
-                    onClick={() => setFullScreenPreview(v => !v)}
+                    className="px-4 py-2 rounded-lg font-semibold shadow transition-all duration-200 bg-blue-500 text-white hover:bg-blue-600 ml-auto"
+                    onClick={() => setIsFullScreenPreview(true)}
                   >
-                    {fullScreenPreview ? 'Exit Full Screen' : 'Full Screen Preview'}
+                    Full Screen Preview
                   </button>
                 </div>
-                {/* Preview Container */}
-                <div className={fullScreenPreview ? 'fixed inset-0 z-50 bg-black/80 flex items-center justify-center' : 'w-full max-w-3xl aspect-[16/9] bg-gray-200 rounded-2xl flex items-center justify-center overflow-hidden border border-gray-300 shadow-inner'}>
-                  <div className={fullScreenPreview ? 'w-[90vw] h-[90vh] flex items-center justify-center' : 'w-full h-full flex items-center justify-center scale-90'}>
-                    <QuestionPreview question={form} customizations={form.settings} />
-                    {fullScreenPreview && (
+                {/* Preview Container with max size, scaling, border, and shadow */}
+                <div
+                  className="flex items-center justify-center"
+                  style={{
+                    width: '100%',
+                    maxWidth: '900px',
+                    maxHeight: '500px',
+                    minHeight: '0',
+                    minWidth: '0',
+                    overflow: 'hidden',
+                    border: '1.5px solid #e5e7eb',
+                    boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)',
+                    borderRadius: '1.5rem',
+                    background: '#f8fafc',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '800px',
+                      height: '450px',
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transform: 'scale(0.95)',
+                      transformOrigin: 'top center',
+                    }}
+                  >
+                    <div style={{ width: '100%', height: '100%' }}>
+                      <QuestionPreview question={form} customizations={form.settings} />
+                    </div>
+                  </div>
+                </div>
+                {/* Full Screen Modal */}
+                {isFullScreenPreview && (
+                  <div
+                    style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      width: '100vw',
+                      height: '100vh',
+                      zIndex: 9999,
+                      background: 'rgba(0,0,0,0.85)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <div style={{ position: 'absolute', top: 32, right: 48, zIndex: 10000 }}>
                       <button
-                        className="absolute top-6 right-8 px-4 py-2 bg-gray-700 text-white rounded-lg font-semibold shadow hover:bg-gray-900 text-base border border-gray-900 z-50"
-                        onClick={() => setFullScreenPreview(false)}
+                        type="button"
+                        className="px-5 py-2 bg-gray-700 text-white rounded-lg font-semibold shadow hover:bg-gray-900 text-base border border-gray-900"
+                        onClick={() => setIsFullScreenPreview(false)}
                       >
                         Close
                       </button>
-                    )}
+                    </div>
+                    <div style={{ width: '90vw', height: '90vh', maxWidth: 1200, maxHeight: 800, background: '#fff', borderRadius: 24, overflow: 'hidden', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <QuestionPreview question={form} customizations={form.settings} />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </main>
@@ -778,6 +858,16 @@ export default function QuestionsPage() {
                   </div>
                 </>
               )}
+              {/* Apply to All Button */}
+              <div className="flex justify-center mt-8">
+                <button
+                  type="button"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition-all"
+                  onClick={handleApplyToAll}
+                >
+                  Apply to All
+                </button>
+              </div>
             </div>
           </aside>
         </div>
