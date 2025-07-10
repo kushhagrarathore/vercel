@@ -1,5 +1,7 @@
 {
   "dependencies": {
-    "@google/generative-ai": "^0.24.1"
+    "@google/generative-ai": "^0.24.1",
+    "file-saver": "^2.0.5",
+    "xlsx": "^0.18.5"
   }
 }

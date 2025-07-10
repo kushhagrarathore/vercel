@@ -162,7 +162,9 @@ const FormView = () => {
           <div className="form-logo-preview"><img src={customization.logoImage} alt="Form Logo" /></div>
         )}
         <h2 className="form-title" style={{ color: customization.textColor }}>{form.title || 'Untitled Form'}</h2>
-        {form.description && <p className="form-desc" style={{ color: customization.textColor, opacity: 0.7 }}>{form.description}</p>}
+        {form.description && (
+          <p className="form-description-preview">{form.description}</p>
+        )}
         <form onSubmit={handleSubmit}>
           {(form.questions || []).map((q, i) => (
             <div key={i} className="form-preview-question">

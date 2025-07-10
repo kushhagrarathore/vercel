@@ -4,6 +4,7 @@ import { supabase } from '../../supabase';
 import FormLayout from '../../components/forms/FormLayout';
 import '../../components/forms/FormLayout.css';
 import { FaUser, FaClock, FaArrowLeft } from 'react-icons/fa';
+import ShareDropdown from './ShareDropdown';
 
 const ViewResponses = () => {
   const { formId, quizId } = useParams();
@@ -201,6 +202,22 @@ const ViewResponses = () => {
           </table>
         </div>
       )}
+      {/* Share Results Button */}
+      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: '32px 0 0 0' }}>
+        <ShareDropdown responses={responses.map(resp => {
+          let answersObj = {};
+          try {
+            answersObj = typeof resp.answers === 'string' ? JSON.parse(resp.answers) : resp.answers;
+          } catch (e) {
+            answersObj = {};
+          }
+          return {
+            User: resp.users?.email || 'Anonymous',
+            SubmittedAt: new Date(resp.submitted_at).toLocaleString(),
+            ...answersObj
+          };
+        })} />
+      </div>
       <style>{`
         @keyframes fadeInCard {
           from { opacity: 0; transform: translateY(24px) scale(0.98); }

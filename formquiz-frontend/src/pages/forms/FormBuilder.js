@@ -16,6 +16,7 @@ import FormLayout from '../../components/forms/FormLayout';
 
 const FormBuilder = () => {
   const [title, setTitle] = useState('Untitled Form');
+  const [description, setDescription] = useState('');
   const [questions, setQuestions] = useState([]);
   const [formId, setFormId] = useState(null);
   const [activeTab, setActiveTab] = useState('standard');
@@ -72,6 +73,7 @@ const FormBuilder = () => {
         }
         setFormId(form.id);
         setTitle(form.title || 'Untitled Form');
+        setDescription(form.description || '');
         setCustomization(form.customization_settings || customization);
         // Fetch questions
         const { data: questionsData } = await supabase
@@ -175,6 +177,7 @@ const FormBuilder = () => {
       if (!currentFormId) {
         const formData = {
           title: title.trim(),
+          description: description.trim(), // ✅ new
           customization_settings: customization,
           created_by: user?.email || 'anonymous',
           user_id: user?.id || null,
@@ -199,6 +202,7 @@ const FormBuilder = () => {
           .from('forms')
           .update({
             title: title.trim(),
+            description: description.trim(), // ✅ new
             customization_settings: customization,
             user_id: user?.id || null,
           })
@@ -272,6 +276,7 @@ const FormBuilder = () => {
 
       setQuestions([]);
       setTitle('Untitled Form');
+      setDescription(''); // ✅ new
       setFormId(null);
       setCustomization({
         backgroundColor: '#ffffff',
@@ -312,6 +317,7 @@ const FormBuilder = () => {
 
     const formDraft = {
       title,
+      description, // ✅ new
       questions,
       customization,
     };
@@ -398,6 +404,23 @@ const FormBuilder = () => {
             </div>
           )}
           <h2 className="form-title" style={{ color: customization.textColor }}>{title}</h2>
+          {description && (
+            <p
+              className="form-description-preview"
+              style={{
+                color: customization.textColor,
+                fontFamily: customization.fontFamily,
+                fontSize: '1.1rem',
+                marginTop: '8px',
+                marginBottom: '24px',
+                textAlign: 'center',
+                maxWidth: '700px',
+                lineHeight: '1.6',
+              }}
+            >
+              {description}
+            </p>
+          )}
           {questions.map((question, index) => (
             <div key={question.id} className="form-preview-question">
               <h3 className="form-preview-label" style={{ color: customization.textColor }}>
@@ -594,10 +617,19 @@ const FormBuilder = () => {
                   </aside>
 
                   <main className="form-editor-area">
-                    <div className="form-title-section">
+                    <div className="form-title-block">
                       <p className="form-editor-area-title-placeholder">
                         Form Title: <span className="current-title">{title}</span>
                       </p>
+                      <textarea
+                        className="form-description-textarea"
+                        placeholder="Add a short description about this form..."
+                        value={description}
+                        onChange={(e) => {
+                          setDescription(e.target.value);
+                          setHasUnsavedChanges(true);
+                        }}
+                      />
                     </div>
 
                     {questions.length > 0 ? (
@@ -770,10 +802,19 @@ const FormBuilder = () => {
                 </aside>
 
                 <main className="form-editor-area">
-                  <div className="form-title-section">
+                  <div className="form-title-block">
                     <p className="form-editor-area-title-placeholder">
                       Form Title: <span className="current-title">{title}</span>
                     </p>
+                    <textarea
+                      className="form-description-textarea"
+                      placeholder="Add a short description about this form..."
+                      value={description}
+                      onChange={(e) => {
+                        setDescription(e.target.value);
+                        setHasUnsavedChanges(true);
+                      }}
+                    />
                   </div>
 
                   {questions.length > 0 ? (
