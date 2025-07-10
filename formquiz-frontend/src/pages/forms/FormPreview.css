@@ -1,147 +1,183 @@
-body {
-  background: linear-gradient(180deg, #fffbe6 0%, #ffe066 100%);
+/* Full viewport background with optional blur/overlay for contrast */
+.form-preview-bg {
   min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg, #f7fafc);
   position: relative;
+  transition: background 0.3s;
+  overflow-x: hidden;
+}
+.form-preview-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  /* Optional: add a subtle overlay for contrast if background image is set */
+  background: rgba(255,255,255,0.25);
+  backdrop-filter: blur(2.5px);
+  pointer-events: none;
+  transition: background 0.3s;
 }
 
-.main-form-card {
-  background: rgba(255, 255, 255, 0.92);
-  border-radius: 22px;
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.10);
-  padding: 36px 32px;
-  max-width: 700px;
-  margin: 48px auto;
-  border: 1.5px solid #f7e9b6;
-}
-
-.stat-box {
+/* Centered white rectangle, much wider and more padding */
+.form-preview-centerbox {
   background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(60,60,100,0.07);
-  padding: 18px 24px;
-  margin: 0 12px 24px 0;
-  display: inline-block;
-  min-width: 140px;
-  text-align: center;
-  border: 1px solid #f3e8b5;
-}
-
-.share-btn {
-  background: #e57373;
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 12px 28px;
-  font-size: 1em;
-  font-weight: 500;
-  box-shadow: 0 2px 8px rgba(229,115,115,0.10);
-  cursor: pointer;
-  margin-top: 18px;
-  transition: background 0.18s;
-}
-.share-btn:hover {
-  background: #d32f2f;
-}
-
-.form-preview-wrapper {
-  max-width: 700px;
-  margin: 40px auto;
-  padding: 0;
-  background: none;
-  box-shadow: none;
-  border-radius: 0;
-  border: none;
-  font-family: 'Segoe UI', sans-serif;
-  color: #333;
-}
-
-.form-preview-wrapper h2 {
-  font-size: 28px;
-  margin-bottom: 25px;
-  text-align: center;
-  color: #2c3e50;
-}
-
-.preview-question {
-  background: rgba(255,255,255,0.85);
-  border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(60,60,100,0.07);
-  padding: 18px 16px;
-  margin-bottom: 18px;
-  border: 1px solid #e3e8f0;
-}
-
-.preview-question h4 {
-  font-size: 18px;
-  margin-bottom: 10px;
-  color: #34495e;
-}
-
-.preview-question input[type="text"],
-.preview-question input[type="email"],
-.preview-question input[type="number"],
-.preview-question input[type="date"],
-.preview-question textarea {
+  border-radius: 32px;
+  box-shadow: 0 12px 48px 0 rgba(44,62,80,0.18);
+  max-width: 1100px;
   width: 100%;
-  padding: 12px;
-  font-size: 15px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  margin-top: 8px;
-  outline: none;
-  box-sizing: border-box;
-  transition: border 0.2s ease;
-  background: rgba(255,255,255,0.7);
+  margin: 48px 0;
+  padding: 64px 56px;
+  position: relative;
+  z-index: 2;
+  transition: box-shadow 0.2s, border-radius 0.2s, padding 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.preview-question input:focus,
-.preview-question textarea:focus {
-  border-color: #4a6bff;
+.form-logo-preview {
+  text-align: center;
+  margin-bottom: 18px;
+}
+.form-logo-preview img {
+  max-width: 200px;
+  max-height: 90px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 1px 6px rgba(44,62,80,0.08);
 }
 
-.preview-question textarea {
-  resize: vertical;
-  min-height: 100px;
+.form-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 12px;
+  color: #2d3a4a;
+  letter-spacing: -1px;
+}
+.form-desc {
+  text-align: center;
+  color: #6b7280;
+  margin-bottom: 40px;
+  font-size: 1.15rem;
 }
 
-.preview-question label {
+.form-preview-question {
+  margin-bottom: 40px;
+  background: rgba(248,250,252,0.8);
+  border-radius: 18px;
+  padding: 24px 24px 14px 24px;
+  box-shadow: 0 2px 12px rgba(60,60,100,0.06);
+  border: 1px solid #e3e8f0;
+  width: 100%;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.form-preview-label {
+  font-weight: 700;
+  color: #374151;
+  font-size: 1.15rem;
+  margin-bottom: 12px;
   display: block;
-  font-size: 15px;
-  margin-top: 10px;
+}
+.form-preview-input {
+  width: 100%;
+  padding: 16px 18px;
+  border: 1.5px solid #d0d7de;
+  border-radius: 12px;
+  font-size: 1.12rem;
+  box-sizing: border-box;
+  background: #f7fafd;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  margin-top: 6px;
+}
+.form-preview-input:focus {
+  border-color: #4a6bff;
+  box-shadow: 0 0 0 2px #4a6bff22;
+  outline: none;
+}
+.form-preview-options {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+}
+.form-preview-option-label {
+  font-size: 1.12rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-right: 24px;
+  margin-bottom: 10px;
   cursor: pointer;
 }
-
-.preview-question input[type="radio"] {
-  margin-right: 8px;
+.form-preview-radio {
   accent-color: #4a6bff;
+  margin-right: 10px;
+  transform: scale(1.18);
 }
-
-.submit-button {
-  background: #2563eb;
-  color: #fff;
+.form-preview-submit {
+  width: 100%;
+  padding: 18px 0;
+  font-size: 1.22rem;
+  background: linear-gradient(90deg, #4a6bff 0%, #6b8cff 100%);
+  color: white;
   border: none;
   border-radius: 12px;
-  padding: 12px 32px;
-  font-size: 1.1em;
-  font-weight: 500;
-  box-shadow: 0 2px 8px rgba(37,99,235,0.10);
+  font-weight: 800;
   cursor: pointer;
-  transition: background 0.18s;
-  display: block;
-  margin: 40px auto 0;
+  box-shadow: 0 2px 12px rgba(44,62,80,0.10);
+  margin-top: 18px;
+  letter-spacing: 0.5px;
+  transition: background 0.2s, box-shadow 0.2s;
 }
-.submit-button:hover {
-  background: #1d4ed8;
+.form-preview-submit:hover {
+  background: #2563eb;
 }
 
-@media (max-width: 600px) {
-  .main-form-card {
-    padding: 16px 4px;
-  }
-  .form-preview-wrapper {
-    padding: 0;
-  }
-  .submit-button {
-    width: 100%;
+@media (max-width: 1200px) {
+  .form-preview-centerbox {
+    max-width: 98vw;
+    padding: 40px 4vw;
   }
 }
+@media (max-width: 900px) {
+  .form-preview-centerbox {
+    max-width: 99vw;
+    padding: 24px 2vw;
+    border-radius: 18px;
+  }
+  .form-title {
+    font-size: 1.5rem;
+  }
+  .form-desc {
+    font-size: 1.05rem;
+  }
+  .form-preview-question {
+    padding: 14px 4px 8px 4px;
+    border-radius: 10px;
+  }
+}
+@media (max-width: 600px) {
+  .form-preview-centerbox {
+    padding: 10px 0.5vw;
+    border-radius: 8px;
+    margin: 0;
+  }
+  .form-title {
+    font-size: 1.1rem;
+  }
+  .form-desc {
+    font-size: 0.98rem;
+  }
+  .form-preview-question {
+    padding: 8px 2px 4px 2px;
+    border-radius: 6px;
+  }
+}
+

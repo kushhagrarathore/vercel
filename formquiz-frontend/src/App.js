@@ -8,6 +8,7 @@ import Signup from './pages/forms/Signup'; // CombineBuild
 import Dashboard from './pages/Dashboard'; // CombineBuild
 import FormBuilder from './pages/forms/FormBuilder';
 import FormView from './pages/forms/FormView'; // CombineBuild
+import FormPreview from './pages/forms/FormPreview'; // Form preview component
 import ViewResponses from './pages/forms/ViewResponses'; // CombineBuild
 import ResultsPage from './pages/livequiz/ResultsPage';
 import ResponsePage from './pages/ResponsePage';
@@ -42,7 +43,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/builder" element={<FormBuilder />} />
             <Route path="/builder/:formId" element={<FormBuilder />} />
-            <Route path="/preview/:formId" element={<FormView />} />
+            <Route path="/preview/:formId" element={<FormPreview />} />
             <Route path="/form/:formId" element={<FormView />} />
             <Route path="/public/:formId" element={<FormView />} />
             <Route path="/respond/:formId" element={<ResponsePage />} />

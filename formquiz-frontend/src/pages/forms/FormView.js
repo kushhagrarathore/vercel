@@ -1,10 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useLocation } from 'react-router-dom';
 import { supabase } from '../../supabase';
-import './FormView.css';
-import Spinner from '../../components/Spinner';
-import Skeleton from '../../components/Skeleton';
-import { useToast } from '../../components/Toast';
+import './FormPreview.css'; // Use the same CSS as FormPreview for consistency
+import FormLayout from '../../components/forms/FormLayout';
+
+const DEFAULT_CUSTOMIZATION = {
+  backgroundColor: '#f7fafc',
+  textColor: '#22223b',
+  buttonColor: '#2563eb',
+  buttonTextColor: '#fff',
+  backgroundImage: '',
+  logoImage: '',
+  fontFamily: 'Inter, Arial, sans-serif',
+  borderRadius: '16px',
+};
 
 const FormView = () => {
   const { formId } = useParams();
@@ -13,8 +22,8 @@ const FormView = () => {
   const [form, setForm] = useState(null);
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
+  const [customization, setCustomization] = useState(DEFAULT_CUSTOMIZATION);
 
-  // ✅ Fetch form and questions
   useEffect(() => {
     const fetchFormAndQuestions = async () => {
       try {
@@ -35,6 +44,9 @@ const FormView = () => {
         if (questionsError) throw new Error('Failed to load questions');
 
         setForm({ ...formData, questions: questionsData });
+        if (formData?.customization_settings) {
+          setCustomization({ ...DEFAULT_CUSTOMIZATION, ...formData.customization_settings });
+        }
       } catch (error) {
         console.error('Error loading form:', error);
       }
@@ -43,13 +55,11 @@ const FormView = () => {
     fetchFormAndQuestions();
   }, [formId]);
 
-  // ✅ Handle input change
   const handleChange = (questionId, value) => {
     if (isPreviewMode) return; // Prevent editing in preview mode
     setAnswers((prev) => ({ ...prev, [questionId]: value }));
   };
 
-  // ✅ Handle form submission (resolved)
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (isPreviewMode) return; // Prevent submit in preview mode
@@ -87,45 +97,133 @@ const FormView = () => {
     }
   };
 
-  // ✅ Render individual question
-  const renderQuestion = (q, index) => {
-    switch (q.question_type) {
+  function getBgStyle(c) {
+    return {
+      minHeight: '100vh',
+      width: '100vw',
+      backgroundColor: c.backgroundColor,
+      backgroundImage: c.backgroundImage ? `url(${c.backgroundImage})` : undefined,
+      backgroundSize: c.backgroundImage ? 'cover' : undefined,
+      backgroundPosition: c.backgroundImage ? 'center' : undefined,
+      backgroundRepeat: c.backgroundImage ? 'no-repeat' : undefined,
+      fontFamily: c.fontFamily,
+      transition: 'background 0.3s',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    };
+  }
+  function getCardStyle(c) {
+    return {
+      background: '#fff',
+      borderRadius: c.borderRadius,
+      boxShadow: '0 8px 32px 0 rgba(44,62,80,0.13)',
+      maxWidth: 900,
+      width: '100%',
+      minWidth: 0,
+      margin: '40px 0',
+      padding: '48px 40px',
+      color: c.textColor,
+      fontFamily: c.fontFamily,
+      transition: 'box-shadow 0.2s',
+      position: 'relative',
+      zIndex: 2,
+    };
+  }
+
+  // UI states
+  if (!form) return <div className="form-preview-bg"><div className="form-preview-centerbox">Loading...</div></div>;
+  if (form.is_published === false) {
+    return (
+      <div className="form-preview-bg" style={getBgStyle(customization)}>
+        <div className="form-preview-centerbox" style={getCardStyle(customization)}>
+          <span role="img" aria-label="closed" style={{ fontSize: 32 }}>🚫</span>
+          <div style={{ marginTop: 24, fontSize: 22, color: '#e53935', fontWeight: 700 }}>This form is closed.</div>
+        </div>
+      </div>
+    );
+  }
+  if (submitted) {
+    return (
+      <div className="form-preview-bg" style={getBgStyle(customization)}>
+        <div className="form-preview-centerbox" style={getCardStyle(customization)}>
+          <span role="img" aria-label="success" style={{ fontSize: 32 }}>✅</span>
+          <div style={{ marginTop: 24, fontSize: 22, color: '#219150', fontWeight: 600 }}>Response saved!</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Main UI
+  return (
+    <FormLayout customization={customization}>
+      <div className="form-content-area">
+        {customization.logoImage && (
+          <div className="form-logo-preview"><img src={customization.logoImage} alt="Form Logo" /></div>
+        )}
+        <h2 className="form-title" style={{ color: customization.textColor }}>{form.title || 'Untitled Form'}</h2>
+        {form.description && <p className="form-desc" style={{ color: customization.textColor, opacity: 0.7 }}>{form.description}</p>}
+        <form onSubmit={handleSubmit}>
+          {(form.questions || []).map((q, i) => (
+            <div key={i} className="form-preview-question">
+              <label className="form-preview-label" style={{ color: customization.textColor }}>
+                {q.question_text || `Question ${i + 1}`}{q.required && <span style={{ color: '#e53935' }}> *</span>}
+              </label>
+              <div>{renderQuestion(q, i)}</div>
+            </div>
+          ))}
+          {!isPreviewMode && (
+            <button type="submit" className="form-preview-submit" style={{ background: customization.buttonColor, color: customization.buttonTextColor, borderRadius: customization.borderRadius, fontFamily: customization.fontFamily }}>Submit</button>
+          )}
+        </form>
+      </div>
+    </FormLayout>
+  );
+
+  function renderQuestion(q, index) {
+    const type = q.question_type || q.type;
+    switch (type) {
       case 'short_text':
       case 'short-text':
         return (
           <input
             type="text"
             value={answers[q.id] || ''}
-            onChange={(e) => handleChange(q.id, e.target.value)}
-            className="form-input"
+            onChange={e => handleChange(q.id, e.target.value)}
+            className="form-preview-input"
             required={q.required}
             disabled={isPreviewMode}
+            style={{ borderRadius: customization.borderRadius, fontFamily: customization.fontFamily, color: customization.textColor }}
           />
         );
       case 'long_text':
       case 'long-text':
         return (
           <textarea
-            required={q.required}
             value={answers[q.id] || ''}
-            onChange={(e) => handleChange(q.id, e.target.value)}
+            onChange={e => handleChange(q.id, e.target.value)}
             rows={4}
-            style={{ width: '100%', padding: 8 }}
+            className="form-preview-input"
+            required={q.required}
             disabled={isPreviewMode}
+            style={{ borderRadius: customization.borderRadius, fontFamily: customization.fontFamily, color: customization.textColor, minHeight: 100 }}
           />
         );
       case 'multiple_choice':
       case 'multiple-choice':
         return (
-          <div>
+          <div className="form-preview-options">
             {q.options?.map((opt, idx) => (
-              <label key={idx} style={{ display: 'block', marginBottom: 5 }}>
+              <label key={idx} className="form-preview-option-label" style={{ color: customization.textColor, fontFamily: customization.fontFamily }}>
                 <input
                   type="radio"
                   name={q.id}
                   value={opt}
                   checked={answers[q.id] === opt}
                   onChange={() => handleChange(q.id, opt)}
+                  className="form-preview-radio"
+                  style={{ accentColor: customization.buttonColor }}
+                  required={q.required}
                   disabled={isPreviewMode}
                 />{' '}
                 {opt}
@@ -133,69 +231,32 @@ const FormView = () => {
             ))}
           </div>
         );
-      default:
-        return <p>❌ Unsupported question type: {q.question_type}</p>;
-    }
-  };
-
-  // ✅ UI states
-  if (!form) return <p>Loading...</p>;
-  if (form.is_published === false) {
-    return (
-      <div style={{ textAlign: 'center', marginTop: 80, fontSize: 22, color: '#e53935', fontWeight: 700 }}>
-        <span role="img" aria-label="closed">🚫</span> This form is closed.
-      </div>
-    );
-  }
-  if (submitted) {
-    return (
-      <div style={{ textAlign: 'center', marginTop: 60, fontSize: 22, color: '#219150', fontWeight: 600 }}>
-        <span role="img" aria-label="success">✅</span> Response saved!
-      </div>
-    );
-  }
-
-  // ✅ Main UI
-  return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f7fafc 0%, #e3e9f7 100%)', padding: '40px 0', fontFamily: 'Inter, Arial, sans-serif' }}>
-      <div style={{ maxWidth: 520, margin: '0 auto', background: '#fff', borderRadius: 16, boxShadow: '0 6px 32px rgba(44,62,80,0.10)', padding: '36px 32px 32px 32px', position: 'relative' }}>
-        <h2 style={{ textAlign: 'center', fontWeight: 800, fontSize: 28, marginBottom: 8, color: '#2d3a4a', letterSpacing: '-1px' }}>
-          {form.title || 'Untitled Form'}
-        </h2>
-        {form.description && <p style={{ textAlign: 'center', color: '#6b7280', marginBottom: 24 }}>{form.description}</p>}
-
-        <form onSubmit={handleSubmit}>
-          {(form.questions || []).map((q, i) => (
-            <div key={i} style={{ marginBottom: 28 }}>
-              <label style={{ fontWeight: 600, color: '#374151', fontSize: 16, marginBottom: 6, display: 'block' }}>
-                {q.question_text}{q.required && <span style={{ color: '#e53935' }}> *</span>}
+      case 'picture_choice':
+      case 'picture-choice':
+        return (
+          <div className="form-preview-options">
+            {q.options?.map((opt, idx) => (
+              <label key={idx} className="form-preview-option-label" style={{ color: customization.textColor, fontFamily: customization.fontFamily, display: 'inline-block', margin: 8 }}>
+                <input
+                  type="radio"
+                  name={q.id}
+                  value={opt}
+                  checked={answers[q.id] === opt}
+                  onChange={() => handleChange(q.id, opt)}
+                  className="form-preview-radio"
+                  style={{ accentColor: customization.buttonColor }}
+                  required={q.required}
+                  disabled={isPreviewMode}
+                />{' '}
+                <img src={opt} alt="option" style={{ maxWidth: 80, maxHeight: 80, borderRadius: 8, border: '1px solid #eee', marginLeft: 6 }} />
               </label>
-              <div>{renderQuestion(q, i)}</div>
-            </div>
-          ))}
-          {!isPreviewMode && (
-            <button type="submit" style={{
-              width: '100%',
-              background: 'linear-gradient(90deg, #4a6bff 0%, #6b8cff 100%)',
-              color: 'white',
-              fontWeight: 700,
-              fontSize: 18,
-              border: 'none',
-              borderRadius: 8,
-              padding: '14px 0',
-              marginTop: 10,
-              boxShadow: '0 2px 8px rgba(44,62,80,0.08)',
-              cursor: 'pointer',
-              transition: 'background 0.2s',
-              letterSpacing: '0.5px'
-            }}>
-              Submit
-            </button>
-          )}
-        </form>
-      </div>
-    </div>
-  );
+            ))}
+          </div>
+        );
+      default:
+        return <p style={{ color: '#e53935' }}>❌ Unsupported question type: {type}</p>;
+    }
+  }
 };
 
 export default FormView;
