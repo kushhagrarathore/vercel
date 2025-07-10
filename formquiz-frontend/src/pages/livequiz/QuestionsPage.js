@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '../../supabase/client';
+import { supabase } from '../../supabase.js';
 import QuestionPreview from './QuestionPreview';
 
 export default function QuestionsPage() {
@@ -10,6 +10,7 @@ export default function QuestionsPage() {
     options: ['', ''],
     correct_answer_index: 0,
     timer: 20,
+    settings: {},
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -28,6 +29,8 @@ export default function QuestionsPage() {
   const [titleInputGlow, setTitleInputGlow] = useState(false);
   const [titleInputBg, setTitleInputBg] = useState(false);
   const navigate = useNavigate();
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [deletedQuestionIds, setDeletedQuestionIds] = useState([]);
 
   // 1. Customization defaults
   const settingsDefaults = {
@@ -48,6 +51,25 @@ export default function QuestionsPage() {
     bold: false,
     italic: false,
   };
+
+  // Global customization state for 'Apply to All'
+  const [globalCustomization, setGlobalCustomization] = useState(settingsDefaults);
+
+  // 3. Add right sidebar state
+  const [customSidebarOpen, setCustomSidebarOpen] = useState(true);
+
+  // Full screen preview state
+  const [isFullScreenPreview, setIsFullScreenPreview] = useState(false);
+
+  // Ref for preview container (must be after customSidebarOpen is defined)
+  const previewRef = useRef(null);
+
+  // Scroll to preview when customization sidebar opens (must be after customSidebarOpen is defined)
+  useEffect(() => {
+    if (customSidebarOpen && previewRef.current) {
+      previewRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [customSidebarOpen]);
 
   useEffect(() => {
     fetchQuestions();
@@ -89,18 +111,16 @@ export default function QuestionsPage() {
 
   // 2. Add settings state for the form
   function getSettings(obj) {
-    return { ...settingsDefaults, ...(obj?.settings || obj || {}) };
+    // Use globalCustomization as base if set
+    return { ...globalCustomization, ...(obj?.settings || obj || {}) };
   }
-
-  // 3. Add right sidebar state
-  const [customSidebarOpen, setCustomSidebarOpen] = useState(true);
 
   // 4. Update form state to always include settings
   useEffect(() => {
     if (selectedQuestionIdx !== null && questions[selectedQuestionIdx]) {
       setForm({ ...questions[selectedQuestionIdx], settings: getSettings(questions[selectedQuestionIdx].settings) });
     }
-  }, [selectedQuestionIdx]);
+  }, [selectedQuestionIdx, globalCustomization]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -211,16 +231,15 @@ export default function QuestionsPage() {
       return;
     }
     try {
-      const titleToSave = quizName.trim() ? quizName : 'Untitled Quiz';
-      // Fetch current user from Supabase Auth
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData?.user) {
-        setError('Could not get current user.');
+      // Fetch the current authenticated user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        setError('Unable to get user info. Please log in again.');
         setLoading(false);
         return;
       }
-      const userId = userData.user.id;
-      // Insert quiz with user_id
+      const userId = user.id;
+      const titleToSave = quizName.trim() ? quizName : 'Untitled Quiz';
       const { data, error } = await supabase
         .from('lq_quizzes')
         .insert([{ title: titleToSave, user_id: userId }])
@@ -259,7 +278,7 @@ export default function QuestionsPage() {
       options: ['', ''],
       correct_answer_index: 0,
       timer: 20,
-      settings: { ...settingsDefaults },
+      settings: { ...globalCustomization },
     });
     setSelectedQuestionIdx(null);
     setIsEditingExisting(false);
@@ -298,6 +317,113 @@ export default function QuestionsPage() {
     dragOverItem.current = undefined;
   };
 
+  // Delete question handler
+  const handleDeleteQuestion = (idx) => {
+    const questionToDelete = questions[idx];
+    if (questionToDelete.id) {
+      setDeletedQuestionIds((prev) => [...prev, questionToDelete.id]);
+    }
+    const updatedQuestions = questions.filter((_, i) => i !== idx);
+    setQuestions(updatedQuestions);
+    // Adjust selectedQuestionIdx if needed
+    if (selectedQuestionIdx === idx) {
+      setSelectedQuestionIdx(null);
+      setIsEditingExisting(false);
+      setForm({ question_text: '', options: ['', ''], correct_answer_index: 0, timer: 20 });
+    } else if (selectedQuestionIdx > idx) {
+      setSelectedQuestionIdx(selectedQuestionIdx - 1);
+    }
+    setHasUnsavedChanges(true);
+  };
+
+  // --- CREATE or SAVE QUIZ LOGIC ---
+  const handleCreateOrSaveQuiz = async () => {
+    setLoading(true);
+    setSuccessMessage('');
+    setQuizTitleError('');
+    setShowTitlePrompt(false);
+    setTitleInputGlow(false);
+    setTitleInputBg(false);
+    if (!quizName.trim()) {
+      setQuizTitleError('Please enter a quiz title before proceeding.');
+      setShowTitlePrompt(true);
+      setTitleInputGlow(true);
+      setTitleInputBg(true);
+      setLoading(false);
+      setTimeout(() => setShowTitlePrompt(false), 3500);
+      setTimeout(() => setTitleInputGlow(false), 2500);
+      setTimeout(() => setTitleInputBg(false), 2500);
+      return;
+    }
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        setError('Unable to get user info. Please log in again.');
+        setLoading(false);
+        return;
+      }
+      const userId = user.id;
+      const titleToSave = quizName.trim() ? quizName : 'Untitled Quiz';
+      let quizId = selectedQuizId;
+      if (!selectedQuizId) {
+        // CREATE new draft quiz
+        const { data, error } = await supabase
+          .from('lq_quizzes')
+          .insert([{ title: titleToSave, user_id: userId }])
+          .select()
+          .single();
+        if (error) throw error;
+        quizId = data.id;
+        setSelectedQuizId(data.id);
+        // Save all current questions to lq_questions
+        for (const [i, q] of questions.entries()) {
+          await supabase.from('lq_questions').update({ quiz_id: data.id, order_index: i }).eq('id', q.id);
+        }
+        setSuccessMessage('Draft created!');
+      } else {
+        // SAVE/UPDATE existing draft quiz
+        const { error } = await supabase
+          .from('lq_quizzes')
+          .update({ title: titleToSave })
+          .eq('id', quizId);
+        if (error) throw error;
+        // Delete questions marked for deletion
+        if (deletedQuestionIds.length > 0) {
+          await supabase.from('lq_questions').delete().in('id', deletedQuestionIds);
+          setDeletedQuestionIds([]);
+        }
+        // Update order_index for remaining questions
+        for (const [i, q] of questions.entries()) {
+          await supabase.from('lq_questions').update({ order_index: i }).eq('id', q.id);
+        }
+        setSuccessMessage('Draft saved!');
+      }
+      setHasUnsavedChanges(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Track unsaved changes on any edit
+  useEffect(() => {
+    setHasUnsavedChanges(true);
+    // eslint-disable-next-line
+  }, [quizName, questions, form]);
+
+  // --- APPLY TO ALL LOGIC ---
+  const handleApplyToAll = () => {
+    // Save current form.settings as the new globalCustomization
+    const newCustomization = { ...form.settings };
+    setGlobalCustomization(newCustomization);
+    // Apply to all questions
+    const updatedQuestions = questions.map(q => ({ ...q, settings: { ...newCustomization } }));
+    setQuestions(updatedQuestions);
+    // If editing a question, update its form as well
+    setForm(f => ({ ...f, settings: { ...newCustomization } }));
+  };
+
   if (error) {
     return <div className="p-4 text-red-500">Error: {error}</div>;
   }
@@ -313,62 +439,62 @@ export default function QuestionsPage() {
           >
             ← Back to Dashboard
           </button>
-          <input
-            ref={quizNameInputRef}
-            type="text"
-            value={quizName}
-            onChange={e => {
-              setQuizName(e.target.value);
-              if (e.target.value.trim()) setQuizTitleError('');
-              if (e.target.value.trim()) {
-                setShowTitlePrompt(false);
-                setTitleInputGlow(false);
-                setTitleInputBg(false);
-              }
-            }}
-            placeholder="Untitled Quiz"
+        <input
+          ref={quizNameInputRef}
+          type="text"
+          value={quizName}
+          onChange={e => {
+            setQuizName(e.target.value);
+            if (e.target.value.trim()) setQuizTitleError('');
+            if (e.target.value.trim()) {
+              setShowTitlePrompt(false);
+              setTitleInputGlow(false);
+              setTitleInputBg(false);
+            }
+          }}
+          placeholder="Untitled Quiz"
             className={`ml-4 text-xl font-semibold truncate max-w-xs border-none focus:ring-0 focus:outline-none p-0 m-0 transition-all duration-300 ${titleInputGlow ? 'ring-2 ring-amber-400 ring-offset-2 border-amber-400' : ''} ${titleInputBg ? 'bg-amber-100/70' : 'bg-transparent'}`}
-            style={{ minWidth: '120px' }}
-          />
+          style={{ minWidth: '120px' }}
+        />
         </div>
         <div className="flex items-center gap-4">
           <button
             className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold"
             onClick={() => navigate('/Admin')}
           >
-            Go to Admin Page →
+            Start Quiz →
           </button>
           <button
             type="button"
-            onClick={handleMenuCreateQuiz}
-            className="px-5 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors whitespace-nowrap"
+            onClick={handleCreateOrSaveQuiz}
+            className={`px-5 py-2 ${selectedQuizId ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-600 hover:bg-green-700'} text-white rounded transition-colors whitespace-nowrap`}
             disabled={loading}
           >
-            {loading ? 'Creating...' : 'Create Quiz'}
+            {loading ? (selectedQuizId ? 'Saving...' : 'Creating...') : (selectedQuizId ? 'Save' : 'Create Quiz')}
           </button>
         </div>
       </div>
-      {/* Floating Prompt Box */}
-      {showTitlePrompt && (
-        <div
-          className="fixed left-1/2 top-16 z-50 -translate-x-1/2 animate-fade-in-out"
-          style={{
-            minWidth: 320,
-            background: 'rgba(255, 237, 213, 0.98)', // amber-100
-            color: '#b45309', // amber-700
-            border: '2px solid #f59e42', // amber-400
-            borderRadius: 16,
-            boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)',
-            padding: '18px 32px',
-            fontWeight: 600,
-            fontSize: 18,
-            textAlign: 'center',
-            transition: 'opacity 0.5s',
-          }}
-        >
-          Please enter a quiz title before proceeding.
-        </div>
-      )}
+        {/* Floating Prompt Box */}
+        {showTitlePrompt && (
+          <div
+            className="fixed left-1/2 top-16 z-50 -translate-x-1/2 animate-fade-in-out"
+            style={{
+              minWidth: 320,
+              background: 'rgba(255, 237, 213, 0.98)', // amber-100
+              color: '#b45309', // amber-700
+              border: '2px solid #f59e42', // amber-400
+              borderRadius: 16,
+              boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)',
+              padding: '18px 32px',
+              fontWeight: 600,
+              fontSize: 18,
+              textAlign: 'center',
+              transition: 'opacity 0.5s',
+            }}
+          >
+            Please enter a quiz title before proceeding.
+          </div>
+        )}
       {/* Layout: Sidebar + Main + (optional) Right Panel */}
       <div className="flex flex-row w-full">
         {/* Fixed, full-height Sidebar with native drag-and-drop */}
@@ -389,6 +515,14 @@ export default function QuestionsPage() {
                 >
                   <span className="text-xs font-semibold text-gray-500 mr-2">Q{idx + 1}</span>
                   <span className="truncate flex-1">{q.question_text || `Question ${idx + 1}`}</span>
+                  <button
+                    type="button"
+                    className="ml-2 text-red-500 hover:text-red-700 p-1 rounded"
+                    title="Delete Question"
+                    onClick={e => { e.stopPropagation(); handleDeleteQuestion(idx); }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
                 </li>
               ))}
             </ul>
@@ -500,33 +634,83 @@ export default function QuestionsPage() {
                 </button>
               </div>
             </form>
-            {/* Live Preview */}
-            {form && (
-              <div className="mt-8 w-full flex flex-col items-center">
+            {/* Live Preview - only show if customization sidebar is open */}
+            {customSidebarOpen && form && (
+              <div ref={previewRef} className="mt-8 w-full flex flex-col items-center">
                 <div className="flex w-full justify-between items-center mb-2">
-                  <h3 className="text-lg font-bold text-gray-700">Live Preview</h3>
+                  <span className="text-lg font-bold text-gray-700">Live Preview</span>
                   <button
                     type="button"
-                    className={`px-4 py-2 rounded-lg font-semibold shadow transition-all duration-200 ${fullScreenPreview ? 'bg-gray-700 text-white hover:bg-gray-800' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
-                    onClick={() => setFullScreenPreview(v => !v)}
+                    className="px-4 py-2 rounded-lg font-semibold shadow transition-all duration-200 bg-blue-500 text-white hover:bg-blue-600 ml-auto"
+                    onClick={() => setIsFullScreenPreview(true)}
                   >
-                    {fullScreenPreview ? 'Exit Full Screen' : 'Full Screen Preview'}
+                    Full Screen Preview
                   </button>
                 </div>
-                {/* Preview Container */}
-                <div className={fullScreenPreview ? 'fixed inset-0 z-50 bg-black/80 flex items-center justify-center' : 'w-full max-w-3xl aspect-[16/9] bg-gray-200 rounded-2xl flex items-center justify-center overflow-hidden border border-gray-300 shadow-inner'}>
-                  <div className={fullScreenPreview ? 'w-[90vw] h-[90vh] flex items-center justify-center' : 'w-full h-full flex items-center justify-center scale-90'}>
-                    <QuestionPreview question={form} customizations={form.settings} />
-                    {fullScreenPreview && (
+                {/* Preview Container with max size, scaling, border, and shadow */}
+                <div
+                  className="flex items-center justify-center"
+                  style={{
+                    width: '100%',
+                    maxWidth: '900px',
+                    maxHeight: '500px',
+                    minHeight: '0',
+                    minWidth: '0',
+                    overflow: 'hidden',
+                    border: '1.5px solid #e5e7eb',
+                    boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)',
+                    borderRadius: '1.5rem',
+                    background: '#f8fafc',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '800px',
+                      height: '450px',
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transform: 'scale(0.95)',
+                      transformOrigin: 'top center',
+                    }}
+                  >
+                    <div style={{ width: '100%', height: '100%' }}>
+                      <QuestionPreview question={form} customizations={form.settings} />
+                    </div>
+                  </div>
+                </div>
+                {/* Full Screen Modal */}
+                {isFullScreenPreview && (
+                  <div
+                    style={{
+                      position: 'fixed',
+                      top: 0,
+                      left: 0,
+                      width: '100vw',
+                      height: '100vh',
+                      zIndex: 9999,
+                      background: 'rgba(0,0,0,0.85)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <div style={{ position: 'absolute', top: 32, right: 48, zIndex: 10000 }}>
                       <button
-                        className="absolute top-6 right-8 px-4 py-2 bg-gray-700 text-white rounded-lg font-semibold shadow hover:bg-gray-900 text-base border border-gray-900 z-50"
-                        onClick={() => setFullScreenPreview(false)}
+                        type="button"
+                        className="px-5 py-2 bg-gray-700 text-white rounded-lg font-semibold shadow hover:bg-gray-900 text-base border border-gray-900"
+                        onClick={() => setIsFullScreenPreview(false)}
                       >
                         Close
                       </button>
-                    )}
+                    </div>
+                    <div style={{ width: '90vw', height: '90vh', maxWidth: 1200, maxHeight: 800, background: '#fff', borderRadius: 24, overflow: 'hidden', boxShadow: '0 8px 32px 0 rgba(0,0,0,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <QuestionPreview question={form} customizations={form.settings} />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </main>
@@ -681,6 +865,16 @@ export default function QuestionsPage() {
                   </div>
                 </>
               )}
+              {/* Apply to All Button */}
+              <div className="flex justify-center mt-8">
+                <button
+                  type="button"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition-all"
+                  onClick={handleApplyToAll}
+                >
+                  Apply to All
+                </button>
+              </div>
             </div>
           </aside>
         </div>
