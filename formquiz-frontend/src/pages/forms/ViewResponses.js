@@ -1,185 +1,120 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
-import Spinner from '../../components/Spinner';
-import Skeleton from '../../components/Skeleton';
-import { useToast } from '../../components/Toast';
-
-// Enhanced Results Page CSS
-const styles = `
-.results-container {
-  max-width: 700px;
-  margin: 40px auto;
-  padding: 24px;
-  background: #f8fafc;
-  border-radius: 18px;
-  box-shadow: 0 4px 24px rgba(80, 80, 180, 0.08);
-}
-.form-title {
-  color: #4a6bff;
-  font-weight: 700;
-}
-.results-summary {
-  margin-bottom: 18px;
-  font-size: 1.1rem;
-  color: #374151;
-}
-.no-responses {
-  text-align: center;
-  color: #888;
-  font-size: 1.1rem;
-  margin: 40px 0;
-}
-.responses-list {
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-}
-.response-card {
-  background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(44,62,80,0.08);
-  padding: 18px 22px;
-  border: 1px solid #e5e7eb;
-}
-.response-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  font-size: 0.98rem;
-  color: #6366f1;
-}
-.user-id {
-  font-weight: 600;
-}
-.submitted-at {
-  color: #6b7280;
-}
-.answers-list {
-  margin-top: 8px;
-}
-.answer-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 6px;
-  font-size: 1rem;
-}
-.question {
-  color: #374151;
-  font-weight: 500;
-}
-.answer {
-  color: #2563eb;
-  font-weight: 500;
-}
-`;
-if (typeof document !== 'undefined' && !document.getElementById('results-enhanced-css')) {
-  const style = document.createElement('style');
-  style.id = 'results-enhanced-css';
-  style.innerHTML = styles;
-  document.head.appendChild(style);
-}
+import FormLayout from '../../components/forms/FormLayout';
+import '../../components/forms/FormLayout.css';
 
 const ViewResponses = () => {
-  const { formId } = useParams();
-  const navigate = useNavigate();
+  const { formId, quizId } = useParams();
   const [responses, setResponses] = useState([]);
   const [questions, setQuestions] = useState([]);
-  const [formTitle, setFormTitle] = useState('');
+  const [title, setTitle] = useState('');
+  const [customization, setCustomization] = useState({});
 
   useEffect(() => {
     const fetchData = async () => {
-      console.log('formId:', formId); // Debug formId
-      // Get responses
-      const { data: respData, error: respError } = await supabase
-        .from('responses')
-        .select('*')
-        .eq('form_id', formId);
-      if (respError) {
-        console.error('Supabase responses error:', respError);
+      let respData = null;
+      let qData = null;
+      let titleData = null;
+      let customizationData = null;
+      if (formId) {
+        // Form responses
+        const respRes = await supabase
+          .from('responses')
+          .select('*, users(email)')
+          .eq('form_id', formId);
+        respData = respRes.data;
+        const formRes = await supabase
+          .from('forms')
+          .select('title, customization_settings')
+          .eq('id', formId)
+          .single();
+        titleData = formRes.data?.title;
+        customizationData = formRes.data?.customization_settings || {};
+        const qRes = await supabase
+          .from('questions')
+          .select('*')
+          .eq('form_id', formId)
+          .order('order_index');
+        qData = qRes.data;
+      } else if (quizId) {
+        // Quiz responses
+        const respRes = await supabase
+          .from('quiz_responses')
+          .select('*, users(email)')
+          .eq('quiz_id', quizId);
+        respData = respRes.data;
+        const quizRes = await supabase
+          .from('quizzes')
+          .select('title')
+          .eq('id', quizId)
+          .single();
+        titleData = quizRes.data?.title;
+        const qRes = await supabase
+          .from('slides')
+          .select('*')
+          .eq('quiz_id', quizId)
+          .order('slide_index');
+        qData = qRes.data;
       }
+      if (titleData) setTitle(titleData);
       if (respData) {
+        console.log('Fetched responses:', respData);
         setResponses(respData);
       }
-
-      // Get form questions
-      const { data: formData, error: formError } = await supabase
-        .from('forms')
-        .select('title')
-        .eq('id', formId)
-        .single();
-      if (formError) {
-        console.error('Supabase form error:', formError);
-      }
-
-      const { data: qData, error: qError } = await supabase
-        .from('questions')
-        .select('*')
-        .eq('form_id', formId)
-        .order('order_index');
-      if (qError) {
-        console.error('Supabase questions error:', qError);
-      }
-
-      if (formData) setFormTitle(formData.title);
       if (qData) setQuestions(qData);
+      if (customizationData) setCustomization(customizationData);
     };
-
     fetchData();
-  }, [formId]);
+  }, [formId, quizId]);
 
   const getQuestionText = (questionId) => {
     const q = questions.find(q => q.id === questionId);
-    return q ? q.question_text : questionId;
+    return q ? (q.question_text || q.title) : questionId;
   };
 
   return (
-    <div className="results-container">
-      <button
-        onClick={() => navigate('/dashboard')}
-        style={{
-          marginBottom: 18,
-          background: '#4a6bff',
-          color: '#fff',
-          border: 'none',
-          borderRadius: 8,
-          padding: '10px 22px',
-          fontWeight: 600,
-          fontSize: 16,
-          cursor: 'pointer',
-          boxShadow: '0 2px 8px rgba(44,62,80,0.08)',
-          transition: 'background 0.2s',
-        }}
-      >
-        ← Back to Dashboard
-      </button>
-      <h2>📋 Responses for: <span className="form-title">{formTitle}</span></h2>
-      <div className="results-summary">
-        <span>Total Responses: <b>{responses.length}</b></span>
+    <div style={{ minHeight: '100vh', background: '#f7fafc', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div style={{ width: '100%', maxWidth: 900, margin: '0 auto', padding: '48px 0 24px 0', textAlign: 'center' }}>
+        <h2 style={{ marginBottom: '32px', fontWeight: 700, fontSize: '2rem', color: '#2d314d', letterSpacing: '-1px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+          <span role="img" aria-label="clipboard">📋</span> Responses for: <span style={{ color: '#3b3b6d' }}>{title}</span>
+        </h2>
       </div>
       {responses.length === 0 ? (
-        <div className="no-responses">
-          <p>No responses submitted yet.</p>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+          <FormLayout customization={customization}>
+            <div className="form-content-area" style={{ textAlign: 'center', fontSize: '1.1rem', color: '#888', minWidth: 250, minHeight: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <p style={{ margin: 0 }}>No responses submitted yet.</p>
+            </div>
+          </FormLayout>
         </div>
       ) : (
-        <div className="responses-list">
-          {responses.map((resp, idx) => (
-            <div className="response-card" key={idx}>
-              <div className="response-header">
-                <span className="user-id">🧑 {resp.user_id || 'Anonymous'}</span>
-                <span className="submitted-at">🕒 {new Date(resp.submitted_at).toLocaleString()}</span>
-              </div>
-              <div className="answers-list">
-                {Object.entries(resp.answers || {}).map(([qid, answer], i) => (
-                  <div className="answer-row" key={i}>
-                    <span className="question">{getQuestionText(qid)}:</span>
-                    <span className="answer">{answer}</span>
+        <div style={{ width: '100%', maxWidth: 900, margin: '0 auto', paddingBottom: 48 }}>
+          {responses.map((resp, idx) => {
+            let answersObj = {};
+            try {
+              answersObj = typeof resp.answers === 'string' ? JSON.parse(resp.answers) : resp.answers;
+            } catch (e) {
+              answersObj = {};
+            }
+            return (
+              <FormLayout key={idx} customization={customization}>
+                <div className="form-content-area">
+                  <div style={{ marginBottom: 16, color: customization.textColor || '#2d314d', fontWeight: 500 }}>
+                    <span role="img" aria-label="user">🧑</span> <b>User:</b> {resp.users?.email || 'Anonymous'}<br />
+                    <span role="img" aria-label="clock">🕒</span> <b>Submitted At:</b> {new Date(resp.submitted_at).toLocaleString()}
                   </div>
-                ))}
-              </div>
-            </div>
-          ))}
+                  <ul style={{ marginTop: '10px', paddingLeft: 0, listStyle: 'none' }}>
+                    {Object.entries(answersObj || {}).map(([qid, answer], i) => (
+                      <li key={i} style={{ marginBottom: 12, background: 'rgba(255,255,255,0.10)', borderRadius: 8, padding: '10px 14px', color: customization.textColor || '#2d314d', fontSize: '1.08rem' }}>
+                        <strong>{getQuestionText(qid)}:</strong> {answer}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </FormLayout>
+            );
+          })}
         </div>
       )}
     </div>
