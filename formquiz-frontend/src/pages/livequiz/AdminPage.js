@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../supabase.js';
 import { useQuiz } from '../../pages/livequiz/QuizContext';
 import { QRCodeSVG } from 'qrcode.react';
+import QuestionPreview from './QuestionPreview';
 
 export default function AdminPage() {
   const {
@@ -668,117 +669,10 @@ export default function AdminPage() {
                     <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[1600px] mx-auto px-0 pt-[5.5rem] pb-0 box-border relative">
                       {/* Question or Results */}
                       {quizPhase === 'question' && timeLeft > 0 ? (
-                        <>
-                          {/* Question text */}
-                          <div className="w-full bg-white/90 rounded-t-3xl shadow-2xl p-10 flex flex-col items-center justify-center"
-                            style={{
-                              minHeight:'120px',
-                              background: settings.questionContainerBgColor || '#ffffff',
-                              color: settings.textColor,
-                              borderRadius: settings.borderRadius,
-                              boxShadow: settings.shadow ? '0 4px 24px 0 rgba(0,0,0,0.10)' : 'none',
-                              fontSize: settings.fontSize,
-                              fontFamily: settings.fontFamily,
-                              textAlign: settings.alignment,
-                            }}
-                          >
-                            <h3 className="font-bold text-4xl md:text-5xl text-gray-900 text-center break-words w-full max-w-5xl" style={{lineHeight:'1.2', fontWeight: settings.bold ? 'bold' : 'normal', fontStyle: settings.italic ? 'italic' : 'normal', color: settings.textColor, fontFamily: settings.fontFamily, fontSize: settings.fontSize}}>{currentQuestion?.question_text}</h3>
-                          </div>
-                          {/* Options */}
-                          <div className="w-full flex-1 flex flex-col items-center justify-center">
-                            {currentQuestion?.options && (
-                              <div className="w-full flex flex-col items-center justify-center gap-14 mt-14 px-16">
-                                {/* 2 options: side by side */}
-                                {currentQuestion.options.length === 2 && (
-                                  <div className="flex flex-row w-full gap-14">
-                                    {currentQuestion.options.map((option, idx) => (
-                                      <button key={idx} className="flex-1 py-14 text-3xl md:text-4xl font-semibold rounded-2xl shadow-lg text-white text-center"
-                                        style={{
-                                          background: settings.buttonColor,
-                                          borderRadius: settings.borderRadius,
-                                          fontSize: settings.fontSize,
-                                          fontFamily: settings.fontFamily,
-                                          fontWeight: settings.bold ? 'bold' : 'normal',
-                                          fontStyle: settings.italic ? 'italic' : 'normal',
-                                          boxShadow: settings.shadow ? '0 2px 8px 0 rgba(0,0,0,0.10)' : 'none',
-                                        }}
-                                      >
-                                        {option}
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
-                                {/* 3 options: 2 top, 1 bottom */}
-                                {currentQuestion.options.length === 3 && (
-                                  <div className="flex flex-col w-full gap-10">
-                                    <div className="flex flex-row w-full gap-14">
-                                      {currentQuestion.options.slice(0,2).map((option, idx) => (
-                                        <button key={idx} className="flex-1 py-14 text-3xl md:text-4xl font-semibold rounded-2xl shadow-lg text-white text-center"
-                                          style={{
-                                            background: settings.buttonColor,
-                                            borderRadius: settings.borderRadius,
-                                            fontSize: settings.fontSize,
-                                            fontFamily: settings.fontFamily,
-                                            fontWeight: settings.bold ? 'bold' : 'normal',
-                                            fontStyle: settings.italic ? 'italic' : 'normal',
-                                            boxShadow: settings.shadow ? '0 2px 8px 0 rgba(0,0,0,0.10)' : 'none',
-                                          }}
-                                        >
-                                          {option}
-                                        </button>
-                                      ))}
-                                    </div>
-                                    <div className="flex flex-row w-full justify-center">
-                                      <button className="w-1/2 py-14 text-3xl md:text-4xl font-semibold rounded-2xl shadow-lg text-white text-center"
-                                        style={{
-                                          background: settings.buttonColor,
-                                          borderRadius: settings.borderRadius,
-                                          fontSize: settings.fontSize,
-                                          fontFamily: settings.fontFamily,
-                                          fontWeight: settings.bold ? 'bold' : 'normal',
-                                          fontStyle: settings.italic ? 'italic' : 'normal',
-                                          boxShadow: settings.shadow ? '0 2px 8px 0 rgba(0,0,0,0.10)' : 'none',
-                                        }}
-                                      >
-                                        {currentQuestion.options[2]}
-                                      </button>
-                                    </div>
-                                  </div>
-                                )}
-                                {/* 4 options: 2x2 grid */}
-                                {currentQuestion.options.length === 4 && (
-                                  <div className="grid grid-cols-2 gap-14 w-full">
-                                    {currentQuestion.options.map((option, idx) => (
-                                      <button key={idx} className="py-14 text-3xl md:text-4xl font-semibold rounded-2xl shadow-lg text-white text-center"
-                                        style={{
-                                          background: settings.buttonColor,
-                                          borderRadius: settings.borderRadius,
-                                          fontSize: settings.fontSize,
-                                          fontFamily: settings.fontFamily,
-                                          fontWeight: settings.bold ? 'bold' : 'normal',
-                                          fontStyle: settings.italic ? 'italic' : 'normal',
-                                          boxShadow: settings.shadow ? '0 2px 8px 0 rgba(0,0,0,0.10)' : 'none',
-                                        }}
-                                      >
-                                        {option}
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          {/* Next Button - bottom right, floating */}
-                          <div className="fixed bottom-10 right-16 z-50">
-                            <button
-                              onClick={nextQuestion}
-                              className="flex items-center gap-2 px-10 py-5 bg-green-600 text-white rounded-2xl font-bold text-2xl shadow-xl hover:bg-green-700 transition-all border-2 border-green-700"
-                              style={{ minWidth: '200px', fontWeight: 700 }}
-                            >
-                              Next <span className="ml-2 text-3xl">➡</span>
-                            </button>
-                          </div>
-                        </>
+                        <QuestionPreview
+                          question={currentQuestion}
+                          customizations={settings}
+                        />
                       ) : quizPhase === 'question' && timeLeft === 0 ? (
                         /* Results Screen */
                         <div className="w-full h-full flex flex-col items-center justify-center">
@@ -806,18 +700,20 @@ export default function AdminPage() {
                               })}
                             </div>
                           </div>
-                          {/* Next Button - bottom right, floating */}
-                          <div className="fixed bottom-10 right-16 z-50">
-                            <button
-                              onClick={nextQuestion}
-                              className="flex items-center gap-2 px-10 py-5 bg-green-600 text-white rounded-2xl font-bold text-2xl shadow-xl hover:bg-green-700 transition-all border-2 border-green-700"
-                              style={{ minWidth: '200px', fontWeight: 700 }}
-                            >
-                              Next <span className="ml-2 text-3xl">➡</span>
-                            </button>
-                          </div>
                         </div>
                       ) : null}
+                      {/* Next Button - bottom right, floating */}
+                      {quizPhase === 'question' && timeLeft > 0 && (
+                        <div className="fixed bottom-10 right-16 z-50">
+                          <button
+                            onClick={nextQuestion}
+                            className="flex items-center gap-2 px-10 py-5 bg-green-600 text-white rounded-2xl font-bold text-2xl shadow-xl hover:bg-green-700 transition-all border-2 border-green-700"
+                            style={{ minWidth: '200px', fontWeight: 700 }}
+                          >
+                            Next <span className="ml-2 text-3xl">➡</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
