@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../supabase.js';
 import { useQuiz } from '../../pages/livequiz/QuizContext';
 import { QRCodeSVG } from 'qrcode.react';
 import QuestionPreview from './QuestionPreview';
 
 export default function AdminPage() {
+  const navigate = useNavigate();
+  const { quizId } = useParams();
   const {
     session,
     setSession,
@@ -107,6 +110,22 @@ export default function AdminPage() {
       fetchQuestions(selectedQuizId);
     }
   }, [selectedQuizId]);
+
+  // On mount, if quizId is present, set it as selectedQuizId and skip quiz list
+  useEffect(() => {
+    if (quizId) {
+      setSelectedQuizId(quizId);
+    }
+  }, [quizId]);
+
+  // If quizId is present and no session yet, auto-start quiz session
+  useEffect(() => {
+    if (quizId && !session && selectedQuizId === quizId && questions.length > 0 && !loading) {
+      // Only start if not already started
+      startQuiz();
+    }
+    // eslint-disable-next-line
+  }, [quizId, session, selectedQuizId, questions, loading]);
 
   // Fetch and subscribe to participants for the current session
   useEffect(() => {
@@ -459,6 +478,18 @@ export default function AdminPage() {
       className={`min-h-screen min-w-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-purple-100 font-sans transition-all duration-500 ${presentationMode ? 'fixed inset-0 w-screen h-screen z-50 p-0 m-0 overflow-hidden' : 'px-2 sm:px-4'}`}
       style={presentationMode ? { margin: 0, padding: 0 } : {}}
     >
+      {/* Back to Dashboard Button */}
+      {!presentationMode && (
+        <div className="fixed top-4 left-4 z-40">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg font-semibold shadow hover:bg-gray-300 transition-all text-base border border-gray-400"
+            title="Back to Dashboard"
+          >
+            ← Back to Dashboard
+          </button>
+        </div>
+      )}
       {/* Enter Presentation Mode Button */}
       {!presentationMode && (
         <div className="fixed top-4 right-4 z-40">
@@ -581,6 +612,10 @@ export default function AdminPage() {
               )}
             </div>
           </div>
+        ) :
+        // If quizId is present, skip quiz list and loading, just show loading or lobby
+        quizId ? (
+          loading ? <div className="p-4">Loading...</div> : null
         ) :
         !session ? (
           <div>
