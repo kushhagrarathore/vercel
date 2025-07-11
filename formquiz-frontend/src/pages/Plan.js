@@ -194,6 +194,7 @@ const Plan = () => {
             ← Back
           </button>
         </div>
+        <div style={{ height: 140 }} />
       </div>
     </div>
   );

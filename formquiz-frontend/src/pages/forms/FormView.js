@@ -183,9 +183,12 @@ const FormView = () => {
   );
 
   function renderQuestion(q, index) {
-    const type = q.question_type || q.type;
+    // Normalize type to support both dash and underscore
+    let type = q.question_type || q.type;
+    if (typeof type === 'string') {
+      type = type.replace(/_/g, '-');
+    }
     switch (type) {
-      case 'short_text':
       case 'short-text':
         return (
           <input
@@ -198,7 +201,6 @@ const FormView = () => {
             style={{ borderRadius: customization.borderRadius, fontFamily: customization.fontFamily, color: customization.textColor }}
           />
         );
-      case 'long_text':
       case 'long-text':
         return (
           <textarea
@@ -211,7 +213,6 @@ const FormView = () => {
             style={{ borderRadius: customization.borderRadius, fontFamily: customization.fontFamily, color: customization.textColor, minHeight: 100 }}
           />
         );
-      case 'multiple_choice':
       case 'multiple-choice':
         return (
           <div className="form-preview-options">
@@ -233,7 +234,6 @@ const FormView = () => {
             ))}
           </div>
         );
-      case 'picture_choice':
       case 'picture-choice':
         return (
           <div className="form-preview-options">

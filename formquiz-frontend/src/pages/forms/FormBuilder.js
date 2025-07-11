@@ -22,7 +22,11 @@ const FormBuilder = () => {
 
   const [title, setTitle] = useState(premadeTitle || 'Untitled Form');
   const [description, setDescription] = useState(premadeDescription || '');
-  const [questions, setQuestions] = useState(premadeQuestions || []);
+  const [questions, setQuestions] = useState(
+    premadeQuestions
+      ? premadeQuestions.map(q => ({ ...q, id: q.id || uuidv4() }))
+      : []
+  );
   const [formId, setFormId] = useState(null);
   const [activeTab, setActiveTab] = useState('standard');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -63,7 +67,7 @@ const FormBuilder = () => {
       setFormId(null);
       // If template data is present, set it (for navigation from template cards)
       if (premadeQuestions && premadeQuestions.length > 0) {
-        setQuestions(premadeQuestions);
+        setQuestions(premadeQuestions.map(q => ({ ...q, id: q.id || uuidv4() })));
       }
       if (premadeTitle) {
         setTitle(premadeTitle);
@@ -240,7 +244,8 @@ const FormBuilder = () => {
       }
       // Insert new questions
       if (questions.length) {
-        const questionsToInsert = questions.map((q, idx) => ({
+        const questionsWithId = questions.map((q, idx) => ({ ...q, id: q.id || uuidv4() }));
+        const questionsToInsert = questionsWithId.map((q, idx) => ({
           id: q.id,
           form_id: currentFormId,
           question_text: q.question_text,
