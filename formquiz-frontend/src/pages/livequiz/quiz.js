@@ -365,14 +365,14 @@ export default function Quiz() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
-  // Custom navigation blocker for in-app navigation
-  useBlocker(() => {
-    if (hasUnsavedChanges) {
-      setShowUnsavedModal(true);
-      return true; // Block navigation
-    }
-    return false;
-  }, hasUnsavedChanges);
+  // Remove useBlocker usage to avoid error with BrowserRouter
+  // useBlocker(() => {
+  //   if (hasUnsavedChanges) {
+  //     setShowUnsavedModal(true);
+  //     return true; // Block navigation
+  //   }
+  //   return false;
+  // }, hasUnsavedChanges);
 
   // Handle leave/cancel in modal
   const handleLeave = () => {
