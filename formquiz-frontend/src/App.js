@@ -67,6 +67,12 @@ function App() {
             <Route path="/signup" element={<Signup />} />
             {/* Public user quiz route */}
             <Route path="/userend" element={<UserEnd />} />
+            <Route path="/form/:formId" element={<FormView />} />
+            <Route path="/public/:formId" element={<FormView />} />
+            {/* Public quiz participation routes */}
+            <Route path="/quiz/:quizId" element={<QuizProvider><QuizPage /></QuizProvider>} />
+            <Route path="/join/:quizId" element={<JoinQuiz />} />
+            <Route path="/quiz/fill/:quizId" element={<QuizFillPage />} />
             {/* Protected routes */}
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
             <Route path="/builder" element={<RequireAuth><FormBuilder /></RequireAuth>} />
@@ -80,17 +86,14 @@ function App() {
             <Route path="/view-responses" element={<RequireAuth><ViewResponses /></RequireAuth>} />
             {/* Quizzes */}
             <Route path="/quiz" element={<RequireAuth><Quiz /></RequireAuth>} />
-            <Route path="/quiz/:quizId" element={<RequireAuth><QuizProvider><QuizPage /></QuizProvider></RequireAuth>} />
             <Route path="/quiz/create" element={<RequireAuth><QuizProvider><CreateQuizPage /></QuizProvider></RequireAuth>} />
             <Route path="/quiz/create/:quizId" element={<RequireAuth><QuizProvider><CreateQuizPage /></QuizProvider></RequireAuth>} />
             <Route path="/quiz/present/:quizId" element={<RequireAuth><PresentQuizPage /></RequireAuth>} />
             <Route path="/quiz/preview/:quizId" element={<RequireAuth><PreviewQuizPage /></RequireAuth>} />
             <Route path="/quiz/results/:quizId" element={<RequireAuth><ResultsPage /></RequireAuth>} />
-            <Route path="/quiz/fill/:quizId" element={<RequireAuth><QuizFillPage /></RequireAuth>} />
             <Route path="/quiz/edit/:quizId" element={<RequireAuth><Quiz /></RequireAuth>} />
             <Route path="/quiz/:quizId/results" element={<RequireAuth><QuizResultsPage /></RequireAuth>} />
             {/* Live Quiz Routes */}
-            <Route path="/join/:quizId" element={<RequireAuth><JoinQuiz /></RequireAuth>} />
             <Route path="/live/leaderboard/:quizId" element={<RequireAuth><Leaderboard /></RequireAuth>} />
             <Route path="/live-quiz" element={<RequireAuth><LiveQuiz /></RequireAuth>} />
             <Route path="/livequiz/questions/:quizId" element={<RequireAuth><QuestionsPage /></RequireAuth>} />

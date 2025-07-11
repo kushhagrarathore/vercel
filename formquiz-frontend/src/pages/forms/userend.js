@@ -211,7 +211,7 @@ export default function LiveQuizUser() {
       // Prompt for username if not logged in
       supabase.auth.getUser().then(({ data }) => {
         setUser(data.user);
-        if (!data.user) setShowUserPrompt(true);
+        // Do not prompt for login; allow anonymous access
       });
     }
     fetchQuizData();
