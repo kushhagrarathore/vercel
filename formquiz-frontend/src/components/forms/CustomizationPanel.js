@@ -4,98 +4,71 @@ import './CustomizationPanel.css';
 
 const TEMPLATES = [
   {
-    name: 'Classic Blue',
-    customization: {
-      backgroundColor: '#f7fafc',
-      textColor: '#22223b',
-      buttonColor: '#2563eb',
-      buttonTextColor: '#fff',
-      backgroundImage: '',
-      logoImage: '',
-      fontFamily: 'Inter, Arial, sans-serif',
-      borderRadius: '16px',
-    },
-    preview: {
-      bg: '#f7fafc',
-      text: '#22223b',
-      button: '#2563eb',
-      font: 'Inter, Arial, sans-serif',
-    },
-  },
-  {
     name: 'Dark Mode',
+    classNames: 'bg-gray-900 text-white',
     customization: {
       backgroundColor: '#18181b',
-      textColor: '#f1f5f9',
-      buttonColor: '#60a5fa',
-      buttonTextColor: '#232336',
-      backgroundImage: '',
-      logoImage: '',
+      textColor: '#fff',
+      buttonColor: '#2563eb',
+      buttonTextColor: '#fff',
       fontFamily: 'Inter, Arial, sans-serif',
-      borderRadius: '16px',
+      borderRadius: '18px',
     },
     preview: {
       bg: '#18181b',
-      text: '#f1f5f9',
-      button: '#60a5fa',
-      font: 'Inter, Arial, sans-serif',
+      text: '#fff',
+      border: '#232336',
     },
   },
   {
-    name: 'Sunshine',
+    name: 'Light Mode',
+    classNames: 'bg-white text-black',
     customization: {
-      backgroundColor: '#fffbe6',
-      textColor: '#a16207',
-      buttonColor: '#facc15',
+      backgroundColor: '#fff',
+      textColor: '#232336',
+      buttonColor: '#2563eb',
       buttonTextColor: '#fff',
-      backgroundImage: '',
-      logoImage: '',
-      fontFamily: 'Georgia, serif',
-      borderRadius: '20px',
+      fontFamily: 'Inter, Arial, sans-serif',
+      borderRadius: '18px',
     },
     preview: {
-      bg: '#fffbe6',
-      text: '#a16207',
-      button: '#facc15',
-      font: 'Georgia, serif',
+      bg: '#fff',
+      text: '#232336',
+      border: '#e5e7eb',
     },
   },
   {
-    name: 'Ocean',
+    name: 'Ocean Blue',
+    classNames: 'bg-blue-100 text-blue-900',
     customization: {
       backgroundColor: '#dbeafe',
       textColor: '#1e3a8a',
-      buttonColor: '#3b82f6',
+      buttonColor: '#2563eb',
       buttonTextColor: '#fff',
-      backgroundImage: '',
-      logoImage: '',
-      fontFamily: 'Helvetica, sans-serif',
+      fontFamily: 'Inter, Arial, sans-serif',
       borderRadius: '18px',
     },
     preview: {
       bg: '#dbeafe',
       text: '#1e3a8a',
-      button: '#3b82f6',
-      font: 'Helvetica, sans-serif',
+      border: '#60a5fa',
     },
   },
   {
-    name: 'Minimal',
+    name: 'Sunshine Yellow',
+    classNames: 'bg-yellow-100 text-yellow-900',
     customization: {
-      backgroundColor: '#fff',
-      textColor: '#23272f',
-      buttonColor: '#4a6bff',
+      backgroundColor: '#fef9c3',
+      textColor: '#a16207',
+      buttonColor: '#facc15',
       buttonTextColor: '#fff',
-      backgroundImage: '',
-      logoImage: '',
-      fontFamily: 'Arial, sans-serif',
-      borderRadius: '8px',
+      fontFamily: 'Georgia, serif',
+      borderRadius: '18px',
     },
     preview: {
-      bg: '#fff',
-      text: '#23272f',
-      button: '#4a6bff',
-      font: 'Arial, sans-serif',
+      bg: '#fef9c3',
+      text: '#a16207',
+      border: '#fde68a',
     },
   },
 ];
@@ -130,24 +103,26 @@ const CustomizationPanel = ({ customization, setCustomization }) => {
         <button className={`customization-toggle-btn${mode === 'advanced' ? ' active' : ''}`} onClick={() => setMode('advanced')}>Advanced</button>
       </div>
       {mode === 'basic' ? (
-        <div className="template-card-list">
-          {TEMPLATES.map((tpl, idx) => (
-            <div
-              key={tpl.name}
-              className="template-card-preview"
-              onClick={() => setCustomization({ ...customization, ...tpl.customization })}
-              style={{ cursor: 'pointer', border: '2px solid #e0e0e0', borderRadius: 12, marginBottom: 18, background: tpl.preview.bg }}
-            >
-              <div style={{ padding: 18, textAlign: 'center' }}>
-                <div style={{ fontFamily: tpl.preview.font, color: tpl.preview.text, fontWeight: 700, fontSize: 18 }}>{tpl.name}</div>
-                <div style={{ margin: '12px 0' }}>
-                  <span style={{ display: 'inline-block', width: 32, height: 32, background: tpl.preview.button, borderRadius: 8, marginRight: 8 }}></span>
-                  <span style={{ fontFamily: tpl.preview.font, color: tpl.preview.text, fontSize: 15 }}>Aa</span>
-                </div>
-                <div style={{ fontSize: 12, color: tpl.preview.text, opacity: 0.7 }}>{tpl.preview.font.split(',')[0]}</div>
+        <div className="template-panel-list">
+          {TEMPLATES.map((tpl, idx) => {
+            const isSelected = Object.entries(tpl.customization).every(([key, val]) => customization[key] === val);
+            return (
+              <div
+                key={tpl.name}
+                className={`template-panel-card${isSelected ? ' selected' : ''}`}
+                onClick={() => setCustomization({ ...customization, ...tpl.customization })}
+                style={{
+                  background: tpl.preview.bg,
+                  color: tpl.preview.text,
+                  borderColor: isSelected ? '#2563eb' : tpl.preview.border,
+                }}
+              >
+                <div className="template-panel-title">{tpl.name}</div>
+                <div className="template-panel-class">{tpl.classNames}</div>
               </div>
-            </div>
-          ))}
+            );
+          })}
+          <div className="template-panel-hint">Click a template to apply its style instantly.</div>
         </div>
       ) : (
         <div>

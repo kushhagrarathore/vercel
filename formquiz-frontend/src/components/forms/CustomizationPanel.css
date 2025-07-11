@@ -592,3 +592,67 @@ input[type="color"] {
     padding: 14px 4vw;
   }
 }
+
+/* Template Panel (new style for basic mode) */
+.template-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 18px;
+}
+
+.template-panel-card {
+  border: 2.5px solid #e5e7eb;
+  border-radius: 18px;
+  box-shadow: 0 2px 10px 0 rgba(44,62,80,0.07);
+  padding: 28px 22px 20px 22px;
+  cursor: pointer;
+  transition: border 0.2s, box-shadow 0.2s, transform 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-height: 110px;
+  position: relative;
+}
+
+.template-panel-card.selected {
+  border: 2.5px solid #2563eb;
+  box-shadow: 0 4px 18px 0 rgba(37,99,235,0.10);
+  transform: scale(1.03);
+  z-index: 2;
+}
+
+.template-panel-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+
+.template-panel-class {
+  font-size: 1.05rem;
+  font-weight: 500;
+  opacity: 0.85;
+  margin-bottom: 2px;
+}
+
+.template-panel-hint {
+  margin-top: 10px;
+  color: #7b7b93;
+  font-size: 0.98rem;
+  text-align: left;
+  padding-left: 2px;
+}
+
+@media (max-width: 600px) {
+  .template-panel-card {
+    padding: 18px 10px 14px 10px;
+    min-height: 80px;
+  }
+  .template-panel-title {
+    font-size: 1.1rem;
+  }
+  .template-panel-class {
+    font-size: 0.95rem;
+  }
+}
