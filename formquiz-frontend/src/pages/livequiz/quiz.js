@@ -689,8 +689,8 @@ export default function Quiz() {
             <FiArrowLeft /> Back
           </Button>
           <input
-            className="quizbuilder-title font-bold text-2xl px-4 py-2 rounded-lg border-none outline-none bg-transparent"
-            style={{ color: 'var(--text)', background: 'transparent', minWidth: 180, maxWidth: 320 }}
+            className="quizbuilder-title font-bold px-4 py-2 rounded-lg border-none outline-none bg-transparent"
+            style={{ color: '#6b7280', background: 'transparent', minWidth: 140, maxWidth: 260, fontSize: 22, fontWeight: 600, letterSpacing: '-0.5px' }}
             value={title}
             onChange={e => setTitle(e.target.value)}
             placeholder="Untitled Presentation"

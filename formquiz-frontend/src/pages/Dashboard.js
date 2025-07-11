@@ -435,6 +435,7 @@ const Dashboard = () => {
 
         <section
           className={`dashboard-animated-section ${viewMode}`}
+          style={{ paddingBottom: 30 }} // Add extra bottom padding
         >
           <AnimatePresence>
             {loading ? (
@@ -474,7 +475,7 @@ const Dashboard = () => {
                       exit={{ opacity: 0, scale: 0.95, y: 18 }}
                       transition={{ duration: 0.32, type: 'spring' }}
                       className="dashboard-animated-card"
-                      style={{ position: 'relative', borderLeft: '6px solid #a78bfa', background: '#fff', borderRadius: 18, boxShadow: '0 2px 12px #a5b4fc22', padding: 18, minHeight: 120, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 8 }}
+                      style={{ position: 'relative', borderLeft: '6px solid #a78bfa', background: '#fff', borderRadius: 18, boxShadow: '0 2px 12px #a5b4fc22', padding: 18, minHeight: 120, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 8, marginBottom: 30 }} // Add marginBottom to last card
                       onClick={() => navigate(`/livequiz/questions/${item.id}`)}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
@@ -499,6 +500,7 @@ const Dashboard = () => {
                       exit={{ opacity: 0, scale: 0.95, y: 18 }}
                       transition={{ duration: 0.32, type: 'spring' }}
                       className="dashboard-animated-card"
+                      style={{ marginBottom: 30 }} // Add marginBottom to last card
                     >
                       <MemoFormCardRow
                         view={viewMode}
@@ -547,6 +549,8 @@ const Dashboard = () => {
                     </motion.div>
                   )
                 ))}
+                {/* Extra spacer div for bottom gap */}
+                <div style={{ height: 30 }} />
               </>
             ) : (
               <motion.div
