@@ -542,11 +542,7 @@ export default function QuestionsPage() {
               fontSize: '1.15rem',
               marginRight: '0.5rem',
             }}
-            onClick={() => {
-              if (selectedQuizId) {
-                navigate(`/Admin/${selectedQuizId}`);
-              }
-            }}
+            onClick={() => navigate('/Admin')}
           >
             Start Quiz →
           </button>

@@ -1,13 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../supabase.js';
 import { useQuiz } from '../../pages/livequiz/QuizContext';
 import { QRCodeSVG } from 'qrcode.react';
 import QuestionPreview from './QuestionPreview';
+import { useNavigate } from 'react-router-dom';
 
 export default function AdminPage() {
   const navigate = useNavigate();
-  const { quizId } = useParams();
   const {
     session,
     setSession,
@@ -110,22 +109,6 @@ export default function AdminPage() {
       fetchQuestions(selectedQuizId);
     }
   }, [selectedQuizId]);
-
-  // On mount, if quizId is present, set it as selectedQuizId and skip quiz list
-  useEffect(() => {
-    if (quizId) {
-      setSelectedQuizId(quizId);
-    }
-  }, [quizId]);
-
-  // If quizId is present and no session yet, auto-start quiz session
-  useEffect(() => {
-    if (quizId && !session && selectedQuizId === quizId && questions.length > 0 && !loading) {
-      // Only start if not already started
-      startQuiz();
-    }
-    // eslint-disable-next-line
-  }, [quizId, session, selectedQuizId, questions, loading]);
 
   // Fetch and subscribe to participants for the current session
   useEffect(() => {
@@ -483,7 +466,7 @@ export default function AdminPage() {
         <div className="fixed top-4 left-4 z-40">
           <button
             onClick={() => navigate('/dashboard')}
-            className="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg font-semibold shadow hover:bg-gray-300 transition-all text-base border border-gray-400"
+            className="px-6 py-2 bg-white text-blue-700 border border-blue-700 rounded-lg font-semibold shadow hover:bg-blue-50 transition-all text-base"
             title="Back to Dashboard"
           >
             ← Back to Dashboard
@@ -612,10 +595,6 @@ export default function AdminPage() {
               )}
             </div>
           </div>
-        ) :
-        // If quizId is present, skip quiz list and loading, just show loading or lobby
-        quizId ? (
-          loading ? <div className="p-4">Loading...</div> : null
         ) :
         !session ? (
           <div>
