@@ -374,9 +374,7 @@ const QuizResultsPage = () => {
                   answersObj = {};
                 }
                 // For quiz, answers may be array of {questionId, selectedIndex, text}
-                const answerMap = Array.isArray(answersObj)
-                  ? Object.fromEntries(answersObj.map(a => [a.questionId || a.question_id, a.selectedIndex !== undefined ? (q => q.options && q.options[a.selectedIndex] ? q.options[a.selectedIndex] : '-') : a.text || '-']))
-                  : answersObj;
+                // Removed unused variable: answerMap
                 return (
                   <tr key={resp.id || idx} style={{
                     background: idx % 2 === 0 ? 'rgba(99,102,241,0.04)' : 'rgba(255,255,255,0.95)',

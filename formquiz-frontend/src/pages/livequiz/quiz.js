@@ -192,7 +192,7 @@ export default function Quiz() {
   const [editingName, setEditingName] = useState(null);
   const [openColorPicker, setOpenColorPicker] = useState(null);
   const [publishedQuizId, setPublishedQuizId] = useState(null);
-  const [defaultSlideStyle, setDefaultSlideStyle] = useState({
+  const [defaultSlideStyle] = useState({
     fontFamily: textStyles[0].value,
     textColor: '#000000',
     background: '#ffffff',
@@ -202,7 +202,6 @@ export default function Quiz() {
   const [responses, setResponses] = useState([]);
   const [addSlidePopupOpen, setAddSlidePopupOpen] = useState(false);
   const [showUnsavedModal, setShowUnsavedModal] = useState(false);
-  const pendingNavigationRef = useRef(null);
   const navigate = useNavigate();
 
   // --- Bulletproof Unsaved Changes Logic ---
@@ -293,7 +292,7 @@ export default function Quiz() {
       // This is an AI-generated quiz, fetch from database
       const fetchAIGeneratedQuiz = async () => {
         try {
-          const { data: quizData, error: quizError } = await supabase
+          const { data: quizData } = await supabase
             .from('quizzes')
             .select('*')
             .eq('id', quizId)
@@ -304,7 +303,7 @@ export default function Quiz() {
             setPublishedQuizId(quizId);
             
             // Fetch slides for this AI-generated quiz
-            const { data: slidesData, error: slidesError } = await supabase
+            const { data: slidesData } = await supabase
               .from('slides')
               .select('*')
               .eq('quiz_id', quizId)
@@ -339,16 +338,16 @@ export default function Quiz() {
     async function fetchQuizAndSlides() {
       if (!quizId) return;
       // Fetch quiz
-      const { data: quizData, error: quizError } = await supabase
+      const { data: quizData } = await supabase
         .from('quizzes')
         .select('*')
         .eq('id', quizId)
         .single();
-      if (quizError || !quizData) return;
+      if (!quizData) return;
       setTitle(quizData.title || 'Untitled Presentation');
       setPublishedQuizId(quizId); // Ensure Save button is shown for existing quiz
       // Fetch slides
-      const { data: slidesData, error: slidesError } = await supabase
+      const { data: slidesData } = await supabase
         .from('slides')
         .select('*')
         .eq('quiz_id', quizId)
