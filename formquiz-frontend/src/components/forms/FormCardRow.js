@@ -123,7 +123,7 @@ const FormCardRow = ({
   // Add main card click handler
   const handleCardClick = (e) => {
     if (isForm) {
-      navigate(`/form/${formId}`); // Go to public form view for submissions
+      navigate(`/builder/${formId}`);
     } else {
       navigate(`/quiz/edit/${formId}`);
     }
