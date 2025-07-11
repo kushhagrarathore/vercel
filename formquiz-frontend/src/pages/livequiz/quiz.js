@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate, useParams, useLocation, UNSAFE_NavigationContext as NavigationContext } from "react-router-dom";
+import { useNavigate, useParams, useLocation, useBlocker } from "react-router-dom";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -119,26 +119,7 @@ const questionTypes = [
   { label: 'One Word Answer', value: 'one_word' },
 ];
 
-// Custom hook to block navigation in React Router v6
-function useBlocker(blocker, when = true) {
-  const { navigator } = UNSAFE_NavigationContext;
-  useEffect(() => {
-    if (!when) return;
-    const push = navigator.push;
-    navigator.push = (...args) => {
-      if (blocker()) {
-        // Block navigation
-        return;
-      }
-      push.apply(navigator, args);
-    };
-    return () => {
-      navigator.push = push;
-    };
-  }, [navigator, blocker, when]);
-}
-
-// Add this function at the top (after imports):
+// Use the useBlocker hook from react-router-dom directly in the component where needed.
 function calculateScore(slides, userAnswers) {
   let score = 0;
   slides.forEach((slide, idx) => {
@@ -385,16 +366,13 @@ export default function Quiz() {
   }, [hasUnsavedChanges]);
 
   // Custom navigation blocker for in-app navigation
-  useBlocker(
-    useCallback(() => {
-      if (hasUnsavedChanges) {
-        setShowUnsavedModal(true);
-        return true; // Block navigation
-      }
-      return false;
-    }, [hasUnsavedChanges]),
-    hasUnsavedChanges
-  );
+  useBlocker(() => {
+    if (hasUnsavedChanges) {
+      setShowUnsavedModal(true);
+      return true; // Block navigation
+    }
+    return false;
+  }, hasUnsavedChanges);
 
   // Handle leave/cancel in modal
   const handleLeave = () => {
