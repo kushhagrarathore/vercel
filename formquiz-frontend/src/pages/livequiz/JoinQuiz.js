@@ -74,7 +74,7 @@ const JoinQuiz = () => {
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, [roomCode]);
+  }, [roomCode, fetchQuestion]);
 
   // When liveQuiz changes, update currentIndex and reset state
   useEffect(() => {

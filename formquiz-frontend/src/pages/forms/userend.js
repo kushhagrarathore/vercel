@@ -38,7 +38,7 @@ function calculateScore(slides, userAnswers) {
         correct.some(
           ans =>
             typeof ans === 'string' &&
-            ans.trim().replace(/\s+/g, ' ').toLowerCase() === userAnswer.text.trim().replace(/\s+/g, ' ').toLowerCase()
+            ans.trim().toLowerCase() === userAnswer.text.trim().toLowerCase()
         )
       );
     }
@@ -453,7 +453,7 @@ export default function LiveQuizUser() {
               userAnswer.text.trim() !== '' &&
               Array.isArray(slide.correct_answers) &&
               slide.correct_answers.some(
-                ans => ans.trim().replace(/\s+/g, ' ').toLowerCase() === userAnswer.text.trim().replace(/\s+/g, ' ').toLowerCase()
+                ans => ans.trim().toLowerCase() === userAnswer.text.trim().toLowerCase()
               )
             ) {
               score++;
@@ -595,7 +595,7 @@ export default function LiveQuizUser() {
                           }
                         } else if (slide.type === 'one_word') {
                           answerDisplay = userAnswer?.text ? userAnswer.text : 'No answer';
-                          isCorrect = userAnswer && typeof userAnswer.text === 'string' && userAnswer.text.trim() !== '' && correct.some(ans => typeof ans === 'string' && ans.trim().replace(/\s+/g, ' ').toLowerCase() === userAnswer.text.trim().replace(/\s+/g, ' ').toLowerCase());
+                          isCorrect = userAnswer && typeof userAnswer.text === 'string' && userAnswer.text.trim() !== '' && correct.some(ans => typeof ans === 'string' && ans.trim().toLowerCase() === userAnswer.text.trim().toLowerCase());
                           if (!isCorrect && correct.length > 0) {
                             correctDisplay = correct.join(', ');
                           }

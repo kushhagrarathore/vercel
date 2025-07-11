@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase } from '../../supabase'; // Ensure this path is correct
+import { supabase } from '../../supabase';
 
 const Leaderboard = () => {
   const { quizId } = useParams(); // Or sessionId, depending on what leaderboard you want to show

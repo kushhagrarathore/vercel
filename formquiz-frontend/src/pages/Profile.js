@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import Spinner from '../components/Spinner';
 import { useToast } from '../components/Toast';
-import { FiUser, FiSettings, FiShield, FiFileText, FiLock, FiLogOut, FiTrash2, FiCamera, FiX } from 'react-icons/fi';
+import { FiUser, FiSettings, FiShield, FiFileText, FiLogOut, FiTrash2, FiCamera, FiX } from 'react-icons/fi';
 
 const SIDEBAR_SECTIONS = [
   { label: 'Profile', group: 'Settings', icon: <FiUser /> },

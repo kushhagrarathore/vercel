@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
-import { generateLiveLink } from '../../utils/generateLiveLink';
 import Leaderboard from '../livequiz/Leaderboard';
 import { QRCodeCanvas } from 'qrcode.react';
 // TODO: Import TimerBar, Leaderboard, LiveAudienceView, etc.
@@ -443,7 +442,7 @@ const PresentQuizPage = () => {
     return () => { supabase.removeChannel(channel); };
   }, [roomCode]);
 
-  const joinLink = generateLiveLink(roomCode);
+  const joinLink = `http://localhost:3000/livequiz/${roomCode}`; // Placeholder, replace with actual domain
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(joinLink);

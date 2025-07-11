@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../supabase';
-import { generateLiveLink } from '../utils/generateLiveLink';
 // TODO: Import TimerBar, Leaderboard, LiveAudienceView, etc.
 
 const PresentQuizPage = () => {
@@ -76,7 +75,7 @@ const PresentQuizPage = () => {
           <div style={{ marginBottom: 16, color: '#059669', fontWeight: 600 }}>Quiz is LIVE!</div>
           <div style={{ marginBottom: 16 }}>
             <b>Share this link with participants:</b><br />
-            <a href={generateLiveLink(quizId)} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline', wordBreak: 'break-all', fontSize: 16 }}>{generateLiveLink(quizId)}</a>
+            <a href={`http://localhost:3000/live/${quizId}`} target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', textDecoration: 'underline', wordBreak: 'break-all', fontSize: 16 }}>{`http://localhost:3000/live/${quizId}`}</a>
           </div>
           <div style={{ marginBottom: 24 }}>
             <b>Current Question:</b> {slides[currentQuestion]?.question || 'N/A'}

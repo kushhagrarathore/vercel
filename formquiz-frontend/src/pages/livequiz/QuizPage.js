@@ -28,7 +28,7 @@ export default function QuizPage() {
       setSessionCode(codeFromUrl);
     }
     // eslint-disable-next-line
-  }, [searchParams]);
+  }, [searchParams, sessionCode]);
 
   useEffect(() => {
     if (!participant?.id) return;

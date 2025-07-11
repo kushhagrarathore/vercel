@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useContext } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams, useLocation, UNSAFE_NavigationContext as NavigationContext } from "react-router-dom";
 import { DndContext, closestCenter } from "@dnd-kit/core";
 import {
@@ -121,7 +121,7 @@ const questionTypes = [
 
 // Custom hook to block navigation in React Router v6
 function useBlocker(blocker, when = true) {
-  const { navigator } = useContext(NavigationContext);
+  const { navigator } = UNSAFE_NavigationContext;
   useEffect(() => {
     if (!when) return;
     const push = navigator.push;
