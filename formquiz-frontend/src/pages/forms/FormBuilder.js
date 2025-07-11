@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import { v4 as uuidv4 } from 'uuid';
 import { QRCodeSVG } from 'qrcode.react';
@@ -15,9 +15,14 @@ import CustomizationPanel from '../../components/forms/CustomizationPanel';
 import FormLayout from '../../components/forms/FormLayout';
 
 const FormBuilder = () => {
-  const [title, setTitle] = useState('Untitled Form');
-  const [description, setDescription] = useState('');
-  const [questions, setQuestions] = useState([]);
+  const location = useLocation();
+  const premadeQuestions = location.state?.questions;
+  const premadeTitle = location.state?.title;
+  const premadeDescription = location.state?.description;
+
+  const [title, setTitle] = useState(premadeTitle || 'Untitled Form');
+  const [description, setDescription] = useState(premadeDescription || '');
+  const [questions, setQuestions] = useState(premadeQuestions || []);
   const [formId, setFormId] = useState(null);
   const [activeTab, setActiveTab] = useState('standard');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
@@ -56,6 +61,16 @@ const FormBuilder = () => {
     if (!paramFormId) {
       setLoading(false);
       setFormId(null);
+      // If template data is present, set it (for navigation from template cards)
+      if (premadeQuestions && premadeQuestions.length > 0) {
+        setQuestions(premadeQuestions);
+      }
+      if (premadeTitle) {
+        setTitle(premadeTitle);
+      }
+      if (premadeDescription) {
+        setDescription(premadeDescription);
+      }
       return;
     }
     async function fetchForm() {

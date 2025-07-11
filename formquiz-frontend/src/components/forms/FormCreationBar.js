@@ -1,11 +1,27 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import './FormCreationBar.css';
+import { formTemplates } from '../../utils/formTemplates'; // You will need to create this file
 
 const FormCreationBar = () => {
   const navigate = useNavigate();
 
   const handleFormClick = () => navigate('/builder');
+
+  // New handler for templates
+  const handleTemplateClick = (templateKey) => {
+    if (formTemplates[templateKey]) {
+      navigate('/builder', {
+        state: {
+          questions: formTemplates[templateKey].questions,
+          title: formTemplates[templateKey].title,
+          description: formTemplates[templateKey].description,
+        },
+      });
+    } else {
+      handleFormClick();
+    }
+  };
 
   const templates = [
     {
@@ -32,7 +48,7 @@ const FormCreationBar = () => {
       type: 'Feedback',
       label: 'Feedback Form',
       tagClass: 'feedback',
-      onClick: handleFormClick,
+      onClick: () => handleTemplateClick('feedback'),
       icon: (
         <span style={{
           display: 'inline-flex',
@@ -52,7 +68,7 @@ const FormCreationBar = () => {
       type: 'Contact',
       label: 'Contact Form',
       tagClass: 'contact',
-      onClick: handleFormClick,
+      onClick: () => handleTemplateClick('contact'),
       icon: (
         <span style={{
           display: 'inline-flex',
@@ -72,7 +88,7 @@ const FormCreationBar = () => {
       type: 'Survey',
       label: 'Survey Form',
       tagClass: 'survey',
-      onClick: handleFormClick,
+      onClick: () => handleTemplateClick('survey'),
       icon: (
         <span style={{
           display: 'inline-flex',
