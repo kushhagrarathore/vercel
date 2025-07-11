@@ -120,6 +120,15 @@ const FormCardRow = ({
     }
   };
 
+  // Add main card click handler
+  const handleCardClick = (e) => {
+    if (isForm) {
+      navigate(`/builder/${formId}`);
+    } else {
+      navigate(`/quiz/edit/${formId}`);
+    }
+  };
+
   // Update ActionButtons to be minimal:
   const ActionButtons = () => (
     <div className="card-actions-big" style={{ display: 'flex', gap: 10, marginTop: 8 }}>
@@ -331,7 +340,7 @@ const FormCardRow = ({
           cursor: 'pointer',
           ...(expanded ? { boxShadow: '0 8px 32px rgba(80,80,180,0.16)', transform: 'scale(1.03)' } : {}),
         }}
-        onClick={handleEdit}
+        onClick={handleCardClick}
         tabIndex={0}
         role="button"
       >
