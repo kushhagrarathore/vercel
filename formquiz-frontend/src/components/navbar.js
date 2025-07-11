@@ -50,20 +50,7 @@ const Navbar = ({ activeTab, onToggle }) => {
     <nav className="modern-navbar">
       {/* Logo */}
       <div className="inquizo-logo">
-        <span className="logo-icon">
-          <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-            <circle cx="16" cy="16" r="15" fill="url(#logo-gradient)" />
-            <path d="M16 10c2.2 0 3.5 1.7 3.5 3.5 0 2.3-3.5 2.3-3.5 5.5" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
-            <circle cx="16" cy="23" r="1.2" fill="#fff"/>
-            <defs>
-              <linearGradient id="logo-gradient" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-                <stop stopColor="#6D5BFF"/>
-                <stop offset="1" stopColor="#FF6B81"/>
-              </linearGradient>
-            </defs>
-          </svg>
-        </span>
-        <span className="logo-text">Inquizo</span>
+        <img src="/MAINLOGO.png" alt="Inquizo Logo" className="inquizo-logo-img" />
       </div>
 
       {/* Navigation Pills */}

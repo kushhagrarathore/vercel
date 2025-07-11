@@ -3,11 +3,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.2rem 2.5rem;
+  padding: 0.2rem 1rem;
   background: #fff;
   box-shadow: 0 2px 16px rgba(124, 58, 237, 0.04);
   border-bottom: 1.5px solid #f3f4f6;
-  min-height: 72px;
+  min-height: 48px;
   z-index: 100;
 }
 
@@ -15,11 +15,23 @@
 .inquizo-logo {
   display: flex;
   align-items: center;
+  justify-content: center;
   font-family: 'Poppins', 'Inter', 'Montserrat', sans-serif;
   font-weight: 700;
   font-size: 2rem;
   letter-spacing: 0.5px;
   gap: 0.6rem;
+}
+.inquizo-logo img {
+  height: 120px;
+  width: 120px;
+  max-width: 120px;
+  max-height: 120px;
+  min-width: 120px;
+  min-height: 120px;
+  margin: 0;
+  object-fit: contain;
+  display: block;
 }
 .logo-text {
   background: linear-gradient(90deg, #6D5BFF 0%, #FF6B81 100%);
@@ -152,6 +164,10 @@
   .inquizo-logo {
     font-size: 1.3rem;
   }
+  .inquizo-logo img {
+    height: 38px;
+    max-width: 120px;
+  }
   .nav-pill {
     padding: 0.5rem 1rem;
     font-size: 1rem;
@@ -168,6 +184,10 @@
     align-items: stretch;
     gap: 0.7rem;
     padding: 0.7rem 0.5rem;
+  }
+  .inquizo-logo img {
+    height: 28px;
+    max-width: 90px;
   }
   .nav-pills {
     justify-content: center;
