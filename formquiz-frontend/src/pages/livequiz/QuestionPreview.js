@@ -194,10 +194,23 @@ export default function QuestionPreview({
   }
 
   // Main render
+  const bgImageUrl = customizations.backgroundImageUrl || customizations.imageUrl || '';
+  const hasBgImage = bgImageUrl && typeof bgImageUrl === 'string' && bgImageUrl.trim() !== '';
   return (
     <div
       className="fixed inset-0 w-screen h-screen flex flex-col items-stretch justify-stretch bg-gradient-to-br from-blue-50 to-purple-100"
-      style={{ background: c.backgroundColor, fontFamily: c.fontFamily, minHeight: '100vh', minWidth: '100vw', overflow: 'hidden' }}
+      style={{
+        background: hasBgImage
+          ? `url('${bgImageUrl}') center center / cover no-repeat`
+          : c.backgroundColor,
+        fontFamily: c.fontFamily,
+        minHeight: '100vh',
+        minWidth: '100vw',
+        overflow: 'hidden',
+        backgroundSize: hasBgImage ? 'cover' : undefined,
+        backgroundPosition: hasBgImage ? 'center' : undefined,
+        backgroundRepeat: hasBgImage ? 'no-repeat' : undefined,
+      }}
     >
       {/* Top Bar */}
       {showTopBar && (
