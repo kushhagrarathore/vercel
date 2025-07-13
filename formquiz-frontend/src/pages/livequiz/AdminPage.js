@@ -670,6 +670,12 @@ export default function AdminPage() {
                 } else if (settings.backgroundGradient) {
                   pageBg = settings.backgroundGradient;
                 }
+                // Leaderboard and podium data
+                const leaderboardData = participants
+                  .map(p => ({ ...p, score: participantScores[p.id] || 0 }))
+                  .sort((a, b) => b.score - a.score)
+                  .slice(0, 5);
+                const podiumData = leaderboardData.slice(0, 3);
                 return (
                   <div
                     className="fixed inset-0 w-screen h-screen flex flex-col items-center justify-center overflow-hidden z-40"
@@ -677,60 +683,71 @@ export default function AdminPage() {
                       background: pageBg,
                       backgroundSize: settings.imageUrl ? 'cover' : undefined,
                       backgroundPosition: settings.imageUrl ? 'center' : undefined,
+                      padding: 0,
+                      margin: 0,
                     }}
                   >
-                    <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[1600px] mx-auto px-0 pt-[5.5rem] pb-0 box-border relative">
-                      {/* Question Presentation */}
-                      {quizPhase === 'question' && timeLeft > 0 ? (
-                        <QuestionPreview
-                          question={currentQuestion}
-                          customizations={settings}
-                          showTimer={true}
-                          timeLeft={timeLeft}
-                          showCorrect={showCorrect}
-                        />
-                      ) : quizPhase === 'question' && timeLeft === 0 ? (
-                        /* Results Screen */
-                        <div className="w-full h-full flex flex-col items-center justify-center">
-                          <div className="w-full bg-white/90 rounded-t-3xl shadow-2xl p-10 flex flex-col items-center justify-center" style={{minHeight:'120px', background: settings.questionContainerBgColor || '#ffffff'}}>
-                            <h3 className="font-bold text-4xl md:text-5xl text-gray-900 text-center break-words w-full max-w-5xl mb-8">Results</h3>
-                            <div className="w-full flex flex-col items-center justify-center gap-10 mt-6 px-16">
-                              {currentQuestion.options.map((option, idx) => {
-                                const count = pollResults[idx] || 0;
-                                const total = pollResults.reduce((a, b) => a + b, 0) || 1;
-                                const percent = Math.round((count / total) * 100);
-                                const isCorrect = idx === currentQuestion.correct_answer_index;
-                                return (
-                                  <div key={idx} className={`flex items-center w-full p-6 rounded-2xl shadow-lg ${isCorrect ? 'bg-green-100 border-2 border-green-500' : 'bg-gray-100 border-2 border-gray-300'}`}>
-                                    <span className={`flex-1 text-2xl md:text-3xl font-semibold ${isCorrect ? 'text-green-700' : 'text-gray-800'}`}>{option}</span>
-                                    <div className="w-1/2 mx-4 bg-gray-200 rounded h-8 relative overflow-hidden">
-                                      <div
-                                        className={`h-8 rounded ${isCorrect ? 'bg-green-400' : 'bg-blue-400'}`}
-                                        style={{ width: `${percent}%` }}
-                                      ></div>
-                                      <span className="absolute left-4 top-1 text-lg text-black font-bold">{count} ({percent}%)</span>
-                                    </div>
-                                    {isCorrect && <span className="ml-6 text-green-700 font-bold text-3xl">✓</span>}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      ) : null}
-                      {/* Next Button - bottom right, floating */}
-                      {quizPhase === 'question' && timeLeft > 0 && (
-                        <div className="fixed bottom-10 right-16 z-50">
-                          <button
-                            onClick={nextQuestion}
-                            className="flex items-center gap-2 px-10 py-5 bg-green-600 text-white rounded-2xl font-bold text-2xl shadow-xl hover:bg-green-700 transition-all border-2 border-green-700"
-                            style={{ minWidth: '200px', fontWeight: 700 }}
-                          >
-                            Next <span className="ml-2 text-3xl">➡</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    {/* Edge-to-edge, fullscreen presentation with fixed question bar and 2x2 grid */}
+                    {showPodium ? (
+                      <QuestionPreview
+                        showTopBar={true}
+                        quizCode={session?.code || ''}
+                        questionNumber={currentQuestionIndex + 1}
+                        totalQuestions={questions.length}
+                        onExit={() => setPresentationMode(false)}
+                        showPodium={true}
+                        podium={podiumData}
+                        customizations={settings}
+                      />
+                    ) : showLeaderboard ? (
+                      <QuestionPreview
+                        showTopBar={true}
+                        quizCode={session?.code || ''}
+                        questionNumber={currentQuestionIndex + 1}
+                        totalQuestions={questions.length}
+                        onExit={() => setPresentationMode(false)}
+                        showLeaderboard={true}
+                        leaderboard={leaderboardData}
+                        customizations={settings}
+                      />
+                    ) : quizPhase === 'question' && timeLeft === 0 ? (
+                      <QuestionPreview
+                        showTopBar={true}
+                        quizCode={session?.code || ''}
+                        questionNumber={currentQuestionIndex + 1}
+                        totalQuestions={questions.length}
+                        onExit={() => setPresentationMode(false)}
+                        showResults={true}
+                        pollResults={pollResults}
+                        question={currentQuestion}
+                        customizations={settings}
+                      />
+                    ) : quizPhase === 'question' && timeLeft > 0 ? (
+                      <QuestionPreview
+                        question={currentQuestion}
+                        customizations={settings}
+                        showTimer={true}
+                        timeLeft={timeLeft}
+                        showCorrect={showCorrect}
+                        showTopBar={true}
+                        quizCode={session?.code || ''}
+                        questionNumber={currentQuestionIndex + 1}
+                        totalQuestions={questions.length}
+                        onExit={() => setPresentationMode(false)}
+                      />
+                    ) : null}
+                    {/* Next Button - bottom right, floating */}
+                    {quizPhase === 'question' && timeLeft > 0 && (
+                      <div className="fixed bottom-10 right-16 z-50">
+                        <button
+                          onClick={nextQuestion}
+                          className="flex items-center gap-2 px-10 py-5 bg-green-600 text-white rounded-2xl font-bold text-2xl shadow-xl hover:bg-green-700 transition-all border-2 border-green-700"
+                          style={{ minWidth: '200px', fontWeight: 700 }}
+                        >
+                          Next <span className="ml-2 text-3xl">➡</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })()
