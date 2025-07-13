@@ -678,13 +678,16 @@ export default function AdminPage() {
                 const podiumData = leaderboardData.slice(0, 3);
                 return (
                   <div
-                    className="fixed inset-0 w-screen h-screen flex flex-col items-center justify-center overflow-hidden z-40"
+                    className="fixed inset-0 w-screen h-screen flex flex-col items-stretch justify-stretch bg-gradient-to-br from-blue-50 to-purple-100"
                     style={{
                       background: pageBg,
                       backgroundSize: settings.imageUrl ? 'cover' : undefined,
                       backgroundPosition: settings.imageUrl ? 'center' : undefined,
                       padding: 0,
                       margin: 0,
+                      minHeight: '100vh',
+                      minWidth: '100vw',
+                      overflow: 'hidden',
                     }}
                   >
                     {/* Edge-to-edge, fullscreen presentation with top bar and all states */}
