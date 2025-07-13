@@ -687,7 +687,7 @@ export default function AdminPage() {
                       margin: 0,
                     }}
                   >
-                    {/* Edge-to-edge, fullscreen presentation with fixed question bar and 2x2 grid */}
+                    {/* Edge-to-edge, fullscreen presentation with top bar and all states */}
                     {showPodium ? (
                       <QuestionPreview
                         showTopBar={true}

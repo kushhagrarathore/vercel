@@ -44,8 +44,39 @@ export default function QuestionPreview({
   const questionText = question.question_text || '';
   const correctIdx = question.correct_answer_index ?? null;
 
-  // Always use a 2x2 grid for options
-  const optionGrid = [0, 1, 2, 3].map(idx => options[idx] || '');
+  // Option layout: 2 = row, 3 = 2 top/1 bottom, 4 = 2x2 grid
+  let optionLayout = null;
+  if (options.length === 2) {
+    optionLayout = (
+      <div className="flex flex-row gap-12 w-full justify-center items-center mt-8">
+        {options.map((option, index) => renderOption(option, index))}
+      </div>
+    );
+  } else if (options.length === 3) {
+    optionLayout = (
+      <div className="flex flex-col gap-8 w-full items-center mt-8">
+        <div className="flex flex-row gap-12 w-full justify-center">
+          {renderOption(options[0], 0)}
+          {renderOption(options[1], 1)}
+        </div>
+        <div className="flex flex-row gap-12 w-full justify-center">
+          {renderOption(options[2], 2)}
+        </div>
+      </div>
+    );
+  } else if (options.length === 4) {
+    optionLayout = (
+      <div className="grid grid-cols-2 gap-12 w-full mt-8">
+        {options.map((option, index) => renderOption(option, index))}
+      </div>
+    );
+  } else {
+    optionLayout = (
+      <div className="flex flex-col gap-8 w-full items-center mt-8">
+        {options.map((option, index) => renderOption(option, index))}
+      </div>
+    );
+  }
 
   function renderOption(option, index) {
     const isCorrect = correctIdx === index;
@@ -53,18 +84,28 @@ export default function QuestionPreview({
     return (
       <div
         key={index}
-        className={`relative flex items-center bg-white rounded-2xl border-2 transition-all duration-200 px-8 py-10 min-h-[120px] ${option ? 'border-gray-300' : 'border-dashed border-gray-200 opacity-60'} justify-center`}
+        className={`flex-1 flex items-center justify-center px-10 py-8 rounded-2xl border-2 transition-all duration-200 cursor-pointer group text-2xl md:text-3xl lg:text-4xl ${
+          isCorrect && showCorrect ? 'border-green-500 bg-green-50' : isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
+        }`}
         style={{
-          boxShadow: option ? '0 4px 16px rgba(44,62,80,0.10)' : 'none',
-          fontSize: 28,
-          fontWeight: 600,
           color: c.textColor,
           fontFamily: c.fontFamily,
-          position: 'relative',
-          minWidth: 0,
+          fontSize: Math.max(28, c.fontSize),
+          fontWeight: c.bold ? 'bold' : 'normal',
+          fontStyle: c.italic ? 'italic' : 'normal',
+          minHeight: '96px',
+          boxShadow: 'none',
+          borderRadius: c.borderRadius * 0.7,
+          borderWidth: 2,
+          borderColor: isCorrect && showCorrect ? '#22c55e' : isSelected ? c.buttonColor : '#e5e7eb',
+          background: isCorrect && showCorrect ? '#dcfce7' : isSelected ? '#eff6ff' : '#fff',
+          transition: 'all 0.2s',
+          pointerEvents: editable ? 'auto' : 'none',
+          justifyContent: 'center',
         }}
+        onClick={editable && onOptionClick ? () => onOptionClick(index) : undefined}
       >
-        <span className="flex-1 text-2xl text-center font-semibold break-words" style={{fontSize: 28}}>{option || <span className="text-gray-400">Option {index + 1}</span>}</span>
+        <span className="flex-1 text-center font-semibold break-words">{option || <span className="text-gray-400">Option {index + 1}</span>}</span>
         {showCorrect && isCorrect && (
           <span className="ml-4 text-green-600 font-bold text-4xl">✓</span>
         )}
@@ -78,11 +119,11 @@ export default function QuestionPreview({
     );
   }
 
-  // Leaderboard and Podium (edge-to-edge, fullscreen, below menu bar)
+  // Leaderboard and Podium (edge-to-edge, fullscreen)
   function renderLeaderboard() {
     if (!leaderboard) return null;
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-white/90 px-0 py-0" style={{marginTop: '4.5rem'}}>
+      <div className="w-full h-full flex flex-col items-center justify-center bg-white/90 px-0 py-0">
         <h3 className="font-bold text-5xl text-gray-900 text-center mb-12 mt-8 tracking-wide">Leaderboard</h3>
         <ol className="w-full max-w-4xl mx-auto space-y-6 mb-8">
           {leaderboard.map((p, i) => (
@@ -100,7 +141,7 @@ export default function QuestionPreview({
   function renderPodium() {
     if (!podium) return null;
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-white/90 px-0 py-0" style={{marginTop: '4.5rem'}}>
+      <div className="w-full h-full flex flex-col items-center justify-center bg-white/90 px-0 py-0">
         <h3 className="font-bold text-5xl text-gray-900 text-center mb-12 mt-8 tracking-wide">🏆 Podium</h3>
         <div className="flex flex-row items-end justify-center gap-16 w-full max-w-4xl mx-auto mb-12">
           {podium.map((p, i) => (
@@ -119,7 +160,7 @@ export default function QuestionPreview({
     if (!showResults || !pollResults || !options.length) return null;
     const total = pollResults.reduce((a, b) => a + b, 0) || 1;
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-white/90 px-0 py-0" style={{marginTop: '4.5rem'}}>
+      <div className="w-full h-full flex flex-col items-center justify-center bg-white/90 px-0 py-0">
         <h3 className="font-bold text-5xl text-gray-900 text-center mb-12 mt-8 tracking-wide">Results</h3>
         <div className="w-full flex flex-col items-center justify-center gap-10 mt-6 px-16">
           {options.map((option, idx) => {
@@ -148,7 +189,7 @@ export default function QuestionPreview({
       className="w-full h-full min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-purple-100"
       style={{ background: c.backgroundColor, fontFamily: c.fontFamily }}
     >
-      {/* Top Bar (if needed) */}
+      {/* Top Bar */}
       {showTopBar && (
         <div className="fixed top-0 left-0 w-full z-50 bg-white/90 shadow-md flex items-center justify-between px-8 py-3 gap-4"
           style={{ minHeight: '4.5rem', backdropFilter: 'blur(8px)' }}
@@ -174,23 +215,42 @@ export default function QuestionPreview({
           </div>
         </div>
       )}
-      {/* Spacer for menu bar */}
-      <div style={{minHeight: '4.5rem'}} />
-      {/* Fixed question bar in main content area */}
-      <div className="fixed left-0 w-full z-30 flex items-center justify-center px-8" style={{top: '4.5rem', minHeight: '6.5rem'}}>
-        <div className="w-full max-w-4xl text-5xl md:text-6xl font-bold text-blue-700 text-center tracking-tight bg-white bg-opacity-95 outline-none border-b-2 border-blue-200 focus:border-blue-500 transition shadow-xl rounded-2xl py-6" style={{fontSize: 48, padding: '1.5rem 2rem'}}>
-          {questionText || <span className="text-gray-400">Enter your question...</span>}
-        </div>
-      </div>
-      {/* Spacer for fixed question bar */}
-      <div style={{minHeight: '11rem'}} />
-      {/* Main content: options or state views */}
-      <div className="w-full flex-1 flex flex-col items-center justify-start px-2 md:px-8" style={{minHeight: 'calc(100vh - 15.5rem)'}}>
+      {/* Spacer for top bar */}
+      {showTopBar && <div style={{ minHeight: '4.5rem', width: '100%' }} />}
+      {/* Main content: question, leaderboard, podium, poll results */}
+      <div className="w-full flex-1 flex flex-col items-center justify-center px-0 md:px-0" style={{ minHeight: 'calc(100vh - 4.5rem)' }}>
         {showLeaderboard && leaderboard ? renderLeaderboard() :
          showPodium && podium ? renderPodium() :
          showResults && pollResults && pollResults.length ? renderPollResults() : (
-          <div className="w-full max-w-5xl grid grid-cols-2 gap-12 mt-4 mb-12">
-            {optionGrid.map((option, idx) => renderOption(option, idx))}
+          <div
+            className="w-full flex flex-col items-center justify-start"
+            style={{
+              background: c.questionContainerBgColor,
+              borderRadius: c.borderRadius,
+              color: c.textColor,
+              fontFamily: c.fontFamily,
+              fontSize: c.fontSize,
+              fontWeight: c.bold ? 'bold' : 'normal',
+              fontStyle: c.italic ? 'italic' : 'normal',
+              boxShadow: c.shadow ? '0 8px 32px 0 rgba(44,62,80,0.13)' : 'none',
+              padding: c.padding,
+              margin: c.margin,
+              textAlign: c.alignment,
+              transition: 'all 0.3s',
+              minHeight: '420px',
+              maxWidth: '100vw',
+            }}
+          >
+            <h2 className="text-5xl font-bold text-blue-700 mb-8 text-center tracking-tight w-full break-words" style={{fontSize: Math.max(36, c.fontSize + 12)}}>
+              {questionText || <span className="text-gray-400">Enter your question...</span>}
+            </h2>
+            {optionLayout}
+            {showTimer && timeLeft !== null && !showTopBar && (
+              <div className="mt-8 text-3xl font-bold text-purple-700 flex items-center gap-2 bg-white/80 px-8 py-3 rounded-full shadow w-fit mx-auto">
+                <svg className="w-8 h-8 animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" /><path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                {timeLeft}s
+              </div>
+            )}
           </div>
         )}
       </div>
