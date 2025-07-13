@@ -44,36 +44,25 @@ export default function QuestionPreview({
   const questionText = question.question_text || '';
   const correctIdx = question.correct_answer_index ?? null;
 
-  // Option layout: 2 = row, 3 = 2 top/1 bottom, 4 = 2x2 grid
-  let optionLayout = null;
-  if (options.length === 2) {
-    optionLayout = (
-      <div className="flex flex-row gap-12 w-full justify-center items-center mt-8">
-        {options.map((option, index) => renderOption(option, index))}
-      </div>
-    );
-  } else if (options.length === 3) {
-    optionLayout = (
-      <div className="flex flex-col gap-8 w-full items-center mt-8">
-        <div className="flex flex-row gap-12 w-full justify-center">
-          {renderOption(options[0], 0)}
-          {renderOption(options[1], 1)}
-        </div>
-        <div className="flex flex-row gap-12 w-full justify-center">
-          {renderOption(options[2], 2)}
-        </div>
-      </div>
-    );
-  } else if (options.length === 4) {
-    optionLayout = (
-      <div className="grid grid-cols-2 gap-12 w-full mt-8">
-        {options.map((option, index) => renderOption(option, index))}
-      </div>
-    );
-  } else {
-    optionLayout = (
-      <div className="flex flex-col gap-8 w-full items-center mt-8">
-        {options.map((option, index) => renderOption(option, index))}
+  // Option layout: always 2x2 grid, no dummy buttons
+  function renderGridOptions() {
+    // Map options to grid positions
+    // 2: [0,1,null,null], 3: [0,1,2,null], 4: [0,1,2,3]
+    const grid = [
+      [options[0] !== undefined ? 0 : null, options[1] !== undefined ? 1 : null],
+      [options[2] !== undefined ? 2 : null, options[3] !== undefined ? 3 : null],
+    ];
+    return (
+      <div className="w-full flex flex-col gap-8 mt-8 items-center justify-center">
+        {grid.map((row, rowIdx) => (
+          <div key={rowIdx} className="w-full flex flex-row gap-12 justify-center items-center">
+            {row.map((idx, colIdx) => (
+              <div key={colIdx} style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+                {idx !== null ? renderOption(options[idx], idx) : null}
+              </div>
+            ))}
+          </div>
+        ))}
       </div>
     );
   }
@@ -94,6 +83,8 @@ export default function QuestionPreview({
           fontWeight: c.bold ? 'bold' : 'normal',
           fontStyle: c.italic ? 'italic' : 'normal',
           minHeight: '96px',
+          minWidth: '220px',
+          maxWidth: '340px',
           boxShadow: 'none',
           borderRadius: c.borderRadius * 0.7,
           borderWidth: 2,
@@ -102,6 +93,8 @@ export default function QuestionPreview({
           transition: 'all 0.2s',
           pointerEvents: editable ? 'auto' : 'none',
           justifyContent: 'center',
+          margin: '0 0.5rem',
+          alignItems: 'center',
         }}
         onClick={editable && onOptionClick ? () => onOptionClick(index) : undefined}
       >
@@ -241,10 +234,26 @@ export default function QuestionPreview({
               maxWidth: '100vw',
             }}
           >
-            <h2 className="text-5xl font-bold text-blue-700 mb-8 text-center tracking-tight w-full break-words" style={{fontSize: Math.max(36, c.fontSize + 12)}}>
-              {questionText || <span className="text-gray-400">Enter your question...</span>}
-            </h2>
-            {optionLayout}
+            {/* Question Container */}
+            <div
+              className="w-full flex items-center justify-center"
+              style={{
+                background: customizations.questionBlockBgColor || '#f3f4f6',
+                borderRadius: c.borderRadius,
+                padding: '2.5rem 2rem',
+                marginTop: '0.5rem',
+                marginBottom: '2.5rem',
+                boxShadow: '0 2px 12px 0 rgba(44,62,80,0.07)',
+                minHeight: '80px',
+                maxWidth: 900,
+              }}
+            >
+              <h2 className="text-5xl font-bold text-blue-700 text-center tracking-tight w-full break-words" style={{fontSize: Math.max(36, c.fontSize + 12), margin: 0}}>
+                {questionText || <span className="text-gray-400">Enter your question...</span>}
+              </h2>
+            </div>
+            {/* Options Grid */}
+            {renderGridOptions()}
             {showTimer && timeLeft !== null && !showTopBar && (
               <div className="mt-8 text-3xl font-bold text-purple-700 flex items-center gap-2 bg-white/80 px-8 py-3 rounded-full shadow w-fit mx-auto">
                 <svg className="w-8 h-8 animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" /><path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>

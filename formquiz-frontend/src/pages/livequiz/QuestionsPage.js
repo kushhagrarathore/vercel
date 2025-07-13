@@ -244,7 +244,9 @@ export default function QuestionsPage() {
   }
 
   function addOption() {
-    setForm({ ...form, options: [...form.options, ''] });
+    if (form.options.length < 4) {
+      setForm({ ...form, options: [...form.options, ''] });
+    }
   }
 
   function removeOption(index) {
@@ -653,75 +655,121 @@ export default function QuestionsPage() {
                   maxWidth: '100vw',
                 }}
               >
-                <input
-                  className="w-full text-4xl md:text-5xl font-bold text-blue-700 mb-8 text-center tracking-tight bg-transparent outline-none border-b-2 border-blue-200 focus:border-blue-500 transition"
-                  style={{fontSize: Math.max(32, getSettings(form.settings).fontSize + 8)}}
-                  type="text"
-                  placeholder="Enter your question..."
-                  value={form.question_text}
-                  onChange={e => setForm({ ...form, question_text: e.target.value })}
-                  maxLength={200}
-                  required
-                />
-                <div className={`w-full grid gap-8 ${form.options.length === 2 ? 'grid-cols-2' : form.options.length === 3 ? 'grid-cols-3' : form.options.length >= 4 ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-1'} mb-4`}>
-                  {form.options.map((option, index) => (
-                    <div
-                      key={index}
-                      className={`relative flex items-center px-8 py-6 rounded-2xl border-2 transition-all duration-200 group bg-white`}
-                      style={{
-                        color: getSettings(form.settings).textColor,
-                        fontFamily: getSettings(form.settings).fontFamily,
-                        fontSize: Math.max(22, getSettings(form.settings).fontSize),
-                        fontWeight: getSettings(form.settings).bold ? 'bold' : 'normal',
-                        fontStyle: getSettings(form.settings).italic ? 'italic' : 'normal',
-                        minHeight: '72px',
-                        boxShadow: 'none',
-                        marginBottom: '0.5rem',
-                        borderRadius: getSettings(form.settings).borderRadius * 0.7,
-                        borderWidth: 2,
-                        borderColor: form.correct_answer_index === index ? '#22c55e' : '#e5e7eb',
-                        background: form.correct_answer_index === index ? '#dcfce7' : '#fff',
-                        transition: 'all 0.2s',
-                      }}
-                    >
-                      <input
-                        className="flex-1 text-left px-2 font-semibold break-words bg-transparent outline-none border-none text-lg"
-                        type="text"
-                        placeholder={`Option ${index + 1}`}
-                        value={option}
-                        onChange={e => handleOptionChange(index, e.target.value)}
-                        maxLength={100}
-                        required
-                      />
-                      <button
-                        type="button"
-                        className={`ml-4 text-green-600 font-bold text-3xl focus:outline-none ${form.correct_answer_index === index ? '' : 'opacity-30 hover:opacity-100'}`}
-                        onClick={() => setForm({ ...form, correct_answer_index: index })}
-                        title="Mark as correct answer"
-                        tabIndex={0}
-                      >
-                        ✓
-                      </button>
-                      {form.options.length > 2 && (
-                        <button
-                          type="button"
-                          className="ml-2 text-red-500 font-bold text-2xl focus:outline-none opacity-60 hover:opacity-100"
-                          onClick={() => removeOption(index)}
-                          title="Remove option"
-                          tabIndex={0}
-                        >
-                          ×
-                        </button>
-                      )}
-                    </div>
-                  ))}
+                {/* Question Container */}
+                <div
+                  className="w-full flex items-center justify-center"
+                  style={{
+                    background: form.settings?.questionBlockBgColor || '#f3f4f6',
+                    borderRadius: getSettings(form.settings).borderRadius,
+                    padding: '2.5rem 2rem',
+                    marginTop: '0.5rem',
+                    marginBottom: '2.5rem',
+                    boxShadow: '0 2px 12px 0 rgba(44,62,80,0.07)',
+                    minHeight: '80px',
+                    maxWidth: 900,
+                  }}
+                >
+                  <input
+                    className="w-full text-5xl font-bold text-blue-700 text-center tracking-tight break-words bg-transparent outline-none border-none"
+                    style={{fontSize: Math.max(36, getSettings(form.settings).fontSize + 12), margin: 0}}
+                    type="text"
+                    placeholder="Enter your question..."
+                    value={form.question_text}
+                    onChange={e => setForm({ ...form, question_text: e.target.value })}
+                    maxLength={200}
+                    required
+                  />
                 </div>
+                {/* Options Grid */}
+                {(() => {
+  // Map options to grid positions
+  const opts = form.options;
+  const grid = [
+    [opts[0] !== undefined ? 0 : null, opts[1] !== undefined ? 1 : null],
+    [opts[2] !== undefined ? 2 : null, opts[3] !== undefined ? 3 : null],
+  ];
+  return (
+    <div className="w-full flex flex-col gap-8 mt-8 items-center justify-center">
+      {grid.map((row, rowIdx) => (
+        <div key={rowIdx} className="w-full flex flex-row gap-12 justify-center items-center">
+          {row.map((idx, colIdx) => (
+            <div key={colIdx} style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+              {idx !== null && (
+                <div
+                  className={`flex-1 flex items-center justify-center px-10 py-8 rounded-2xl border-2 transition-all duration-200 group bg-white relative ${form.correct_answer_index === idx ? 'border-green-500 ring-2 ring-green-400' : 'border-gray-200'}`}
+                  style={{
+                    color: getSettings(form.settings).textColor,
+                    fontFamily: getSettings(form.settings).fontFamily,
+                    fontSize: Math.max(22, getSettings(form.settings).fontSize),
+                    fontWeight: getSettings(form.settings).bold ? 'bold' : 'normal',
+                    fontStyle: getSettings(form.settings).italic ? 'italic' : 'normal',
+                    minHeight: '96px',
+                    minWidth: '220px',
+                    maxWidth: '340px',
+                    boxShadow: 'none',
+                    borderRadius: getSettings(form.settings).borderRadius * 0.7,
+                    borderWidth: 2,
+                    background: form.correct_answer_index === idx ? '#e6fbe6' : '#fff',
+                    transition: 'all 0.2s',
+                    margin: '0 0.5rem',
+                    alignItems: 'center',
+                  }}
+                >
+                  {/* Mark as correct answer button */}
+                  <button
+                    type="button"
+                    className={`mr-3 flex items-center justify-center w-9 h-9 rounded-full border-2 transition-colors duration-150 ${form.correct_answer_index === idx ? 'bg-green-500 border-green-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-400 hover:bg-green-100 hover:border-green-400 hover:text-green-600'}`}
+                    title="Mark as correct answer"
+                    aria-label="Mark as correct answer"
+                    onClick={() => setForm({ ...form, correct_answer_index: idx })}
+                    tabIndex={0}
+                  >
+                    {form.correct_answer_index === idx ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" fill="none" />
+                      </svg>
+                    )}
+                  </button>
+                  <input
+                    className="flex-1 text-left px-2 font-semibold break-words bg-transparent outline-none border-none text-lg"
+                    type="text"
+                    placeholder={`Option ${idx + 1}`}
+                    value={form.options[idx]}
+                    onChange={e => handleOptionChange(idx, e.target.value)}
+                    maxLength={100}
+                    required
+                  />
+                  {/* Remove option button */}
+                  <button
+                    type="button"
+                    className={`ml-3 flex items-center justify-center w-9 h-9 rounded-full border-2 border-gray-300 bg-gray-100 text-gray-500 hover:bg-red-100 hover:border-red-400 hover:text-red-600 transition-colors duration-150 ${form.options.length <= 2 ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    title="Remove option"
+                    aria-label="Remove option"
+                    onClick={() => form.options.length > 2 && removeOption(idx)}
+                    tabIndex={0}
+                    disabled={form.options.length <= 2}
+                  >
+                    <span className="text-2xl font-bold leading-none">×</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+})()}
                 <div className="flex gap-4 mt-2">
                   <button
                     type="button"
                     onClick={addOption}
                     className="px-6 py-3 bg-blue-100 text-blue-700 rounded-xl font-semibold hover:bg-blue-200 transition-colors text-lg"
-                    disabled={form.options.length >= 6}
+                    disabled={form.options.length >= 4}
                   >
                     Add Option
                   </button>
@@ -729,13 +777,14 @@ export default function QuestionsPage() {
                     type="button"
                     onClick={() => setIsFullScreenPreview(true)}
                     className="px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors text-lg shadow-lg"
+                    disabled={form.options.length < 2}
                   >
                     Preview
                   </button>
                 </div>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || form.options.length < 2}
                   className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold text-2xl hover:bg-green-700 disabled:bg-gray-300 mt-6 transition-colors"
                   style={{ boxShadow: 'none', border: 'none' }}
                 >
