@@ -33,25 +33,28 @@ export default function QuestionsPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [deletedQuestionIds, setDeletedQuestionIds] = useState([]);
 
-  // 1. Customization defaults
+  // Centralized theme/customization defaults (must match AdminPage.js)
   const settingsDefaults = {
-    backgroundColor: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)', // soft blue gradient
+    backgroundColor: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
     backgroundGradient: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
     imageUrl: '',
     questionContainerBgColor: '#ffffff',
     textColor: '#222222',
     buttonColor: '#2563eb',
-    fontSize: 20,
+    fontSize: 32,
     fontFamily: 'Inter, Arial, sans-serif',
-    borderRadius: 20,
-    padding: 32,
-    margin: 24,
+    borderRadius: 32,
+    padding: 48,
+    margin: 32,
     alignment: 'center',
     optionLayout: 'vertical',
     shadow: true,
     bold: false,
     italic: false,
   };
+  function getSettings(obj) {
+    return { ...settingsDefaults, ...(obj || {}) };
+  }
 
   // Global customization state for 'Apply to All'
   const [globalCustomization, setGlobalCustomization] = useState(settingsDefaults);
@@ -652,119 +655,118 @@ export default function QuestionsPage() {
               <div className="mb-4 p-2 bg-green-100 text-green-800 rounded">{successMessage}</div>
             )}
             {/* If a question is selected, show it for editing. Otherwise, show the add form. */}
-            <form onSubmit={handleSubmit} className="mb-8 w-full flex flex-col items-center">
-              <div
-                className="shadow-2xl max-w-2xl w-full mx-auto flex flex-col gap-10 justify-center items-center"
+            {/* Place this after the preview overlay logic */}
+            <div className="w-full max-w-5xl mx-auto flex flex-col gap-10 justify-center items-center px-2 md:px-8 mt-8 mb-12">
+              <form
+                onSubmit={handleSubmit}
+                className="w-full flex flex-col gap-8 justify-center items-center"
                 style={{
-                  background: form.settings?.backgroundColor || settingsDefaults.backgroundColor,
-                  borderRadius: (form.settings?.borderRadius || settingsDefaults.borderRadius) * 0.7,
-                  color: form.settings?.textColor || settingsDefaults.textColor,
-                  fontFamily: form.settings?.fontFamily || settingsDefaults.fontFamily,
-                  fontSize: form.settings?.fontSize || settingsDefaults.fontSize,
-                  fontWeight: form.settings?.bold ? 'bold' : 'normal',
-                  fontStyle: form.settings?.italic ? 'italic' : 'normal',
-                  boxShadow: form.settings?.shadow ?? settingsDefaults.shadow ? '0 4px 16px 0 rgba(0,0,0,0.08)' : 'none',
-                  padding: '2.5rem 2.5rem 3.5rem 2.5rem',
-                  margin: '2.5rem',
-                  textAlign: form.settings?.alignment || settingsDefaults.alignment,
+                  background: getSettings(form.settings).questionContainerBgColor,
+                  borderRadius: getSettings(form.settings).borderRadius,
+                  color: getSettings(form.settings).textColor,
+                  fontFamily: getSettings(form.settings).fontFamily,
+                  fontSize: getSettings(form.settings).fontSize,
+                  fontWeight: getSettings(form.settings).bold ? 'bold' : 'normal',
+                  fontStyle: getSettings(form.settings).italic ? 'italic' : 'normal',
+                  boxShadow: getSettings(form.settings).shadow ? '0 8px 32px 0 rgba(44,62,80,0.13)' : 'none',
+                  padding: getSettings(form.settings).padding,
+                  margin: getSettings(form.settings).margin,
+                  textAlign: getSettings(form.settings).alignment,
                   transition: 'all 0.3s',
-                  boxSizing: 'border-box',
-                  overflow: 'visible',
-                  minHeight: '520px',
-                  maxHeight: '700px',
+                  minHeight: '420px',
+                  maxWidth: '100vw',
                 }}
               >
-                <h2 className="text-3xl font-bold text-blue-700 mb-6 text-center tracking-tight">{isEditingExisting ? `Q${selectedQuestionIdx + 1} Preview & Edit` : 'Add New Question'}</h2>
-                <div className="mb-6 w-full px-2">
-                  <label className="block mb-2 font-semibold text-gray-700">Question Text</label>
-                  <input
-                    type="text"
-                    value={form.question_text}
-                    onChange={(e) => setForm({ ...form, question_text: e.target.value })}
-                    className="w-full p-4 border border-gray-200 rounded-lg text-lg shadow-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-300 transition-all"
-                    required
-                  />
-                </div>
-                <div className="mb-6 w-full px-2">
-                  <label className="block mb-2 font-semibold text-gray-700">Options</label>
-                  <div className={`grid gap-6 w-full ${form.options.length === 2 ? 'grid-cols-2' : form.options.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`} style={{paddingLeft:'0.5rem',paddingRight:'0.5rem'}}>
-                    {form.options.map((option, index) => (
-                      <div key={index} className={`relative flex items-center px-4 py-2 rounded-full border transition-all duration-200 ${form.correct_answer_index === index ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-gray-50'} group`}
-                        style={{
-                          color: form.settings?.textColor || settingsDefaults.textColor,
-                          fontFamily: form.settings?.fontFamily || settingsDefaults.fontFamily,
-                          fontSize: form.settings?.fontSize || settingsDefaults.fontSize,
-                          fontWeight: form.settings?.bold ? 'bold' : 'normal',
-                          fontStyle: form.settings?.italic ? 'italic' : 'normal',
-                          minHeight: '56px',
-                          position: 'relative',
-                          boxShadow: 'none',
-                          marginBottom: '0.5rem',
-                        }}
+                <input
+                  className="w-full text-4xl md:text-5xl font-bold text-blue-700 mb-8 text-center tracking-tight bg-transparent outline-none border-b-2 border-blue-200 focus:border-blue-500 transition"
+                  style={{fontSize: Math.max(32, getSettings(form.settings).fontSize + 8)}}
+                  type="text"
+                  placeholder="Enter your question..."
+                  value={form.question_text}
+                  onChange={e => setForm({ ...form, question_text: e.target.value })}
+                  maxLength={200}
+                  required
+                />
+                <div className={`w-full grid gap-8 ${form.options.length === 2 ? 'grid-cols-2' : form.options.length === 3 ? 'grid-cols-3' : form.options.length >= 4 ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-1'} mb-4`}>
+                  {form.options.map((option, index) => (
+                    <div
+                      key={index}
+                      className={`relative flex items-center px-8 py-6 rounded-2xl border-2 transition-all duration-200 group bg-white`}
+                      style={{
+                        color: getSettings(form.settings).textColor,
+                        fontFamily: getSettings(form.settings).fontFamily,
+                        fontSize: Math.max(22, getSettings(form.settings).fontSize),
+                        fontWeight: getSettings(form.settings).bold ? 'bold' : 'normal',
+                        fontStyle: getSettings(form.settings).italic ? 'italic' : 'normal',
+                        minHeight: '72px',
+                        boxShadow: 'none',
+                        marginBottom: '0.5rem',
+                        borderRadius: getSettings(form.settings).borderRadius * 0.7,
+                        borderWidth: 2,
+                        borderColor: form.correct_answer_index === index ? '#22c55e' : '#e5e7eb',
+                        background: form.correct_answer_index === index ? '#dcfce7' : '#fff',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      <input
+                        className="flex-1 text-left px-2 font-semibold break-words bg-transparent outline-none border-none text-lg"
+                        type="text"
+                        placeholder={`Option ${index + 1}`}
+                        value={option}
+                        onChange={e => handleOptionChange(index, e.target.value)}
+                        maxLength={100}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className={`ml-4 text-green-600 font-bold text-3xl focus:outline-none ${form.correct_answer_index === index ? '' : 'opacity-30 hover:opacity-100'}`}
+                        onClick={() => setForm({ ...form, correct_answer_index: index })}
+                        title="Mark as correct answer"
+                        tabIndex={0}
                       >
-                        <input
-                          type="text"
-                          value={option}
-                          onChange={(e) => handleOptionChange(index, e.target.value)}
-                          className="flex-1 bg-transparent border-none outline-none px-2 py-2 text-base font-semibold rounded-full focus:ring-0 focus:outline-none"
-                          placeholder={`Option ${index + 1}`}
-                          required
-                        />
-                        <div className="flex items-center gap-2" style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)' }}>
-                          <button
-                            type="button"
-                            onClick={() => setForm({ ...form, correct_answer_index: index })}
-                            className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all duration-150 ${form.correct_answer_index === index ? 'bg-purple-500 text-white border-purple-500' : 'bg-white text-gray-400 border-gray-200 group-hover:border-blue-300'}`}
-                            title="Mark as Correct"
-                            style={{ position: 'relative' }}
-                          >
-                            {form.correct_answer_index === index ? '\u2713' : ''}
-                          </button>
-                          {form.options.length > 2 && (
-                            <button
-                              type="button"
-                              onClick={() => removeOption(index)}
-                              className="w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center transition-all"
-                              aria-label="Remove Option"
-                              style={{
-                                boxShadow: 'none',
-                                border: 'none',
-                                padding: 0,
-                                marginRight: 0,
-                              }}
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="#ef4444" strokeWidth={2}>
-                                <circle cx="12" cy="12" r="11" fill="#fef2f2" />
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 8l8 8M8 16l8-8" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex justify-end mt-3">
+                        ✓
+                      </button>
+                      {form.options.length > 2 && (
+                        <button
+                          type="button"
+                          className="ml-2 text-red-500 font-bold text-2xl focus:outline-none opacity-60 hover:opacity-100"
+                          onClick={() => removeOption(index)}
+                          title="Remove option"
+                          tabIndex={0}
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-4 mt-2">
                   <button
                     type="button"
                     onClick={addOption}
-                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 disabled:opacity-50 transition-colors"
-                    disabled={form.options.length >= 4}
-                    style={{ display: form.options.length < 4 ? 'inline-block' : 'none', boxShadow: 'none', border: 'none' }}
+                    className="px-6 py-3 bg-blue-100 text-blue-700 rounded-xl font-semibold hover:bg-blue-200 transition-colors text-lg"
+                    disabled={form.options.length >= 6}
                   >
                     Add Option
                   </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsFullScreenPreview(true)}
+                    className="px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors text-lg shadow-lg"
+                  >
+                    Preview
+                  </button>
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-lg hover:bg-blue-700 disabled:bg-gray-300 mt-2 transition-colors"
-                  style={{ boxShadow: 'none', border: 'none', marginTop: '1.5rem', marginBottom: '3rem' }}
+                  className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold text-2xl hover:bg-green-700 disabled:bg-gray-300 mt-6 transition-colors"
+                  style={{ boxShadow: 'none', border: 'none' }}
                 >
                   {loading ? (isEditingExisting ? 'Saving...' : 'Adding...') : (isEditingExisting ? 'Save Changes' : 'Save Question')}
                 </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </main>
           {/* Customization panel */}
           <aside className={`fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-80 min-w-[16rem] bg-white shadow-lg z-20 transition-transform duration-300 ${customSidebarOpen ? 'translate-x-0' : 'translate-x-full'} flex flex-col`}>
@@ -945,6 +947,25 @@ export default function QuestionsPage() {
           </aside>
         </div>
       </div>
+      {/* Add a fullscreen preview overlay using QuestionPreview */}
+      {isFullScreenPreview && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80" style={{ minHeight: '100vh', minWidth: '100vw' }}>
+          <button
+            className="absolute top-6 right-8 text-white text-3xl font-bold bg-gray-800 bg-opacity-70 rounded-full px-4 py-2 hover:bg-opacity-90 transition"
+            onClick={() => setIsFullScreenPreview(false)}
+            aria-label="Close Preview"
+          >
+            ×
+          </button>
+          <QuestionPreview
+            question={form}
+            customizations={getSettings(form.settings)}
+            editable={false}
+            showTimer={false}
+            showCorrect={false}
+          />
+        </div>
+      )}
     </div>
   );
 } 

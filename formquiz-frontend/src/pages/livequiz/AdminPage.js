@@ -41,7 +41,7 @@ export default function AdminPage() {
     setTimeout(() => setCopied(false), 1500);
   };
 
-  // Customization defaults (copy from QuestionsPage.js)
+  // Centralized theme/customization defaults
   const settingsDefaults = {
     backgroundColor: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
     backgroundGradient: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
@@ -49,11 +49,11 @@ export default function AdminPage() {
     questionContainerBgColor: '#ffffff',
     textColor: '#222222',
     buttonColor: '#2563eb',
-    fontSize: 20,
+    fontSize: 32,
     fontFamily: 'Inter, Arial, sans-serif',
-    borderRadius: 20,
-    padding: 32,
-    margin: 24,
+    borderRadius: 32,
+    padding: 48,
+    margin: 32,
     alignment: 'center',
     optionLayout: 'vertical',
     shadow: true,
@@ -679,13 +679,15 @@ export default function AdminPage() {
                       backgroundPosition: settings.imageUrl ? 'center' : undefined,
                     }}
                   >
-                    {/* Top bar remains as before */}
                     <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[1600px] mx-auto px-0 pt-[5.5rem] pb-0 box-border relative">
-                      {/* Question or Results */}
+                      {/* Question Presentation */}
                       {quizPhase === 'question' && timeLeft > 0 ? (
                         <QuestionPreview
                           question={currentQuestion}
                           customizations={settings}
+                          showTimer={true}
+                          timeLeft={timeLeft}
+                          showCorrect={showCorrect}
                         />
                       ) : quizPhase === 'question' && timeLeft === 0 ? (
                         /* Results Screen */
