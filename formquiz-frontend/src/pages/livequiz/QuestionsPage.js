@@ -1,17 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { supabase } from '../../supabase.js';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../supabase/client';
 import QuestionPreview from './QuestionPreview';
 
 export default function QuestionsPage() {
-  const { quizId } = useParams();
   const [questions, setQuestions] = useState([]);
   const [form, setForm] = useState({
     question_text: '',
     options: ['', ''],
     correct_answer_index: 0,
     timer: 20,
-    settings: {},
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,13 +23,10 @@ export default function QuestionsPage() {
   const dragOverItem = useRef();
   const [fullScreenPreview, setFullScreenPreview] = useState(false);
   const [customTab, setCustomTab] = useState('templates');
-  const [quizTitleError, setQuizTitleError] = useState('');
   const [showTitlePrompt, setShowTitlePrompt] = useState(false);
   const [titleInputGlow, setTitleInputGlow] = useState(false);
   const [titleInputBg, setTitleInputBg] = useState(false);
   const navigate = useNavigate();
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [deletedQuestionIds, setDeletedQuestionIds] = useState([]);
 
   // 1. Customization defaults
   const settingsDefaults = {
@@ -53,33 +48,9 @@ export default function QuestionsPage() {
     italic: false,
   };
 
-  // Global customization state for 'Apply to All'
-  const [globalCustomization, setGlobalCustomization] = useState(settingsDefaults);
-
-  // 3. Add right sidebar state
-  const [customSidebarOpen, setCustomSidebarOpen] = useState(true);
-
-  // Full screen preview state
-  const [isFullScreenPreview, setIsFullScreenPreview] = useState(false);
-
-  // Ref for preview container (must be after customSidebarOpen is defined)
-  const previewRef = useRef(null);
-
-  // Scroll to preview when customization sidebar opens (must be after customSidebarOpen is defined)
   useEffect(() => {
-    if (customSidebarOpen && previewRef.current) {
-      previewRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, [customSidebarOpen]);
-
-  useEffect(() => {
-    if (quizId) {
-      fetchQuizAndQuestions(quizId);
-    } else {
-      fetchQuestions();
-    }
-    // eslint-disable-next-line
-  }, [quizId]);
+    fetchQuestions();
+  }, []);
 
   async function fetchQuestions() {
     try {
@@ -115,61 +86,20 @@ export default function QuestionsPage() {
     }
   }
 
-  async function fetchQuizAndQuestions(quizId) {
-    setLoading(true);
-    try {
-      // Fetch quiz title
-      const { data: quizData, error: quizError } = await supabase
-        .from('lq_quizzes')
-        .select('*')
-        .eq('id', quizId)
-        .single();
-      if (quizError) throw quizError;
-      setQuizName(quizData.title);
-      setSelectedQuizId(quizId);
-
-      // Fetch questions
-      const { data: questionsData, error: questionsError } = await supabase
-        .from('lq_questions')
-        .select('*')
-        .eq('quiz_id', quizId)
-        .order('created_at', { ascending: true });
-      if (questionsError) throw questionsError;
-      setQuestions(questionsData || []);
-      if (questionsData && questionsData.length > 0) {
-        setForm({ ...questionsData[0] });
-        setSelectedQuestionIdx(0);
-        setIsEditingExisting(true);
-      } else {
-        setForm({
-          question_text: '',
-          options: ['', ''],
-          correct_answer_index: 0,
-          timer: 20,
-          settings: { ...settingsDefaults },
-        });
-        setSelectedQuestionIdx(null);
-        setIsEditingExisting(false);
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   // 2. Add settings state for the form
   function getSettings(obj) {
-    // Use globalCustomization as base if set
-    return { ...globalCustomization, ...(obj?.settings || obj || {}) };
+    return { ...settingsDefaults, ...(obj?.settings || obj || {}) };
   }
+
+  // 3. Add right sidebar state
+  const [customSidebarOpen, setCustomSidebarOpen] = useState(true);
 
   // 4. Update form state to always include settings
   useEffect(() => {
     if (selectedQuestionIdx !== null && questions[selectedQuestionIdx]) {
       setForm({ ...questions[selectedQuestionIdx], settings: getSettings(questions[selectedQuestionIdx].settings) });
     }
-  }, [selectedQuestionIdx, globalCustomization]);
+  }, [selectedQuestionIdx]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -264,12 +194,10 @@ export default function QuestionsPage() {
     }
     setLoading(true);
     setSuccessMessage('');
-    setQuizTitleError('');
     setShowTitlePrompt(false);
     setTitleInputGlow(false);
     setTitleInputBg(false);
     if (!quizName.trim()) {
-      setQuizTitleError('Please enter a quiz title before proceeding.');
       setShowTitlePrompt(true);
       setTitleInputGlow(true);
       setTitleInputBg(true);
@@ -280,15 +208,16 @@ export default function QuestionsPage() {
       return;
     }
     try {
-      // Fetch the current authenticated user
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        setError('Unable to get user info. Please log in again.');
+      const titleToSave = quizName.trim() ? quizName : 'Untitled Quiz';
+      // Fetch current user from Supabase Auth
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData?.user) {
+        setError('Could not get current user.');
         setLoading(false);
         return;
       }
-      const userId = user.id;
-      const titleToSave = quizName.trim() ? quizName : 'Untitled Quiz';
+      const userId = userData.user.id;
+      // Insert quiz with user_id
       const { data, error } = await supabase
         .from('lq_quizzes')
         .insert([{ title: titleToSave, user_id: userId }])
@@ -327,7 +256,7 @@ export default function QuestionsPage() {
       options: ['', ''],
       correct_answer_index: 0,
       timer: 20,
-      settings: { ...globalCustomization },
+      settings: { ...settingsDefaults },
     });
     setSelectedQuestionIdx(null);
     setIsEditingExisting(false);
@@ -366,113 +295,6 @@ export default function QuestionsPage() {
     dragOverItem.current = undefined;
   };
 
-  // Delete question handler
-  const handleDeleteQuestion = (idx) => {
-    const questionToDelete = questions[idx];
-    if (questionToDelete.id) {
-      setDeletedQuestionIds((prev) => [...prev, questionToDelete.id]);
-    }
-    const updatedQuestions = questions.filter((_, i) => i !== idx);
-    setQuestions(updatedQuestions);
-    // Adjust selectedQuestionIdx if needed
-    if (selectedQuestionIdx === idx) {
-      setSelectedQuestionIdx(null);
-      setIsEditingExisting(false);
-      setForm({ question_text: '', options: ['', ''], correct_answer_index: 0, timer: 20 });
-    } else if (selectedQuestionIdx > idx) {
-      setSelectedQuestionIdx(selectedQuestionIdx - 1);
-    }
-    setHasUnsavedChanges(true);
-  };
-
-  // --- CREATE or SAVE QUIZ LOGIC ---
-  const handleCreateOrSaveQuiz = async () => {
-    setLoading(true);
-    setSuccessMessage('');
-    setQuizTitleError('');
-    setShowTitlePrompt(false);
-    setTitleInputGlow(false);
-    setTitleInputBg(false);
-    if (!quizName.trim()) {
-      setQuizTitleError('Please enter a quiz title before proceeding.');
-      setShowTitlePrompt(true);
-      setTitleInputGlow(true);
-      setTitleInputBg(true);
-      setLoading(false);
-      setTimeout(() => setShowTitlePrompt(false), 3500);
-      setTimeout(() => setTitleInputGlow(false), 2500);
-      setTimeout(() => setTitleInputBg(false), 2500);
-      return;
-    }
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        setError('Unable to get user info. Please log in again.');
-        setLoading(false);
-        return;
-      }
-      const userId = user.id;
-      const titleToSave = quizName.trim() ? quizName : 'Untitled Quiz';
-      let quizId = selectedQuizId;
-      if (!selectedQuizId) {
-        // CREATE new draft quiz
-        const { data, error } = await supabase
-          .from('lq_quizzes')
-          .insert([{ title: titleToSave, user_id: userId }])
-          .select()
-          .single();
-        if (error) throw error;
-        quizId = data.id;
-        setSelectedQuizId(data.id);
-        // Save all current questions to lq_questions
-        for (const [i, q] of questions.entries()) {
-          await supabase.from('lq_questions').update({ quiz_id: data.id, order_index: i }).eq('id', q.id);
-        }
-        setSuccessMessage('Draft created!');
-      } else {
-        // SAVE/UPDATE existing draft quiz
-        const { error } = await supabase
-          .from('lq_quizzes')
-          .update({ title: titleToSave })
-          .eq('id', quizId);
-        if (error) throw error;
-        // Delete questions marked for deletion
-        if (deletedQuestionIds.length > 0) {
-          await supabase.from('lq_questions').delete().in('id', deletedQuestionIds);
-          setDeletedQuestionIds([]);
-        }
-        // Update order_index for remaining questions
-        for (const [i, q] of questions.entries()) {
-          await supabase.from('lq_questions').update({ order_index: i }).eq('id', q.id);
-        }
-        setSuccessMessage('Draft saved!');
-      }
-      setHasUnsavedChanges(false);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Track unsaved changes on any edit
-  useEffect(() => {
-    setHasUnsavedChanges(true);
-    // eslint-disable-next-line
-  }, [quizName, questions, form]);
-
-  // --- APPLY TO ALL LOGIC ---
-  const handleApplyToAll = () => {
-    // Save current form.settings as the new globalCustomization
-    const newCustomization = { ...form.settings };
-    setGlobalCustomization(newCustomization);
-    // Apply to all questions
-    const updatedQuestions = questions.map(q => ({ ...q, settings: { ...newCustomization } }));
-    setQuestions(updatedQuestions);
-    // If editing a question, update its form as well
-    setForm(f => ({ ...f, settings: { ...newCustomization } }));
-  };
-
   if (error) {
     return <div className="p-4 text-red-500">Error: {error}</div>;
   }
@@ -480,116 +302,75 @@ export default function QuestionsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation Buttons */}
-      <div className="flex justify-between items-center px-10 py-5 bg-white rounded-b-2xl shadow-md sticky top-0 z-30 border-b border-gray-100" style={{minHeight:'4.5rem'}}>
+      <div className="flex justify-between items-center px-6 py-4 bg-white shadow sticky top-0 z-30">
         <div className="flex items-center gap-4">
           <button
-            className="text-blue-400 font-bold text-base hover:underline focus:outline-none"
-            style={{background:'none',border:'none',padding:0}}
+            className="px-4 py-2 bg-gray-200 text-gray-800 rounded hover:bg-gray-300 font-semibold"
             onClick={() => navigate('/dashboard')}
           >
             ← Back to Dashboard
           </button>
-        <input
-          ref={quizNameInputRef}
-          type="text"
-          value={quizName}
-          onChange={e => {
-            setQuizName(e.target.value);
-            if (e.target.value.trim()) setQuizTitleError('');
-            if (e.target.value.trim()) {
-              setShowTitlePrompt(false);
-              setTitleInputGlow(false);
-              setTitleInputBg(false);
-            }
-          }}
-          placeholder="Untitled Quiz"
-            className={`ml-4 text-3xl font-bold truncate max-w-xs border-none focus:ring-0 focus:outline-none p-0 m-0 transition-all duration-300 text-gray-500 ${titleInputGlow ? 'ring-2 ring-amber-400 ring-offset-2 border-amber-400' : ''} ${titleInputBg ? 'bg-amber-100/70' : 'bg-transparent'}`}
-          style={{ minWidth: '120px', letterSpacing: '-0.01em' }}
-        />
+          <input
+            ref={quizNameInputRef}
+            type="text"
+            value={quizName}
+            onChange={e => {
+              setQuizName(e.target.value);
+              if (e.target.value.trim()) {
+                setShowTitlePrompt(false);
+                setTitleInputGlow(false);
+                setTitleInputBg(false);
+              }
+            }}
+            placeholder="Untitled Quiz"
+            className={`ml-4 text-xl font-semibold truncate max-w-xs border-none focus:ring-0 focus:outline-none p-0 m-0 transition-all duration-300 ${titleInputGlow ? 'ring-2 ring-amber-400 ring-offset-2 border-amber-400' : ''} ${titleInputBg ? 'bg-amber-100/70' : 'bg-transparent'}`}
+            style={{ minWidth: '120px' }}
+          />
         </div>
         <div className="flex items-center gap-4">
           <button
-            className="px-6 py-2 rounded-xl font-bold text-white transition-colors"
-            style={{
-              background: 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)',
-              boxShadow: 'none',
-              border: 'none',
-              fontSize: '1.15rem',
-              marginRight: '0.5rem',
-            }}
-            onClick={() => {
-              if (selectedQuizId) {
-                navigate(`/quiz/preview/${selectedQuizId}`);
-              } else {
-                // Save current quiz draft to localStorage as 'slides' for PreviewQuizPage
-                localStorage.setItem('quizDraft', JSON.stringify({
-                  slides: questions, // lq_questions as slides
-                  quizTitle: quizName,
-                  globalSettings: form.settings || {},
-                }));
-                navigate('/quiz/preview/preview');
-              }
-            }}
-          >
-            Preview
-          </button>
-          <button
-            className="px-6 py-2 rounded-xl font-bold text-white transition-colors"
-            style={{
-              background: 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)',
-              boxShadow: 'none',
-              border: 'none',
-              fontSize: '1.15rem',
-              marginRight: '0.5rem',
-            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold"
             onClick={() => navigate('/Admin')}
           >
-            Start Quiz →
+            Go to Admin Page →
           </button>
           <button
             type="button"
-            onClick={handleCreateOrSaveQuiz}
-            className={`px-6 py-2 rounded-xl font-bold text-white transition-colors whitespace-nowrap`}
-            style={{
-              background: selectedQuizId ? '#facc15' : 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)',
-              color: selectedQuizId ? '#222' : '#fff',
-              boxShadow: 'none',
-              border: 'none',
-              fontSize: '1.15rem',
-            }}
+            onClick={handleMenuCreateQuiz}
+            className="px-5 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors whitespace-nowrap"
             disabled={loading}
           >
-            {loading ? (selectedQuizId ? 'Saving...' : 'Creating...') : (selectedQuizId ? 'Save' : 'Create Quiz')}
+            {loading ? 'Creating...' : 'Create Quiz'}
           </button>
         </div>
       </div>
-        {/* Floating Prompt Box */}
-        {showTitlePrompt && (
-          <div
-            className="fixed left-1/2 top-16 z-50 -translate-x-1/2 animate-fade-in-out"
-            style={{
-              minWidth: 320,
-              background: 'rgba(255, 237, 213, 0.98)', // amber-100
-              color: '#b45309', // amber-700
-              border: '2px solid #f59e42', // amber-400
-              borderRadius: 16,
-              boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)',
-              padding: '18px 32px',
-              fontWeight: 600,
-              fontSize: 18,
-              textAlign: 'center',
-              transition: 'opacity 0.5s',
-            }}
-          >
-            Please enter a quiz title before proceeding.
-          </div>
-        )}
+      {/* Floating Prompt Box */}
+      {showTitlePrompt && (
+        <div
+          className="fixed left-1/2 top-16 z-50 -translate-x-1/2 animate-fade-in-out"
+          style={{
+            minWidth: 320,
+            background: 'rgba(255, 237, 213, 0.98)', // amber-100
+            color: '#b45309', // amber-700
+            border: '2px solid #f59e42', // amber-400
+            borderRadius: 16,
+            boxShadow: '0 4px 24px 0 rgba(0,0,0,0.10)',
+            padding: '18px 32px',
+            fontWeight: 600,
+            fontSize: 18,
+            textAlign: 'center',
+            transition: 'opacity 0.5s',
+          }}
+        >
+          Please enter a quiz title before proceeding.
+        </div>
+      )}
       {/* Layout: Sidebar + Main + (optional) Right Panel */}
       <div className="flex flex-row w-full">
         {/* Fixed, full-height Sidebar with native drag-and-drop */}
-        <aside className="fixed top-[4.5rem] left-0 h-[calc(100vh-4.5rem)] w-64 min-w-[13rem] bg-white rounded-2xl shadow-xl flex flex-col justify-between z-20 border border-gray-100" style={{margin:'1.5rem 0 1.5rem 1.5rem',padding:'0.5rem 0'}}>
+        <aside className="fixed top-[4.5rem] left-0 h-[calc(100vh-4.5rem)] w-60 min-w-[12rem] bg-white shadow-lg flex flex-col justify-between z-10">
           <div className="overflow-y-auto flex-1 p-4">
-            <h2 className="text-lg font-bold mb-3 text-purple-700">Questions</h2>
+            <h2 className="text-lg font-bold mb-3">Questions</h2>
             <ul className="space-y-2">
               {questions.map((q, idx) => (
                 <li
@@ -599,35 +380,18 @@ export default function QuestionsPage() {
                   onDragEnter={() => handleDragEnter(idx)}
                   onDragEnd={handleDragEnd}
                   onDragOver={e => e.preventDefault()}
-                 className={`w-full text-left px-3 py-2 rounded-xl transition-colors flex items-center gap-2 cursor-move select-none ${selectedQuestionIdx === idx ? 'bg-blue-50 font-bold text-blue-700' : 'hover:bg-gray-50'}`}
+                  className={`w-full text-left px-3 py-2 rounded transition-colors flex items-center gap-2 cursor-move select-none ${selectedQuestionIdx === idx ? 'bg-blue-100 font-bold' : 'hover:bg-gray-100'}`}
                   onClick={() => handleSidebarClick(idx)}
                 >
-                  <span className="text-xs font-semibold text-gray-400 mr-2">Q{idx + 1}</span>
+                  <span className="text-xs font-semibold text-gray-500 mr-2">Q{idx + 1}</span>
                   <span className="truncate flex-1">{q.question_text || `Question ${idx + 1}`}</span>
-                  <button
-                    type="button"
-                   className="ml-2 text-red-400 hover:text-red-600 p-1 rounded-full bg-red-50 hover:bg-red-100"
-                    title="Delete Question"
-                    onClick={e => { e.stopPropagation(); handleDeleteQuestion(idx); }}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
                 </li>
               ))}
             </ul>
           </div>
-          <div className="p-4 border-t border-gray-100">
+          <div className="p-4 border-t">
             <button
-              className="w-full px-6 py-3 rounded-2xl font-bold text-white"
-              style={{
-                background: 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)',
-                boxShadow: 'none',
-                border: 'none',
-                fontSize: '1.12rem',
-                letterSpacing: '-0.01em',
-                marginTop: '0.5rem',
-                marginBottom: '0.5rem',
-              }}
+              className="w-full py-2 bg-green-500 text-white rounded hover:bg-green-600"
               onClick={handleAddQuestion}
             >
               + Add Question
@@ -653,118 +417,98 @@ export default function QuestionsPage() {
             )}
             {/* If a question is selected, show it for editing. Otherwise, show the add form. */}
             <form onSubmit={handleSubmit} className="mb-8 w-full flex flex-col items-center">
-              <div
-                className="shadow-2xl max-w-2xl w-full mx-auto flex flex-col gap-10 justify-center items-center"
-                style={{
-                  background: form.settings?.backgroundColor || settingsDefaults.backgroundColor,
-                  borderRadius: (form.settings?.borderRadius || settingsDefaults.borderRadius) * 0.7,
-                  color: form.settings?.textColor || settingsDefaults.textColor,
-                  fontFamily: form.settings?.fontFamily || settingsDefaults.fontFamily,
-                  fontSize: form.settings?.fontSize || settingsDefaults.fontSize,
-                  fontWeight: form.settings?.bold ? 'bold' : 'normal',
-                  fontStyle: form.settings?.italic ? 'italic' : 'normal',
-                  boxShadow: form.settings?.shadow ?? settingsDefaults.shadow ? '0 4px 16px 0 rgba(0,0,0,0.08)' : 'none',
-                  padding: '2.5rem 2.5rem 3.5rem 2.5rem',
-                  margin: '2.5rem',
-                  textAlign: form.settings?.alignment || settingsDefaults.alignment,
-                  transition: 'all 0.3s',
-                  boxSizing: 'border-box',
-                  overflow: 'visible',
-                  minHeight: '520px',
-                  maxHeight: '700px',
-                }}
-              >
-                <h2 className="text-3xl font-bold text-blue-700 mb-6 text-center tracking-tight">{isEditingExisting ? `Q${selectedQuestionIdx + 1} Preview & Edit` : 'Add New Question'}</h2>
-                <div className="mb-6 w-full px-2">
+              <div className="bg-white/80 rounded-xl shadow-lg p-6 max-w-2xl w-full mx-auto">
+                <h2 className="text-2xl font-bold text-blue-700 mb-4 text-center">{isEditingExisting ? `Q${selectedQuestionIdx + 1} Preview & Edit` : 'Add New Question'}</h2>
+                <div className="mb-4">
                   <label className="block mb-2 font-semibold text-gray-700">Question Text</label>
                   <input
                     type="text"
                     value={form.question_text}
                     onChange={(e) => setForm({ ...form, question_text: e.target.value })}
-                    className="w-full p-4 border border-gray-200 rounded-lg text-lg shadow-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-300 transition-all"
+                    className="w-full p-3 border rounded-lg text-lg shadow-sm focus:ring-2 focus:ring-blue-300"
                     required
                   />
                 </div>
-                <div className="mb-6 w-full px-2">
+                <div className="mb-4">
                   <label className="block mb-2 font-semibold text-gray-700">Options</label>
-                  <div className={`grid gap-6 w-full ${form.options.length === 2 ? 'grid-cols-2' : form.options.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`} style={{paddingLeft:'0.5rem',paddingRight:'0.5rem'}}>
+                  <ul className="ml-4 mt-2 space-y-2">
                     {form.options.map((option, index) => (
-                      <div key={index} className={`relative flex items-center px-4 py-2 rounded-full border transition-all duration-200 ${form.correct_answer_index === index ? 'border-blue-400 bg-blue-50' : 'border-gray-200 bg-gray-50'} group`}
-                        style={{
-                          color: form.settings?.textColor || settingsDefaults.textColor,
-                          fontFamily: form.settings?.fontFamily || settingsDefaults.fontFamily,
-                          fontSize: form.settings?.fontSize || settingsDefaults.fontSize,
-                          fontWeight: form.settings?.bold ? 'bold' : 'normal',
-                          fontStyle: form.settings?.italic ? 'italic' : 'normal',
-                          minHeight: '56px',
-                          position: 'relative',
-                          boxShadow: 'none',
-                          marginBottom: '0.5rem',
-                        }}
-                      >
+                      <li key={index} className="flex items-center gap-2">
                         <input
                           type="text"
                           value={option}
                           onChange={(e) => handleOptionChange(index, e.target.value)}
-                          className="flex-1 bg-transparent border-none outline-none px-2 py-2 text-base font-semibold rounded-full focus:ring-0 focus:outline-none"
+                          className="flex-1 p-2 border rounded-lg text-base shadow-sm"
                           placeholder={`Option ${index + 1}`}
                           required
                         />
-                        <div className="flex items-center gap-2" style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)' }}>
-                          <button
-                            type="button"
-                            onClick={() => setForm({ ...form, correct_answer_index: index })}
-                            className={`w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-bold transition-all duration-150 ${form.correct_answer_index === index ? 'bg-purple-500 text-white border-purple-500' : 'bg-white text-gray-400 border-gray-200 group-hover:border-blue-300'}`}
-                            title="Mark as Correct"
-                            style={{ position: 'relative' }}
-                          >
-                            {form.correct_answer_index === index ? '\u2713' : ''}
-                          </button>
-                          {form.options.length > 2 && (
-                            <button
-                              type="button"
-                              onClick={() => removeOption(index)}
-                              className="w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center transition-all"
-                              aria-label="Remove Option"
-                              style={{
-                                boxShadow: 'none',
-                                border: 'none',
-                                padding: 0,
-                                marginRight: 0,
-                              }}
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="#ef4444" strokeWidth={2}>
-                                <circle cx="12" cy="12" r="11" fill="#fef2f2" />
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 8l8 8M8 16l8-8" />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                        <input
+                          type="radio"
+                          name="correct_answer"
+                          checked={form.correct_answer_index === index}
+                          onChange={() => setForm({ ...form, correct_answer_index: index })}
+                          className="ml-2"
+                        />
+                        <span className={form.correct_answer_index === index ? 'text-green-600 font-bold' : 'text-gray-500'}>
+                          {form.correct_answer_index === index ? '✓' : ''}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeOption(index)}
+                          className="ml-2 px-2 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 disabled:opacity-50"
+                          disabled={form.options.length <= 2}
+                          style={{ display: form.options.length > 2 ? 'inline-block' : 'none' }}
+                          aria-label="Remove Option"
+                        >
+                          Remove
+                        </button>
+                      </li>
                     ))}
-                  </div>
-                  <div className="flex justify-end mt-3">
+                  </ul>
                   <button
                     type="button"
                     onClick={addOption}
-                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg font-semibold hover:bg-gray-300 disabled:opacity-50 transition-colors"
+                    className="mt-4 px-4 py-2 bg-gray-200 rounded-lg font-semibold hover:bg-gray-300 disabled:opacity-50"
                     disabled={form.options.length >= 4}
-                    style={{ display: form.options.length < 4 ? 'inline-block' : 'none', boxShadow: 'none', border: 'none' }}
+                    style={{ display: form.options.length < 4 ? 'inline-block' : 'none' }}
                   >
                     Add Option
                   </button>
-                  </div>
+                </div>
+                <div className="mb-4">
+                  <label className="block mb-2 font-semibold text-gray-700">Timer (seconds)</label>
+                  <input
+                    type="number"
+                    value={form.timer}
+                    onChange={(e) => setForm({ ...form, timer: parseInt(e.target.value) })}
+                    className="w-full p-3 border rounded-lg text-lg shadow-sm"
+                    min="5"
+                    max="60"
+                    required
+                  />
                 </div>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 bg-blue-600 text-white rounded-lg font-bold text-lg hover:bg-blue-700 disabled:bg-gray-300 mt-2 transition-colors"
-                  style={{ boxShadow: 'none', border: 'none', marginTop: '1.5rem', marginBottom: '3rem' }}
+                  className="w-full py-3 bg-blue-500 text-white rounded-lg font-bold text-lg shadow hover:bg-blue-600 disabled:bg-gray-400 mt-2"
                 >
-                  {loading ? (isEditingExisting ? 'Saving...' : 'Adding...') : (isEditingExisting ? 'Save Changes' : 'Save Question')}
+                  {loading ? (isEditingExisting ? 'Saving...' : 'Adding...') : (isEditingExisting ? 'Save Changes' : 'Add Question')}
                 </button>
               </div>
             </form>
+            {/* Live Preview: Only visible when customization navbar is open, in the middle area */}
+            {customSidebarOpen && (
+              <section className="w-full flex flex-col items-center justify-center mt-8">
+                <QuestionPreview
+                  question={form}
+                  questionNumber={selectedQuestionIdx + 1}
+                  totalQuestions={questions.length}
+                  timer={form.timer}
+                  showNextButton={false}
+                  showTimer={true}
+                />
+              </section>
+            )}
           </main>
           {/* Customization panel */}
           <aside className={`fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-80 min-w-[16rem] bg-white shadow-lg z-20 transition-transform duration-300 ${customSidebarOpen ? 'translate-x-0' : 'translate-x-full'} flex flex-col`}>
@@ -915,32 +659,40 @@ export default function QuestionsPage() {
                     <label className="block font-medium mt-3 mb-1">Margin</label>
                     <input type="number" min="0" max="64" value={form.settings?.margin || settingsDefaults.margin} onChange={e => setForm(f => ({ ...f, settings: { ...f.settings, margin: parseInt(e.target.value) } }))} className="w-full border rounded p-1" />
                   </div>
-                  {/* Timer Section */}
-                  <div className="mb-6">
-                    <h4 className="font-semibold text-blue-600 mb-2">Timer</h4>
-                    <label className="block font-medium mb-1">Timer (seconds)</label>
-                    <input
-                      type="number"
-                      value={form.timer}
-                      onChange={e => setForm(f => ({ ...f, timer: parseInt(e.target.value) }))}
-                      className="w-full p-3 border rounded-lg text-lg shadow-sm"
-                      min="5"
-                      max="60"
-                      required
-                    />
-                  </div>
                 </>
               )}
               {/* Apply to All Button */}
-              <div className="flex justify-center mt-8">
-                <button
-                  type="button"
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition-all"
-                  onClick={handleApplyToAll}
-                >
-                  Apply to All
-                </button>
-              </div>
+              <button
+                className="w-full py-2 mt-4 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600"
+                type="button"
+                onClick={() => {
+                  // Apply current form.settings to all questions
+                  setQuestions(qs => qs.map(q => ({ ...q, settings: { ...form.settings } })));
+                  // Update all questions in DB
+                  questions.forEach(async (q) => {
+                    await supabase.from('lq_questions').update({ settings: { ...form.settings } }).eq('id', q.id);
+                  });
+                  // Set default for future questions
+                  settingsDefaults.backgroundColor = form.settings.backgroundColor;
+                  settingsDefaults.backgroundGradient = form.settings.backgroundGradient;
+                  settingsDefaults.imageUrl = form.settings.imageUrl;
+                  settingsDefaults.questionContainerBgColor = form.settings.questionContainerBgColor;
+                  settingsDefaults.textColor = form.settings.textColor;
+                  settingsDefaults.buttonColor = form.settings.buttonColor;
+                  settingsDefaults.fontSize = form.settings.fontSize;
+                  settingsDefaults.fontFamily = form.settings.fontFamily;
+                  settingsDefaults.borderRadius = form.settings.borderRadius;
+                  settingsDefaults.padding = form.settings.padding;
+                  settingsDefaults.margin = form.settings.margin;
+                  settingsDefaults.alignment = form.settings.alignment;
+                  settingsDefaults.optionLayout = form.settings.optionLayout;
+                  settingsDefaults.shadow = form.settings.shadow;
+                  settingsDefaults.bold = form.settings.bold;
+                  settingsDefaults.italic = form.settings.italic;
+                }}
+              >
+                Apply to All
+              </button>
             </div>
           </aside>
         </div>

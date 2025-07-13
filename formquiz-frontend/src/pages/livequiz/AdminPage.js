@@ -1,12 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { supabase } from '../../supabase.js';
+import { supabase } from '../../supabase/client';
 import { useQuiz } from '../../pages/livequiz/QuizContext';
-import { QRCodeSVG } from 'qrcode.react';
-import QuestionPreview from './QuestionPreview';
-import { useNavigate } from 'react-router-dom';
 
 export default function AdminPage() {
-  const navigate = useNavigate();
   const {
     session,
     setSession,
@@ -33,13 +29,6 @@ export default function AdminPage() {
   const presentationRef = useRef(null);
   const [waitingToStart, setWaitingToStart] = useState(false);
   const [justStartedSession, setJustStartedSession] = useState(false);
-  const [qrModalOpen, setQrModalOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const handleCopyLink = (url) => {
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
 
   // Customization defaults (copy from QuestionsPage.js)
   const settingsDefaults = {
@@ -330,33 +319,15 @@ export default function AdminPage() {
   }
 
   async function nextQuestion() {
-    // Show leaderboard after results, before moving to next question
-    setShowLeaderboard(true);
-    // Wait for admin to click 'Next' on leaderboard before advancing
-  }
-
-  // Handler for 'Next' button on leaderboard
-  async function handleLeaderboardNext() {
     if (currentQuestionIndex >= questions.length - 1) {
-      // Show podium leaderboard after last question
-      setShowPodium(true);
+      await endQuiz();
       return;
     }
+
     const nextIndex = currentQuestionIndex + 1;
     setCurrentQuestionIndex(nextIndex);
     setCurrentQuestion(questions[nextIndex]);
-    // Update lq_sessions with new current_question_id and phase
-    if (session?.id && questions[nextIndex]?.id) {
-      await supabase
-        .from('lq_sessions')
-        .update({
-          current_question_id: questions[nextIndex].id,
-          phase: 'question',
-        })
-        .eq('id', session.id);
-    }
-    setQuizPhase('question');
-    setShowLeaderboard(false);
+    setQuizPhase('waiting');
   }
 
   async function endQuiz() {
@@ -390,63 +361,6 @@ export default function AdminPage() {
     }
   }
 
-  // Podium state
-  const [showPodium, setShowPodium] = useState(false);
-
-  // Podium leaderboard rendering
-  const renderPodium = () => {
-    // Get top 3 participants by score
-    const sorted = participants
-      .map(p => ({ ...p, score: participantScores[p.id] || 0 }))
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 3);
-    // Pad to always have 3 slots
-    while (sorted.length < 3) sorted.push(null);
-    // Podium heights for 1st, 2nd, 3rd
-    const heights = [120, 80, 60];
-    const places = ['1st', '2nd', '3rd'];
-    const colors = ['bg-yellow-300', 'bg-gray-300', 'bg-amber-400'];
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
-        <div className="w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-2xl p-12 animate-fade-in border border-gray-200 flex flex-col items-center">
-          <h3 className="text-4xl font-extrabold text-gray-800 mb-10 text-center tracking-wide drop-shadow">🏆 Podium</h3>
-          <div className="flex flex-row items-end justify-center gap-8 w-full mb-8">
-            {/* 2nd place */}
-            <div className="flex flex-col items-center flex-1">
-              <div className={`w-24 h-[${heights[1]}px] rounded-t-xl ${colors[1]} flex flex-col items-center justify-end shadow-md`} style={{height:heights[1], minHeight:heights[1]}}>
-                <span className="text-2xl font-bold text-gray-700 mt-2">{places[1]}</span>
-                <span className="text-lg font-medium text-gray-700 mb-2">{sorted[1]?.username || '—'}</span>
-                <span className="text-lg font-semibold text-gray-600 mb-4">{sorted[1]?.score ?? '—'}</span>
-              </div>
-            </div>
-            {/* 1st place */}
-            <div className="flex flex-col items-center flex-1">
-              <div className={`w-28 h-[${heights[0]}px] rounded-t-xl ${colors[0]} flex flex-col items-center justify-end shadow-lg border-4 border-yellow-400`} style={{height:heights[0], minHeight:heights[0]}}>
-                <span className="text-3xl font-extrabold text-yellow-700 mt-2">{places[0]}</span>
-                <span className="text-xl font-bold text-gray-800 mb-2">{sorted[0]?.username || '—'}</span>
-                <span className="text-xl font-bold text-gray-700 mb-4">{sorted[0]?.score ?? '—'}</span>
-              </div>
-            </div>
-            {/* 3rd place */}
-            <div className="flex flex-col items-center flex-1">
-              <div className={`w-24 h-[${heights[2]}px] rounded-t-xl ${colors[2]} flex flex-col items-center justify-end shadow-md`} style={{height:heights[2], minHeight:heights[2]}}>
-                <span className="text-2xl font-bold text-gray-700 mt-2">{places[2]}</span>
-                <span className="text-lg font-medium text-gray-700 mb-2">{sorted[2]?.username || '—'}</span>
-                <span className="text-lg font-semibold text-gray-600 mb-4">{sorted[2]?.score ?? '—'}</span>
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={() => setShowPodium(false)}
-            className="mt-8 px-8 py-3 bg-gray-700 text-white rounded-xl font-bold text-xl shadow hover:bg-gray-800 transition-all"
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    );
-  };
-
   if (loading) {
     return <div className="p-4">Loading...</div>;
   }
@@ -461,30 +375,6 @@ export default function AdminPage() {
       className={`min-h-screen min-w-full flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-purple-100 font-sans transition-all duration-500 ${presentationMode ? 'fixed inset-0 w-screen h-screen z-50 p-0 m-0 overflow-hidden' : 'px-2 sm:px-4'}`}
       style={presentationMode ? { margin: 0, padding: 0 } : {}}
     >
-      {/* Back to Dashboard Button */}
-      {!presentationMode && (
-        <div className="fixed top-4 left-4 z-40">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="px-6 py-2 bg-white text-blue-700 border border-blue-700 rounded-lg font-semibold shadow hover:bg-blue-50 transition-all text-base"
-            title="Back to Dashboard"
-          >
-            ← Back to Dashboard
-          </button>
-        </div>
-      )}
-      {/* Enter Presentation Mode Button */}
-      {!presentationMode && (
-        <div className="fixed top-4 right-4 z-40">
-          <button
-            onClick={() => setPresentationMode(true)}
-            className="px-6 py-2 bg-blue-700 text-white rounded-lg font-semibold shadow hover:bg-blue-900 transition-all text-base border border-blue-900"
-            title="Enter Presentation Mode (Fullscreen)"
-          >
-            Enter Presentation Mode
-          </button>
-        </div>
-      )}
       {/* Fixed Presentation Mode Top Bar */}
       {presentationMode && (
         <div className="fixed top-0 left-0 w-full z-50 bg-white/90 shadow-md flex items-center justify-between px-8 py-3 gap-4"
@@ -511,38 +401,23 @@ export default function AdminPage() {
       )}
       <div className={`w-full ${presentationMode ? 'h-full flex flex-col justify-center items-center' : 'max-w-4xl mx-auto p-2 sm:p-6'}`}
         style={presentationMode ? { maxWidth: '100vw', maxHeight: '100vh', padding: 0, marginTop: '4.5rem' } : {}}>
-        {/* Removed redundant Quiz Admin and Exit Presentation Mode from leaderboard area */}
+        <div className="flex flex-col sm:flex-row items-center justify-between mb-6 gap-4">
+          <h1 className="text-3xl font-bold text-blue-700 tracking-tight">Quiz Admin</h1>
+          <button
+            onClick={() => setPresentationMode(m => !m)}
+            className={`px-4 py-2 rounded-lg font-semibold shadow transition-all duration-200 ${presentationMode ? 'bg-gray-700 text-white hover:bg-gray-800' : 'bg-blue-500 text-white hover:bg-blue-600'}`}
+          >
+            {presentationMode ? 'Exit Presentation Mode' : 'Presentation Mode'}
+          </button>
+        </div>
+
         {/* Quiz Start Flow: After creating session, show code, participant list, and Start Quiz button */}
-        {waitingToStart && session && !presentationMode ? (
+        {waitingToStart && session ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
-            <div className="w-full max-w-lg mx-auto bg-white/80 rounded-xl shadow-lg p-6 animate-fade-in relative">
+            <div className="w-full max-w-lg mx-auto bg-white/80 rounded-xl shadow-lg p-6 animate-fade-in">
               <h2 className="text-2xl font-bold text-blue-700 mb-4 text-center">Quiz Lobby</h2>
               <div className="mb-4 text-center">
                 <span className="text-lg font-semibold text-gray-800">Quiz Code: <span className="text-blue-700 text-2xl font-bold">{session.code}</span></span>
-              </div>
-              {/* QR Code for user response page, inside lobby details */}
-              <div className="flex flex-col items-center mb-4 group" title="Click to enlarge QR code">
-                <span className="font-semibold text-gray-700 mb-2">Join as Participant:</span>
-                <QRCodeSVG
-                  value={`${window.location.origin}/quiz/user?code=${session.code}`}
-                  size={120}
-                  level="H"
-                  includeMargin={true}
-                  className="transition-transform group-hover:scale-105 cursor-pointer"
-                  onClick={() => setQrModalOpen(true)}
-                />
-                <button
-                  type="button"
-                  className="mt-2 text-xs text-blue-600 underline break-all hover:text-blue-800 focus:outline-none"
-                  onClick={() => handleCopyLink(`${window.location.origin}/quiz/user?code=${session.code}`)}
-                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                >
-                  {`${window.location.origin}/quiz/user?code=${session.code}`}
-                </button>
-                {copied && (
-                  <span className="text-green-600 text-xs font-semibold mt-1 animate-fade-in">Copied!</span>
-                )}
-                <span className="text-xs text-blue-500 mt-1">Click QR to enlarge, link to copy</span>
               </div>
               <div className="mb-6">
                 <h3 className="font-bold mb-2 text-lg text-gray-800 text-center">Participants</h3>
@@ -567,32 +442,6 @@ export default function AdminPage() {
                   Start Quiz
                 </button>
               </div>
-              {/* QR Code Modal Overlay */}
-              {qrModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setQrModalOpen(false)}>
-                  <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center relative" onClick={e => e.stopPropagation()}>
-                    <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl font-bold" onClick={() => setQrModalOpen(false)} aria-label="Close QR code modal">&times;</button>
-                    <QRCodeSVG
-                      value={`${window.location.origin}/quiz/user?code=${session.code}`}
-                      size={320}
-                      level="H"
-                      includeMargin={true}
-                    />
-                    <span className="mt-4 text-base text-gray-700 font-semibold text-center">Scan to join as participant</span>
-                    <button
-                      type="button"
-                      className="mt-2 text-xs text-blue-600 underline break-all hover:text-blue-800 focus:outline-none"
-                      onClick={() => handleCopyLink(`${window.location.origin}/quiz/user?code=${session.code}`)}
-                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                    >
-                      {`${window.location.origin}/quiz/user?code=${session.code}`}
-                    </button>
-                    {copied && (
-                      <span className="text-green-600 text-xs font-semibold mt-1 animate-fade-in">Copied!</span>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         ) :
@@ -620,38 +469,28 @@ export default function AdminPage() {
         ) : (
           <div className="space-y-8">
             {/* Show leaderboard only, hide question/response containers when leaderboard is visible */}
-            {showPodium ? renderPodium() : showLeaderboard ? (
-              <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
-                <div className="w-full max-w-4xl mx-auto bg-white rounded-2xl shadow-xl p-12 animate-fade-in border border-gray-200">
-                  <h3 className="text-3xl font-bold text-gray-800 mb-8 text-center tracking-wide">Leaderboard</h3>
-                  <ol className="space-y-3 mb-8">
-                    {(() => {
-                      const sorted = participants
-                        .map(p => ({ ...p, score: participantScores[p.id] || 0 }))
-                        .sort((a, b) => b.score - a.score)
-                        .slice(0, 5);
-                      const rows = [];
-                      for (let i = 0; i < 5; i++) {
-                        const p = sorted[i];
-                        rows.push(
-                          <li key={p ? p.id : `empty-${i}`}
-                            className={`flex items-center justify-between px-8 py-5 rounded-xl border transition-all ${p ? 'bg-gray-50 border-gray-300' : 'bg-gray-100 border-gray-200'}`}
-                            style={{ minHeight: 64 }}
-                          >
-                            <span className="text-2xl font-bold w-10 text-center text-gray-500">{i + 1}</span>
-                            <span className={`flex-1 text-xl font-medium ml-6 ${p ? 'text-gray-800' : 'text-gray-400 italic'}`}>{p ? (p.username || 'Anonymous') : '—'}</span>
-                            <span className={`text-xl font-semibold w-20 text-right ${p ? 'text-gray-700' : 'text-gray-300'}`}>{p ? p.score : '—'}</span>
-                          </li>
-                        );
-                      }
-                      return rows;
-                    })()}
+            {showLeaderboard ? (
+              <div className="flex flex-col items-center justify-center min-h-[50vh] w-full">
+                <div className="w-full max-w-lg mx-auto bg-white/80 rounded-xl shadow-lg p-6 animate-fade-in">
+                  <h3 className="text-2xl font-bold text-blue-700 mb-4 text-center">Top 5 Leaderboard</h3>
+                  <ol className="space-y-2 mb-6">
+                    {participants
+                      .map(p => ({ ...p, score: participantScores[p.id] || 0 }))
+                      .sort((a, b) => b.score - a.score)
+                      .slice(0, 5)
+                      .map((p, idx) => (
+                        <li key={p.id} className="flex items-center justify-between bg-blue-50 rounded-lg px-4 py-2 shadow-sm">
+                          <span className="font-semibold text-lg text-gray-800">
+                            {idx + 1}. {p.username || 'Anonymous'}
+                          </span>
+                          <span className="font-bold text-blue-700 text-lg">{p.score}</span>
+                        </li>
+                      ))}
                   </ol>
-                  <div className="flex justify-center mt-4">
+                  <div className="flex justify-center">
                     <button
-                      onClick={handleLeaderboardNext}
-                      className="px-8 py-3 bg-gray-700 text-white rounded-xl font-bold text-xl shadow hover:bg-gray-800 transition-all"
-                      style={{ minWidth: '160px' }}
+                      onClick={startQuestion}
+                      className="px-6 py-2 bg-green-500 text-white rounded-lg font-semibold shadow hover:bg-green-600 transition-all text-lg"
                     >
                       Next
                     </button>
@@ -683,10 +522,117 @@ export default function AdminPage() {
                     <div className="flex-1 flex flex-col items-center justify-center w-full max-w-[1600px] mx-auto px-0 pt-[5.5rem] pb-0 box-border relative">
                       {/* Question or Results */}
                       {quizPhase === 'question' && timeLeft > 0 ? (
-                        <QuestionPreview
-                          question={currentQuestion}
-                          customizations={settings}
-                        />
+                        <>
+                          {/* Question text */}
+                          <div className="w-full bg-white/90 rounded-t-3xl shadow-2xl p-10 flex flex-col items-center justify-center"
+                            style={{
+                              minHeight:'120px',
+                              background: settings.questionContainerBgColor || '#ffffff',
+                              color: settings.textColor,
+                              borderRadius: settings.borderRadius,
+                              boxShadow: settings.shadow ? '0 4px 24px 0 rgba(0,0,0,0.10)' : 'none',
+                              fontSize: settings.fontSize,
+                              fontFamily: settings.fontFamily,
+                              textAlign: settings.alignment,
+                            }}
+                          >
+                            <h3 className="font-bold text-4xl md:text-5xl text-gray-900 text-center break-words w-full max-w-5xl" style={{lineHeight:'1.2', fontWeight: settings.bold ? 'bold' : 'normal', fontStyle: settings.italic ? 'italic' : 'normal', color: settings.textColor, fontFamily: settings.fontFamily, fontSize: settings.fontSize}}>{currentQuestion?.question_text}</h3>
+                          </div>
+                          {/* Options */}
+                          <div className="w-full flex-1 flex flex-col items-center justify-center">
+                            {currentQuestion?.options && (
+                              <div className="w-full flex flex-col items-center justify-center gap-14 mt-14 px-16">
+                                {/* 2 options: side by side */}
+                                {currentQuestion.options.length === 2 && (
+                                  <div className="flex flex-row w-full gap-14">
+                                    {currentQuestion.options.map((option, idx) => (
+                                      <button key={idx} className="flex-1 py-14 text-3xl md:text-4xl font-semibold rounded-2xl shadow-lg text-white text-center"
+                                        style={{
+                                          background: settings.buttonColor,
+                                          borderRadius: settings.borderRadius,
+                                          fontSize: settings.fontSize,
+                                          fontFamily: settings.fontFamily,
+                                          fontWeight: settings.bold ? 'bold' : 'normal',
+                                          fontStyle: settings.italic ? 'italic' : 'normal',
+                                          boxShadow: settings.shadow ? '0 2px 8px 0 rgba(0,0,0,0.10)' : 'none',
+                                        }}
+                                      >
+                                        {option}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                                {/* 3 options: 2 top, 1 bottom */}
+                                {currentQuestion.options.length === 3 && (
+                                  <div className="flex flex-col w-full gap-10">
+                                    <div className="flex flex-row w-full gap-14">
+                                      {currentQuestion.options.slice(0,2).map((option, idx) => (
+                                        <button key={idx} className="flex-1 py-14 text-3xl md:text-4xl font-semibold rounded-2xl shadow-lg text-white text-center"
+                                          style={{
+                                            background: settings.buttonColor,
+                                            borderRadius: settings.borderRadius,
+                                            fontSize: settings.fontSize,
+                                            fontFamily: settings.fontFamily,
+                                            fontWeight: settings.bold ? 'bold' : 'normal',
+                                            fontStyle: settings.italic ? 'italic' : 'normal',
+                                            boxShadow: settings.shadow ? '0 2px 8px 0 rgba(0,0,0,0.10)' : 'none',
+                                          }}
+                                        >
+                                          {option}
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <div className="flex flex-row w-full justify-center">
+                                      <button className="w-1/2 py-14 text-3xl md:text-4xl font-semibold rounded-2xl shadow-lg text-white text-center"
+                                        style={{
+                                          background: settings.buttonColor,
+                                          borderRadius: settings.borderRadius,
+                                          fontSize: settings.fontSize,
+                                          fontFamily: settings.fontFamily,
+                                          fontWeight: settings.bold ? 'bold' : 'normal',
+                                          fontStyle: settings.italic ? 'italic' : 'normal',
+                                          boxShadow: settings.shadow ? '0 2px 8px 0 rgba(0,0,0,0.10)' : 'none',
+                                        }}
+                                      >
+                                        {currentQuestion.options[2]}
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                                {/* 4 options: 2x2 grid */}
+                                {currentQuestion.options.length === 4 && (
+                                  <div className="grid grid-cols-2 gap-14 w-full">
+                                    {currentQuestion.options.map((option, idx) => (
+                                      <button key={idx} className="py-14 text-3xl md:text-4xl font-semibold rounded-2xl shadow-lg text-white text-center"
+                                        style={{
+                                          background: settings.buttonColor,
+                                          borderRadius: settings.borderRadius,
+                                          fontSize: settings.fontSize,
+                                          fontFamily: settings.fontFamily,
+                                          fontWeight: settings.bold ? 'bold' : 'normal',
+                                          fontStyle: settings.italic ? 'italic' : 'normal',
+                                          boxShadow: settings.shadow ? '0 2px 8px 0 rgba(0,0,0,0.10)' : 'none',
+                                        }}
+                                      >
+                                        {option}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          {/* Next Button - bottom right, floating */}
+                          <div className="fixed bottom-10 right-16 z-50">
+                            <button
+                              onClick={nextQuestion}
+                              className="flex items-center gap-2 px-10 py-5 bg-green-600 text-white rounded-2xl font-bold text-2xl shadow-xl hover:bg-green-700 transition-all border-2 border-green-700"
+                              style={{ minWidth: '200px', fontWeight: 700 }}
+                            >
+                              Next <span className="ml-2 text-3xl">➡</span>
+                            </button>
+                          </div>
+                        </>
                       ) : quizPhase === 'question' && timeLeft === 0 ? (
                         /* Results Screen */
                         <div className="w-full h-full flex flex-col items-center justify-center">
@@ -714,20 +660,18 @@ export default function AdminPage() {
                               })}
                             </div>
                           </div>
+                          {/* Next Button - bottom right, floating */}
+                          <div className="fixed bottom-10 right-16 z-50">
+                            <button
+                              onClick={nextQuestion}
+                              className="flex items-center gap-2 px-10 py-5 bg-green-600 text-white rounded-2xl font-bold text-2xl shadow-xl hover:bg-green-700 transition-all border-2 border-green-700"
+                              style={{ minWidth: '200px', fontWeight: 700 }}
+                            >
+                              Next <span className="ml-2 text-3xl">➡</span>
+                            </button>
+                          </div>
                         </div>
                       ) : null}
-                      {/* Next Button - bottom right, floating */}
-                      {quizPhase === 'question' && timeLeft > 0 && (
-                        <div className="fixed bottom-10 right-16 z-50">
-                          <button
-                            onClick={nextQuestion}
-                            className="flex items-center gap-2 px-10 py-5 bg-green-600 text-white rounded-2xl font-bold text-2xl shadow-xl hover:bg-green-700 transition-all border-2 border-green-700"
-                            style={{ minWidth: '200px', fontWeight: 700 }}
-                          >
-                            Next <span className="ml-2 text-3xl">➡</span>
-                          </button>
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
