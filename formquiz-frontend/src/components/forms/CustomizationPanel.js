@@ -84,6 +84,18 @@ const CustomizationPanel = ({ customization, setCustomization }) => {
   const [bgImageError, setBgImageError] = useState('');
   const [logoImageError, setLogoImageError] = useState('');
 
+  // Add local state for input fields to avoid locking input during validation
+  const [bgImageInput, setBgImageInput] = useState(customization.backgroundImage || '');
+  const [logoImageInput, setLogoImageInput] = useState(customization.logoImage || '');
+
+  // Update local state on prop change (for editing existing forms)
+  React.useEffect(() => {
+    setBgImageInput(customization.backgroundImage || '');
+  }, [customization.backgroundImage]);
+  React.useEffect(() => {
+    setLogoImageInput(customization.logoImage || '');
+  }, [customization.logoImage]);
+
   const validateImageUrl = (url, cb) => {
     if (!url) {
       cb(false);
@@ -130,6 +142,33 @@ const CustomizationPanel = ({ customization, setCustomization }) => {
         [field]: value
       }));
     }
+  };
+
+  // Validate on blur or Enter
+  const handleImageInputBlur = (field, value) => {
+    if (!value) {
+      if (field === 'backgroundImage') setBgImageError('');
+      if (field === 'logoImage') setLogoImageError('');
+      setCustomization(prev => ({ ...prev, [field]: '' }));
+      return;
+    }
+    validateImageUrl(value, (isValid) => {
+      if (field === 'backgroundImage') {
+        if (isValid) {
+          setBgImageError('');
+          setCustomization(prev => ({ ...prev, backgroundImage: value }));
+        } else {
+          setBgImageError('Invalid image URL. Please use a direct/public image link.');
+        }
+      } else if (field === 'logoImage') {
+        if (isValid) {
+          setLogoImageError('');
+          setCustomization(prev => ({ ...prev, logoImage: value }));
+        } else {
+          setLogoImageError('Invalid logo image URL. Please use a direct/public image link.');
+        }
+      }
+    });
   };
 
   const handleImageUpload = async (field, e) => {
@@ -186,8 +225,10 @@ const CustomizationPanel = ({ customization, setCustomization }) => {
                   <input
                     type="text"
                     placeholder="Paste image URL here (e.g. Google Drive public link)"
-                    value={customization.backgroundImage}
-                    onChange={e => handleChange('backgroundImage', e.target.value)}
+                    value={bgImageInput}
+                    onChange={e => setBgImageInput(e.target.value)}
+                    onBlur={e => handleImageInputBlur('backgroundImage', e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.target.blur(); } }}
                   />
                   {bgImageError && <div style={{color: 'red', fontSize: 13, marginTop: 4}}>{bgImageError}</div>}
                   {customization.backgroundImage && !bgImageError && (
@@ -266,8 +307,10 @@ const CustomizationPanel = ({ customization, setCustomization }) => {
                 <input
                   type="text"
                   placeholder="Paste logo image URL here (e.g. Google Drive public link)"
-                  value={customization.logoImage}
-                  onChange={e => handleChange('logoImage', e.target.value)}
+                  value={logoImageInput}
+                  onChange={e => setLogoImageInput(e.target.value)}
+                  onBlur={e => handleImageInputBlur('logoImage', e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.target.blur(); } }}
                 />
                 {logoImageError && <div style={{color: 'red', fontSize: 13, marginTop: 4}}>{logoImageError}</div>}
                 {customization.logoImage && !logoImageError && (
