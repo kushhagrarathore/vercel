@@ -38,6 +38,7 @@ const FormCardRow = ({
   const [copied, setCopied] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const toggleRef = React.useRef(null);
+  // eslint-disable-next-line no-unused-vars
   const [popoverStyle, setPopoverStyle] = useState({});
   const [popoverCoords, setPopoverCoords] = useState({ top: 0, left: 0 });
 
