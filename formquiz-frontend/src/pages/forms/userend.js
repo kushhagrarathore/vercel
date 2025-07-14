@@ -222,6 +222,15 @@ export default function LiveQuizUser() {
     localStorage.setItem('quizAnswers', JSON.stringify(answers));
   }, [answers]);
 
+  // Auto-join as Anonymous if not logged in and no username is set
+  useEffect(() => {
+    if (!user && !username && !hasEnteredName) {
+      setUsername('Anonymous');
+      setHasEnteredName(true);
+      setShowUserPrompt(false);
+    }
+  }, [user, username, hasEnteredName]);
+
   const currentQuestion = slides[questionIndex];
   const totalQuestions = slides.length;
   const isFirst = questionIndex === 0;
@@ -476,6 +485,7 @@ export default function LiveQuizUser() {
   if (!currentQuestion && !submitted) return <div className="p-4">Loading...</div>;
 
   if (showUserPrompt && !submitted) {
+    // Only show if user explicitly logs out or clears username
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: customization.background, fontFamily: customization.fontFamily }}>
         <div className="bg-white shadow-2xl rounded-3xl p-8 max-w-md w-full text-center">
@@ -492,7 +502,10 @@ export default function LiveQuizUser() {
             <Button
               className="bg-blue-600 text-white font-bold px-8 py-3 rounded-lg"
               onClick={() => {
-                if (username.trim() !== "") setShowUserPrompt(false);
+                if (username.trim() !== "") {
+                  setHasEnteredName(true);
+                  setShowUserPrompt(false);
+                }
               }}
               disabled={username.trim() === ""}
             >
