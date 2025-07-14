@@ -336,6 +336,68 @@ const JoinQuiz = () => {
     };
   }, [joined, liveQuiz, roomCode]);
 
+  // Auto-join as Anonymous if roomCode is present and not already joined
+  useEffect(() => {
+    if (roomCode && !joined && !joinAttempted) {
+      setUsername('Anonymous');
+      setJoinAttempted(true);
+      (async () => {
+        setJoining(true);
+        const { data, error } = await supabase
+          .from('sessions')
+          .select('*')
+          .eq('code', roomCode)
+          .single();
+        if (error || !data) {
+          setError('Invalid room code.');
+          setLiveQuiz(null);
+          setJoining(false);
+          fetchAvailableRooms();
+          return;
+        }
+        // Register participant as Anonymous
+        const pid = await (async () => {
+          // Check for duplicate in session_participants table
+          const { data: existing } = await supabase
+            .from('session_participants')
+            .select('id, status')
+            .eq('session_code', roomCode)
+            .eq('name', 'Anonymous');
+          if (existing && existing.length > 0) {
+            setParticipantId(existing[0].id);
+            setParticipantStatus(existing[0].status);
+            return existing[0].id;
+          } else {
+            const { data: inserted } = await supabase.from('session_participants').insert([
+              {
+                session_code: roomCode,
+                name: 'Anonymous',
+                status: 'waiting',
+                score: 0,
+              }
+            ]).select();
+            if (inserted && inserted.length > 0) {
+              setParticipantId(inserted[0].id);
+              setParticipantStatus('waiting');
+              return inserted[0].id;
+            }
+          }
+        })();
+        if (!pid) {
+          setJoining(false);
+          return;
+        }
+        setParticipantId(pid);
+        setLiveQuiz(data);
+        setJoined(true);
+        setJoining(false);
+        if (data.current_slide_index != null) {
+          fetchQuestion(data.current_slide_index);
+        }
+      })();
+    }
+  }, [roomCode, joined, joinAttempted]);
+
   const fetchQuestion = async (questionIdOrIndex) => {
     console.log('[fetchQuestion] called with:', questionIdOrIndex, 'liveQuiz:', liveQuiz);
     if (typeof questionIdOrIndex === 'number' && liveQuiz?.quiz_id != null) {
@@ -415,6 +477,18 @@ const JoinQuiz = () => {
     );
   }
   if (!joined) {
+    // Only show join UI if no roomCode or auto-join failed
+    if (roomCode && joinAttempted) {
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)' }}>
+          <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 4px 24px rgba(60,60,100,0.10)', padding: 32, minWidth: 320, maxWidth: 350, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <h2 style={{ fontWeight: 800, fontSize: 26, color: '#2563eb', marginBottom: 20, letterSpacing: '-1px', textAlign: 'center' }}>Joining as Anonymous...</h2>
+            {error && <div style={{ color: 'red', marginTop: 12 }}>{error}</div>}
+          </div>
+        </div>
+      );
+    }
+    // Fallback: show join UI if no roomCode in URL
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)' }}>
         <div style={{ background: '#fff', borderRadius: 16, boxShadow: '0 4px 24px rgba(60,60,100,0.10)', padding: 32, minWidth: 320, maxWidth: 350, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -436,16 +510,7 @@ const JoinQuiz = () => {
             maxLength={32}
           />
           <button onClick={handleJoin} style={{ padding: '12px 0', fontSize: 17, borderRadius: 8, background: '#2563eb', color: '#fff', border: 'none', fontWeight: 700, width: '100%', marginBottom: 8, cursor: 'pointer', boxShadow: '0 2px 8px #e0e7ff' }}>Join</button>
-          {joinAttempted && error && <div style={{ color: 'red', marginTop: 8, fontSize: 15 }}>{error}
-            {availableRooms.length > 0 && (
-              <div style={{ color: '#888', fontSize: 13, marginTop: 8 }}>
-                <div>Available room codes:</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {availableRooms.map(code => <span key={code} style={{ background: '#e0e7ff', borderRadius: 6, padding: '2px 8px', margin: 2 }}>{code}</span>)}
-                </div>
-              </div>
-            )}
-          </div>}
+          {error && <div style={{ color: 'red', marginTop: 12 }}>{error}</div>}
         </div>
       </div>
     );
