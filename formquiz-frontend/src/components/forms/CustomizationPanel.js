@@ -81,12 +81,55 @@ const CustomizationPanel = ({ customization, setCustomization }) => {
     button: false,
     logo: false,
   });
+  const [bgImageError, setBgImageError] = useState('');
+  const [logoImageError, setLogoImageError] = useState('');
+
+  const validateImageUrl = (url, cb) => {
+    if (!url) {
+      cb(false);
+      return;
+    }
+    const img = new window.Image();
+    img.onload = () => cb(true);
+    img.onerror = () => cb(false);
+    img.src = url;
+  };
 
   const handleChange = (field, value) => {
-    setCustomization(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    if (field === 'backgroundImage') {
+      if (!value) {
+        setBgImageError('');
+        setCustomization(prev => ({ ...prev, backgroundImage: '' }));
+        return;
+      }
+      validateImageUrl(value, (isValid) => {
+        if (isValid) {
+          setBgImageError('');
+          setCustomization(prev => ({ ...prev, backgroundImage: value }));
+        } else {
+          setBgImageError('Invalid image URL. Please use a direct/public image link.');
+        }
+      });
+    } else if (field === 'logoImage') {
+      if (!value) {
+        setLogoImageError('');
+        setCustomization(prev => ({ ...prev, logoImage: '' }));
+        return;
+      }
+      validateImageUrl(value, (isValid) => {
+        if (isValid) {
+          setLogoImageError('');
+          setCustomization(prev => ({ ...prev, logoImage: value }));
+        } else {
+          setLogoImageError('Invalid logo image URL. Please use a direct/public image link.');
+        }
+      });
+    } else {
+      setCustomization(prev => ({
+        ...prev,
+        [field]: value
+      }));
+    }
   };
 
   const handleImageUpload = async (field, e) => {
@@ -139,13 +182,15 @@ const CustomizationPanel = ({ customization, setCustomization }) => {
                   />
                 </div>
                 <div className="image-upload-row">
-                  <label>Image:</label>
+                  <label>Image URL (Google Drive or direct link):</label>
                   <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => handleImageUpload('backgroundImage', e)}
+                    type="text"
+                    placeholder="Paste image URL here (e.g. Google Drive public link)"
+                    value={customization.backgroundImage}
+                    onChange={e => handleChange('backgroundImage', e.target.value)}
                   />
-                  {customization.backgroundImage && (
+                  {bgImageError && <div style={{color: 'red', fontSize: 13, marginTop: 4}}>{bgImageError}</div>}
+                  {customization.backgroundImage && !bgImageError && (
                     <div className="image-preview"
                       style={{ backgroundImage: `url(${customization.backgroundImage})` }} />
                   )}
@@ -217,12 +262,15 @@ const CustomizationPanel = ({ customization, setCustomization }) => {
             <h4 onClick={() => setOpenSection(s => ({ ...s, logo: !s.logo }))} className="customization-accordion-title">Logo {openSection.logo ? '▼' : '▶'}</h4>
             {openSection.logo && (
               <div className="image-upload-row">
+                <label>Logo Image URL (Google Drive or direct link):</label>
                 <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleImageUpload('logoImage', e)}
+                  type="text"
+                  placeholder="Paste logo image URL here (e.g. Google Drive public link)"
+                  value={customization.logoImage}
+                  onChange={e => handleChange('logoImage', e.target.value)}
                 />
-                {customization.logoImage && (
+                {logoImageError && <div style={{color: 'red', fontSize: 13, marginTop: 4}}>{logoImageError}</div>}
+                {customization.logoImage && !logoImageError && (
                   <div className="logo-preview">
                     <img src={customization.logoImage} alt="Logo preview" />
                   </div>

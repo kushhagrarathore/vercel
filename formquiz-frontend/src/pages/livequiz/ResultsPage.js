@@ -452,5 +452,76 @@ function formatTimeAgo(dateString) {
 
 // Export results as CSV
 function handleExportResults() {
-  // ...implement CSV export logic here...
+  // Get questions and responses from the current scope
+  const questions = window.__QUESTIONS__ || [];
+  const responses = window.__RESPONSES__ || [];
+
+  // Fallback: try to get from React state if available
+  if (!questions.length && window.__getQuestions__) {
+    window.__getQuestions__();
+  }
+  if (!responses.length && window.__getResponses__) {
+    window.__getResponses__();
+  }
+
+  // Get the table headers
+  const headers = [
+    'User',
+    'Submitted At',
+    'Score',
+    ...questions.map(q => q.question_text)
+  ];
+
+  // Build CSV rows
+  const rows = [headers];
+  responses.forEach(resp => {
+    let answersObj = {};
+    try {
+      answersObj = typeof resp.answers === 'string' ? JSON.parse(resp.answers) : resp.answers;
+    } catch (e) {
+      answersObj = {};
+    }
+    // For quiz, answers may be array of {questionId, selectedIndex, text}
+    const answerMap = Array.isArray(answersObj)
+      ? Object.fromEntries(answersObj.map(a => [a.questionId || a.question_id, a.selectedIndex !== undefined ? a.selectedIndex : a.text || '-']))
+      : answersObj;
+    const row = [
+      resp.username || resp.user_id || 'Anonymous',
+      new Date(resp.submitted_at).toLocaleString(),
+      resp.score ?? '-',
+      ...questions.map(q => {
+        // Try to match the table display logic
+        if (Array.isArray(resp.answers)) {
+          const found = resp.answers.find(a => (a.questionId || a.question_id) === q.id);
+          if (found) {
+            if (found.selectedIndex !== undefined && q.options && q.options[found.selectedIndex]) {
+              return q.options[found.selectedIndex];
+            } else if (found.text) {
+              return found.text;
+            }
+          }
+          return '-';
+        } else if (resp.answers && resp.answers[q.id]) {
+          return resp.answers[q.id];
+        } else {
+          return '-';
+        }
+      })
+    ];
+    rows.push(row);
+  });
+
+  // Convert to CSV string
+  const csv = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+
+  // Download as file
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'quiz_results.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }

@@ -75,11 +75,15 @@ const FormView = () => {
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-
+      let user_id = null;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        user_id = user?.id || null;
+      } catch {}
+      // Always allow anonymous submission
       const { error } = await supabase.from('responses').insert([{
         form_id: formId,
-        user_id: user?.id || null, // Support anonymous users
+        user_id: user_id, // null if not logged in
         answers: answers,
         submitted_at: new Date().toISOString(),
       }]);

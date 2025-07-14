@@ -276,7 +276,7 @@ export default function LiveQuizUser() {
     const responseData = {
       quiz_id: quizId || localStorage.getItem('quizId') || null,
       user_id,
-      username: username,
+      username: username && username.trim() ? username : 'Anonymous',
       answers,
       score, // push the robust score into the DB
       submitted_at: new Date().toISOString(),
