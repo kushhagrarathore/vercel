@@ -222,14 +222,8 @@ export default function LiveQuizUser() {
     localStorage.setItem('quizAnswers', JSON.stringify(answers));
   }, [answers]);
 
-  // Auto-join as Anonymous if not logged in and no username is set
-  useEffect(() => {
-    if (!user && !username && !hasEnteredName) {
-      setUsername('Anonymous');
-      setHasEnteredName(true);
-      setShowUserPrompt(false);
-    }
-  }, [user, username, hasEnteredName]);
+  // Remove auto-assign Anonymous and always show prompt before quiz
+  // (Remove the useEffect that sets username to 'Anonymous' automatically)
 
   const currentQuestion = slides[questionIndex];
   const totalQuestions = slides.length;
@@ -488,36 +482,25 @@ export default function LiveQuizUser() {
     // Only show if user explicitly logs out or clears username
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: customization.background, fontFamily: customization.fontFamily }}>
-        <div className="bg-white shadow-2xl rounded-3xl p-8 max-w-md w-full text-center">
-          <h2 className="text-2xl font-bold mb-6" style={{ color: customization.textColor }}>Enter Username or Login</h2>
+        <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
+          <h2 className="text-2xl font-bold mb-4">Enter your name to join the quiz</h2>
           <input
+            className="border border-gray-300 rounded px-4 py-2 w-full mb-4"
             type="text"
+            placeholder="Your name (or leave blank for Anonymous)"
             value={username}
             onChange={e => setUsername(e.target.value)}
-            placeholder="Enter your username"
-            className="w-full border-2 rounded-lg px-4 py-3 mb-4 text-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
-            style={{ fontFamily: customization.fontFamily, color: customization.textColor }}
           />
-          <div className="flex flex-col gap-2">
-            <Button
-              className="bg-blue-600 text-white font-bold px-8 py-3 rounded-lg"
-              onClick={() => {
-                if (username.trim() !== "") {
-                  setHasEnteredName(true);
-                  setShowUserPrompt(false);
-                }
-              }}
-              disabled={username.trim() === ""}
-            >
-              Continue as Guest
-            </Button>
-            <Button
-              className="bg-gray-100 text-blue-700 font-bold px-8 py-3 rounded-lg border border-blue-600"
-              onClick={() => navigate('/login')}
-            >
-              Login
-            </Button>
-          </div>
+          <button
+            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full"
+            onClick={() => {
+              setHasEnteredName(true);
+              setShowUserPrompt(false);
+              if (!username.trim()) setUsername('Anonymous');
+            }}
+          >
+            Continue
+          </button>
         </div>
       </div>
     );
