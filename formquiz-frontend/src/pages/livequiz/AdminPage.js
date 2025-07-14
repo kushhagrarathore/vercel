@@ -740,7 +740,7 @@ export default function AdminPage() {
                       />
                     ) : null}
                     {/* Next Button - bottom right, floating */}
-                    {quizPhase === 'question' && timeLeft > 0 && (
+                    {quizPhase === 'question' && (
                       <div className="fixed bottom-10 right-16 z-50">
                         <button
                           onClick={nextQuestion}
