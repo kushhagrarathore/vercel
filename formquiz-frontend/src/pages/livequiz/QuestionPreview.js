@@ -88,19 +88,20 @@ export default function QuestionPreview({
     return (
       <div
         key={index}
-        className={`flex-1 flex items-center justify-center px-14 py-14 rounded-2xl border-4 transition-all duration-200 cursor-pointer group text-4xl md:text-5xl lg:text-6xl font-extrabold ${
+        className={`flex items-center justify-center rounded-2xl border-4 transition-all duration-200 cursor-pointer group font-extrabold ${
           isCorrect && showCorrect ? 'border-green-500 bg-green-50' : isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
         }`}
         style={{
           color: c.textColor,
           fontFamily: c.fontFamily,
-          fontSize: Math.max(40, c.fontSize + 10),
           fontWeight: 800,
           fontStyle: c.italic ? 'italic' : 'normal',
-          minHeight: '140px',
-          width: '46vw', // 45–48% of viewport width
-          maxWidth: '800px',
-          minWidth: '340px',
+          width: '44vw',
+          maxWidth: '700px',
+          minWidth: '320px',
+          height: '200px',
+          minHeight: '200px',
+          maxHeight: '200px',
           boxShadow: '0 4px 24px 0 rgba(44,62,80,0.10)',
           borderRadius: c.borderRadius * 0.7,
           borderWidth: 4,
@@ -108,14 +109,44 @@ export default function QuestionPreview({
           background: isCorrect && showCorrect ? '#dcfce7' : isSelected ? '#eff6ff' : '#fff',
           transition: 'all 0.2s',
           pointerEvents: editable ? 'auto' : 'none',
-          justifyContent: 'center',
-          margin: '0 0.7vw', // slightly narrower margin
+          margin: '0 0.7vw',
           alignItems: 'center',
-          display: 'flex',
+          padding: '8px 18px',
+          overflow: 'hidden',
         }}
         onClick={editable && onOptionClick ? () => onOptionClick(index) : undefined}
       >
-        <span className="flex-1 text-center font-semibold break-words">{option || <span className="text-gray-400">Option {index + 1}</span>}</span>
+        <span
+          className="option-text text-center font-semibold"
+          style={{
+            wordBreak: 'break-word',
+            overflowWrap: 'break-word',
+            textAlign: 'center',
+            width: '100%',
+            maxWidth: '100%',
+            whiteSpace: 'pre-line',
+            display: 'block',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            lineHeight: 1.18,
+            fontSize: (() => {
+              const text = (option || '').toString();
+              const lines = text.split(/\r?\n| /).reduce((acc, word) => {
+                if (!acc.length) return [word];
+                const last = acc[acc.length - 1];
+                if ((last + ' ' + word).length > 32) acc.push(word);
+                else acc[acc.length - 1] = last + ' ' + word;
+                return acc;
+              }, []);
+              if (lines.length <= 1) return '2.2rem';
+              if (lines.length === 2) return '1.7rem';
+              if (lines.length === 3) return '1.2rem';
+              return '1rem';
+            })(),
+          }}
+        >
+          {option || <span className="text-gray-400">Option {index + 1}</span>}
+        </span>
         {showCorrect && isCorrect && (
           <span className="ml-4 text-green-600 font-bold text-4xl">✓</span>
         )}

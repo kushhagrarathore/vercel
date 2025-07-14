@@ -799,7 +799,23 @@ export default function AdminPage() {
                           `${showCorrect && index === currentQuestion.correct_answer_index ? 'text-green-600 font-semibold' : 'text-gray-700'} flex items-center gap-2`
                         }
                       >
-                        {option}
+                        <span
+                          style={{
+                            wordBreak: 'break-word',
+                            overflowWrap: 'break-word',
+                            textAlign: 'center',
+                            fontSize: 'clamp(16px, 2vw, 24px)',
+                            lineHeight: 1.18,
+                            width: '100%',
+                            maxWidth: '100%',
+                            whiteSpace: 'pre-line',
+                            display: 'block',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {option}
+                        </span>
                         {showCorrect && index === currentQuestion.correct_answer_index && <span className="ml-2 text-green-600 font-bold">✓</span>}
                       </li>
                     ))}
@@ -821,19 +837,38 @@ export default function AdminPage() {
                           const count = pollResults[idx] || 0;
                           const total = pollResults.reduce((a, b) => a + b, 0) || 1;
                           const percent = Math.round((count / total) * 100);
+                          const isCorrect = idx === currentQuestion.correct_answer_index;
                           return (
-                            <div key={idx} className={`flex items-center ${idx === currentQuestion.correct_answer_index ? 'bg-green-100' : 'bg-gray-100'} rounded p-2`}>
-                              <span className="flex-1">
-                                {option}
-                                {idx === currentQuestion.correct_answer_index && <span className="ml-2 text-green-600 font-bold">✓</span>}
-                              </span>
-                              <div className="w-1/2 mx-2 bg-gray-200 rounded h-4 relative">
-                                <div
-                                  className={`h-4 rounded ${idx === currentQuestion.correct_answer_index ? 'bg-green-400' : 'bg-blue-400'}`}
-                                  style={{ width: `${percent}%` }}
-                                ></div>
-                                <span className="absolute left-2 top-0 text-xs text-black">{count} ({percent}%)</span>
-                              </div>
+                            <div key={idx} className={`flex items-center justify-center rounded-2xl border-4 shadow-lg text-3xl font-semibold ${isCorrect ? 'bg-green-100 border-green-500' : 'bg-gray-100 border-gray-300'}`}
+                              style={{ width: '44vw', maxWidth: '700px', minWidth: '320px', height: '200px', minHeight: '200px', maxHeight: '200px', margin: '0 0.7vw', padding: '8px 18px', overflow: 'hidden' }}
+                            >
+                                <span className="flex-1 text-center" style={{
+                                  wordBreak: 'break-word',
+                                  overflowWrap: 'break-word',
+                                  textAlign: 'center',
+                                  width: '100%',
+                                  maxWidth: '100%',
+                                  whiteSpace: 'pre-line',
+                                  display: 'block',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  lineHeight: 1.18,
+                                  fontSize: (() => {
+                                    const text = (option || '').toString();
+                                    const lines = text.split(/\r?\n| /).reduce((acc, word) => {
+                                      if (!acc.length) return [word];
+                                      const last = acc[acc.length - 1];
+                                      if ((last + ' ' + word).length > 32) acc.push(word);
+                                      else acc[acc.length - 1] = last + ' ' + word;
+                                      return acc;
+                                    }, []);
+                                    if (lines.length <= 1) return '2.2rem';
+                                    if (lines.length === 2) return '1.7rem';
+                                    if (lines.length === 3) return '1.2rem';
+                                    return '1rem';
+                                  })(),
+                                }}>{option}</span>
+                              {isCorrect && <span className="ml-2 text-green-600 font-bold">✓</span>}
                             </div>
                           );
                         })}

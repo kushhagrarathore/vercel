@@ -696,7 +696,7 @@ export default function QuestionsPage() {
             <div key={colIdx} style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
               {idx !== null && (
                 <div
-                  className={`flex-1 flex items-center justify-center px-10 py-8 rounded-2xl border-2 transition-all duration-200 group bg-white relative ${form.correct_answer_index === idx ? 'border-green-500 ring-2 ring-green-400' : 'border-gray-200'}`}
+                  className={`flex-1 flex items-center px-6 py-6 rounded-2xl border-2 transition-all duration-200 group bg-white relative ${form.correct_answer_index === idx ? 'border-green-500 ring-2 ring-green-400 bg-green-50/60' : 'border-gray-200'}`}
                   style={{
                     color: getSettings(form.settings).textColor,
                     fontFamily: getSettings(form.settings).fontFamily,
@@ -713,27 +713,9 @@ export default function QuestionsPage() {
                     transition: 'all 0.2s',
                     margin: '0 0.5rem',
                     alignItems: 'center',
+                    position: 'relative',
                   }}
                 >
-                  {/* Mark as correct answer button */}
-                  <button
-                    type="button"
-                    className={`mr-3 flex items-center justify-center w-9 h-9 rounded-full border-2 transition-colors duration-150 ${form.correct_answer_index === idx ? 'bg-green-500 border-green-600 text-white' : 'bg-gray-100 border-gray-300 text-gray-400 hover:bg-green-100 hover:border-green-400 hover:text-green-600'}`}
-                    title="Mark as correct answer"
-                    aria-label="Mark as correct answer"
-                    onClick={() => setForm({ ...form, correct_answer_index: idx })}
-                    tabIndex={0}
-                  >
-                    {form.correct_answer_index === idx ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" fill="none" />
-                      </svg>
-                    )}
-                  </button>
                   <input
                     className="flex-1 text-left px-2 font-semibold break-words bg-transparent outline-none border-none text-lg"
                     type="text"
@@ -742,19 +724,54 @@ export default function QuestionsPage() {
                     onChange={e => handleOptionChange(idx, e.target.value)}
                     maxLength={100}
                     required
+                    style={{ minWidth: 0 }}
                   />
-                  {/* Remove option button */}
+                  {/* Action Buttons: Mark as Correct & Remove Option */}
+                  {/* Remove Option Button - absolutely positioned, minimalist */}
                   <button
                     type="button"
-                    className={`ml-3 flex items-center justify-center w-9 h-9 rounded-full border-2 border-gray-300 bg-gray-100 text-gray-500 hover:bg-red-100 hover:border-red-400 hover:text-red-600 transition-colors duration-150 ${form.options.length <= 2 ? 'opacity-40 cursor-not-allowed' : ''}`}
+                    className={`absolute -top-3 -right-3 flex items-center justify-center w-5 h-5 rounded-full border shadow transition-all duration-150 focus:outline-none
+                      ${form.options.length <= 2
+                        ? 'bg-gray-100 border-gray-200 text-gray-300 cursor-not-allowed opacity-40'
+                        : 'bg-white border-gray-300 text-gray-400 hover:bg-red-100 hover:border-red-400 hover:text-red-600'}
+                    `}
                     title="Remove option"
                     aria-label="Remove option"
                     onClick={() => form.options.length > 2 && removeOption(idx)}
                     tabIndex={0}
                     disabled={form.options.length <= 2}
+                    style={{ zIndex: 10 }}
                   >
-                    <span className="text-2xl font-bold leading-none">×</span>
+                    {/* Small X icon */}
+                    <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l8 8M6 14L14 6" />
+                    </svg>
                   </button>
+                  {/* Mark as Correct Button - stays inline */}
+                  <div className="flex flex-row gap-2 ml-4 items-center justify-center min-w-[32px]">
+                    <button
+                      type="button"
+                      className={`option-action-btn flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all duration-150 shadow-sm focus:outline-none
+                        ${form.correct_answer_index === idx
+                          ? 'bg-green-500 border-green-600 text-white scale-110 shadow-green-200'
+                          : 'bg-white border-gray-300 text-gray-400 hover:bg-green-100 hover:border-green-400 hover:text-green-600'}
+                      `}
+                      title="Mark as correct answer"
+                      aria-label="Mark as correct answer"
+                      onClick={() => setForm({ ...form, correct_answer_index: idx })}
+                      tabIndex={0}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth={2}>
+                        {form.correct_answer_index === idx ? (
+                          // Filled checkmark
+                          <path fill="currentColor" stroke="currentColor" strokeWidth="2" d="M7.75 12.25l-2-2a.75.75 0 111.06-1.06l1.47 1.47 4.47-4.47a.75.75 0 111.06 1.06l-5 5z" />
+                        ) : (
+                          // Just a circle
+                          <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="2" fill="none" />
+                        )}
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
