@@ -821,8 +821,7 @@ export default function AdminPage() {
                     ))}
                   </ul>
                   {quizPhase === 'question' && timeLeft > 0 && (
-                    <div className="mt-4 text-xl font-bold text-purple-700 flex items-center gap-2 bg-white/80 px-4 py-1 rounded-full shadow w-fit">
-                      <svg className="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" /><path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                    <div className="mt-4 text-xl font-bold text-purple-700 bg-white/80 px-4 py-1 rounded-full shadow w-fit">
                       {timeLeft}s
                     </div>
                   )}
