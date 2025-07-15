@@ -134,10 +134,6 @@ if (typeof document !== 'undefined' && !document.getElementById('results-enhance
   document.head.appendChild(style);
 }
 
-function isUUID(str) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
-}
-
 export default function LiveQuizUser() {
   const query = useQuery();
   const quizId = query.get("quizId");
@@ -168,28 +164,12 @@ export default function LiveQuizUser() {
         setLoading(false);
         return;
       }
-      // Try to fetch by id only if id is a valid UUID
-      let quizData = null;
-      let _quizError = null;
-      if (id && isUUID(id)) {
-        const { data, error } = await supabase
-          .from('quizzes')
-          .select('*')
-          .eq('id', id)
-          .single();
-        quizData = data;
-        _quizError = error;
-      }
-      // If not found or not a UUID, try by code
-      if ((!quizData || _quizError) && id) {
-        const { data, error } = await supabase
-          .from('quizzes')
-          .select('*')
-          .eq('code', id)
-          .single();
-        quizData = data;
-        _quizError = error;
-      }
+      // Fetch quiz record for customization
+      const { data: quizData, error: _quizError } = await supabase
+        .from('quizzes')
+        .select('*')
+        .eq('id', id)
+        .single();
       if (_quizError || !quizData) {
         setError('Quiz not found.');
         setLoading(false);
@@ -211,7 +191,7 @@ export default function LiveQuizUser() {
       const { data: slidesData, error: _slidesError } = await supabase
         .from('slides')
         .select('*')
-        .eq('quiz_id', quizData.id)
+        .eq('quiz_id', id)
         .order('slide_index');
       if (_slidesError || !slidesData || slidesData.length === 0) {
         setError('No slides found for this quiz.');
