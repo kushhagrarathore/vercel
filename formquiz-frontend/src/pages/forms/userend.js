@@ -158,6 +158,7 @@ export default function LiveQuizUser() {
   const [username, setUsername] = useState("");
   const [hasEnteredName, setHasEnteredName] = useState(false);
   const [showUserPrompt, setShowUserPrompt] = useState(false);
+  const [quizWindowStatus, setQuizWindowStatus] = useState("open"); // 'open', 'not_started', 'ended'
 
   // Show error if no quiz code/id is present
   useEffect(() => {
@@ -216,16 +217,35 @@ export default function LiveQuizUser() {
         }
         setCustomization(custom);
       }
-      // Fetch slides
-      const { data: slidesData, error: _slidesError } = await supabase
+      // Always fetch slides, regardless of timer
+      let slidesData, _slidesError;
+      ({ data: slidesData, error: _slidesError } = await supabase
         .from('slides')
         .select('*')
         .eq('quiz_id', quizData.id)
-        .order('slide_index');
+        .order('slide_index'));
+      if ((!slidesData || slidesData.length === 0) && quizData.code) {
+        ({ data: slidesData, error: _slidesError } = await supabase
+          .from('slides')
+          .select('*')
+          .eq('quiz_id', quizData.code)
+          .order('slide_index'));
+      }
       if (_slidesError || !slidesData || slidesData.length === 0) {
         setError('No slides found for this quiz.');
         setLoading(false);
         return;
+      }
+      // Timer access control (after slides are fetched)
+      const now = new Date();
+      const start = quizData.start_time ? new Date(quizData.start_time) : null;
+      const end = quizData.end_time ? new Date(quizData.end_time) : null;
+      if (start && now < start) {
+        setQuizWindowStatus("not_started");
+      } else if (end && now > end) {
+        setQuizWindowStatus("ended");
+      } else {
+        setQuizWindowStatus("open");
       }
       // Shuffle the slides for random order
       const shuffledSlides = shuffleArray(slidesData);
@@ -502,10 +522,16 @@ export default function LiveQuizUser() {
     fetchScores();
   }, [submitted, quizId]);
 
+  // In the main render, only block quiz participation if quizWindowStatus is not 'open', but always show quiz title and questions if slides exist.
   if (error) return <div style={{ color: 'red', padding: 40 }}>{error}</div>;
-  if (loading) return <div style={{ padding: 40 }}>Loading...</div>;
-  if (!loading && slides.length === 0) return <div style={{ color: 'red', padding: 40 }}>No slides found for this quiz.</div>;
-  if (!currentQuestion && !submitted) return <div className="p-4">Loading...</div>;
+  if (loading) return <div className="p-4">Loading...</div>;
+  if (slides.length === 0) return <div style={{ color: 'red', padding: 40 }}>No slides found for this quiz.</div>;
+  if (quizWindowStatus === "not_started") {
+    return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#b91c1c', fontWeight: 600, textAlign: 'center' }}>Sorry, the link is closed. Please contact the admin.<br/>The quiz has not started yet.</div>;
+  }
+  if (quizWindowStatus === "ended") {
+    return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#b91c1c', fontWeight: 600, textAlign: 'center' }}>Sorry, the link is closed. Please contact the admin.<br/>The quiz has ended.</div>;
+  }
 
   if (showUserPrompt && !submitted) {
     // Only show if user explicitly logs out or clears username
