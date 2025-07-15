@@ -170,6 +170,24 @@ function calculateScore(slides, userAnswers) {
   return score;
 }
 
+// Add at the top, after imports:
+function toUTCISOStringFromLocal(localDateTimeString) {
+  // localDateTimeString: 'YYYY-MM-DDTHH:mm' (assumed local time)
+  const [date, time] = localDateTimeString.split('T');
+  const [year, month, day] = date.split('-').map(Number);
+  const [hour, minute] = time.split(':').map(Number);
+  // Create a Date object in local time
+  const local = new Date(year, month - 1, day, hour, minute);
+  return new Date(local.getTime() - (local.getTimezoneOffset() * 60000)).toISOString();
+}
+function toLocalDateTimeInputValue(utcISOString) {
+  // Converts UTC ISO string to 'YYYY-MM-DDTHH:mm' in local time for input
+  if (!utcISOString) return '';
+  const date = new Date(utcISOString);
+  const pad = n => n.toString().padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 // 🔲 Main Quiz Builder
 export default function Quiz() {
   const { quizId } = useParams();
@@ -324,6 +342,8 @@ export default function Quiz() {
               })));
               setSelectedSlide(0);
             }
+            setStartDateTime(quizData.start_time ? toLocalDateTimeInputValue(quizData.start_time) : "");
+            setEndDateTime(quizData.end_time ? toLocalDateTimeInputValue(quizData.end_time) : "");
           }
         } catch (error) {
           console.error('Error loading AI-generated quiz:', error);
@@ -367,6 +387,8 @@ export default function Quiz() {
         })));
         setSelectedSlide(0);
       }
+      setStartDateTime(quizData.start_time ? toLocalDateTimeInputValue(quizData.start_time) : "");
+      setEndDateTime(quizData.end_time ? toLocalDateTimeInputValue(quizData.end_time) : "");
     }
     fetchQuizAndSlides();
   }, [quizId]);
@@ -505,6 +527,8 @@ export default function Quiz() {
           user_id,
           created_by: email,
           customization_settings,
+          start_time: startDateTime ? toUTCISOStringFromLocal(startDateTime) : null,
+          end_time: endDateTime ? toUTCISOStringFromLocal(endDateTime) : null,
         }])
         .select()
         .single();
@@ -523,6 +547,8 @@ export default function Quiz() {
         .update({
           title,
           customization_settings,
+          start_time: startDateTime ? toUTCISOStringFromLocal(startDateTime) : null,
+          end_time: endDateTime ? toUTCISOStringFromLocal(endDateTime) : null,
         })
         .eq('id', publishedQuizId)
         .select()
@@ -650,6 +676,8 @@ export default function Quiz() {
 
   // Add state for customization tab
   const [customTab, setCustomTab] = useState('templates');
+  const [startDateTime, setStartDateTime] = useState("");
+  const [endDateTime, setEndDateTime] = useState("");
 
   return (
     <div style={gradientBg}>
@@ -1117,6 +1145,35 @@ export default function Quiz() {
                   <option value={28}>3xl</option>
                   <option value={32}>4xl</option>
                 </select>
+              </div>
+              {/* --- Quiz Availability Section: moved up for visibility --- */}
+              <hr className="my-4 border-blue-200" />
+              <div style={{ background: '#f3f6fd', borderRadius: 12, padding: 16, marginBottom: 8 }}>
+                <div className="font-semibold mb-2 text-blue-700" style={{ fontSize: 16 }}>Quiz Availability</div>
+                <div style={{ fontSize: 13, color: '#1e293b', marginBottom: 6 }}>
+                  <b>Current IST time:</b> {new Date(Date.now() + (5.5 * 60 * 60 * 1000 - new Date().getTimezoneOffset() * 60000)).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}<br/>
+                  <span style={{ color: '#64748b' }}>(All times are in IST)</span>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <label>
+                    <span className="text-sm">Start Date & Time</span>
+                    <input
+                      type="datetime-local"
+                      value={startDateTime}
+                      onChange={e => setStartDateTime(e.target.value)}
+                      className="w-full border rounded p-2 mt-1"
+                    />
+                  </label>
+                  <label>
+                    <span className="text-sm">End Date & Time</span>
+                    <input
+                      type="datetime-local"
+                      value={endDateTime}
+                      onChange={e => setEndDateTime(e.target.value)}
+                      className="w-full border rounded p-2 mt-1"
+                    />
+                  </label>
+                </div>
               </div>
               <div>
                 <div className="font-semibold mb-2 text-blue-700">Text Alignment</div>

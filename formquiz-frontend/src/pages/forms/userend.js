@@ -134,9 +134,14 @@ if (typeof document !== 'undefined' && !document.getElementById('results-enhance
   document.head.appendChild(style);
 }
 
+function isUUID(str) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
+}
+
 export default function LiveQuizUser() {
   const query = useQuery();
-  const quizId = query.get("quizId");
+  // Allow joining via either ?quizId=... or ?code=...
+  const quizId = query.get("quizId") || query.get("code");
   const [questionIndex, setQuestionIndex] = useState(0);
   const [slides, setSlides] = useState([]);
   const [quizTitle, setQuizTitle] = useState("Quiz");
@@ -153,6 +158,15 @@ export default function LiveQuizUser() {
   const [username, setUsername] = useState("");
   const [hasEnteredName, setHasEnteredName] = useState(false);
   const [showUserPrompt, setShowUserPrompt] = useState(false);
+  const [quizWindowStatus, setQuizWindowStatus] = useState("open"); // 'open', 'not_started', 'ended'
+
+  // Show error if no quiz code/id is present
+  useEffect(() => {
+    if (!quizId) {
+      setError('Quiz code not found in the link.');
+      setLoading(false);
+    }
+  }, [quizId]);
 
   // Fetch slides and customization from Supabase
   useEffect(() => {
@@ -164,12 +178,28 @@ export default function LiveQuizUser() {
         setLoading(false);
         return;
       }
-      // Fetch quiz record for customization
-      const { data: quizData, error: _quizError } = await supabase
-        .from('quizzes')
-        .select('*')
-        .eq('id', id)
-        .single();
+      // Try to fetch by id only if id is a valid UUID
+      let quizData = null;
+      let _quizError = null;
+      if (id && isUUID(id)) {
+        const { data, error } = await supabase
+          .from('quizzes')
+          .select('*')
+          .eq('id', id)
+          .single();
+        quizData = data;
+        _quizError = error;
+      }
+      // If not found or not a UUID, try by code
+      if ((!quizData || _quizError) && id) {
+        const { data, error } = await supabase
+          .from('quizzes')
+          .select('*')
+          .eq('code', id)
+          .single();
+        quizData = data;
+        _quizError = error;
+      }
       if (_quizError || !quizData) {
         setError('Quiz not found.');
         setLoading(false);
@@ -187,16 +217,35 @@ export default function LiveQuizUser() {
         }
         setCustomization(custom);
       }
-      // Fetch slides
-      const { data: slidesData, error: _slidesError } = await supabase
+      // Always fetch slides, regardless of timer
+      let slidesData, _slidesError;
+      ({ data: slidesData, error: _slidesError } = await supabase
         .from('slides')
         .select('*')
-        .eq('quiz_id', id)
-        .order('slide_index');
+        .eq('quiz_id', quizData.id)
+        .order('slide_index'));
+      if ((!slidesData || slidesData.length === 0) && quizData.code) {
+        ({ data: slidesData, error: _slidesError } = await supabase
+          .from('slides')
+          .select('*')
+          .eq('quiz_id', quizData.code)
+          .order('slide_index'));
+      }
       if (_slidesError || !slidesData || slidesData.length === 0) {
         setError('No slides found for this quiz.');
         setLoading(false);
         return;
+      }
+      // Timer access control (after slides are fetched)
+      const now = new Date();
+      const start = quizData.start_time ? new Date(quizData.start_time) : null;
+      const end = quizData.end_time ? new Date(quizData.end_time) : null;
+      if (start && now < start) {
+        setQuizWindowStatus("not_started");
+      } else if (end && now > end) {
+        setQuizWindowStatus("ended");
+      } else {
+        setQuizWindowStatus("open");
       }
       // Shuffle the slides for random order
       const shuffledSlides = shuffleArray(slidesData);
@@ -473,10 +522,16 @@ export default function LiveQuizUser() {
     fetchScores();
   }, [submitted, quizId]);
 
+  // In the main render, only block quiz participation if quizWindowStatus is not 'open', but always show quiz title and questions if slides exist.
   if (error) return <div style={{ color: 'red', padding: 40 }}>{error}</div>;
-  if (loading) return <div style={{ padding: 40 }}>Loading...</div>;
-  if (!loading && slides.length === 0) return <div style={{ color: 'red', padding: 40 }}>No slides found for this quiz.</div>;
-  if (!currentQuestion && !submitted) return <div className="p-4">Loading...</div>;
+  if (loading) return <div className="p-4">Loading...</div>;
+  if (slides.length === 0) return <div style={{ color: 'red', padding: 40 }}>No slides found for this quiz.</div>;
+  if (quizWindowStatus === "not_started") {
+    return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#b91c1c', fontWeight: 600, textAlign: 'center' }}>Sorry, the link is closed. Please contact the admin.<br/>The quiz has not started yet.</div>;
+  }
+  if (quizWindowStatus === "ended") {
+    return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#b91c1c', fontWeight: 600, textAlign: 'center' }}>Sorry, the link is closed. Please contact the admin.<br/>The quiz has ended.</div>;
+  }
 
   if (showUserPrompt && !submitted) {
     // Only show if user explicitly logs out or clears username
