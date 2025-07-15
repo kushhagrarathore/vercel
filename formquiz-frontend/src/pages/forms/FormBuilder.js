@@ -450,7 +450,7 @@ const FormBuilder = () => {
 
   const baseURL = process.env.NODE_ENV === 'development'
     ? window.location.origin
-    : 'https://vercel-zeta-gray-40.vercel.app';
+    : 'https://inquizo-supa-5z4o.vercel.app/';
 
   const formUrl = formId ? `${baseURL}/form/${formId}` : '';
 
