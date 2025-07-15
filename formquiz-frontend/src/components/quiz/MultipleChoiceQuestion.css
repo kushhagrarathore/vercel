@@ -1,0 +1,5 @@
+.option-input-field::placeholder,
+.question-input::placeholder {
+  color: #fff !important;
+  opacity: 1;
+} 

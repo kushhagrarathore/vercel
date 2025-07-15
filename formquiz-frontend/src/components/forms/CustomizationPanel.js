@@ -4,23 +4,6 @@ import './CustomizationPanel.css';
 
 const TEMPLATES = [
   {
-    name: 'Dark Mode',
-    classNames: 'bg-gray-900 text-white',
-    customization: {
-      backgroundColor: '#18181b',
-      textColor: '#fff',
-      buttonColor: '#2563eb',
-      buttonTextColor: '#fff',
-      fontFamily: 'Inter, Arial, sans-serif',
-      borderRadius: '18px',
-    },
-    preview: {
-      bg: '#18181b',
-      text: '#fff',
-      border: '#232336',
-    },
-  },
-  {
     name: 'Light Mode',
     classNames: 'bg-white text-black',
     customization: {
@@ -107,31 +90,42 @@ const CustomizationPanel = ({ customization, setCustomization }) => {
     img.src = url;
   };
 
+  const convertGoogleDriveLink = (url) => {
+    // Match Google Drive share link
+    const match = url.match(/https?:\/\/drive\.google\.com\/file\/d\/([\w-]+)\/view/);
+    if (match) {
+      return `https://drive.google.com/uc?export=view&id=${match[1]}`;
+    }
+    return url;
+  };
+
   const handleChange = (field, value) => {
+    // Convert Google Drive share link to direct link
+    const processedValue = convertGoogleDriveLink(value);
     if (field === 'backgroundImage') {
-      if (!value) {
+      if (!processedValue) {
         setBgImageError('');
         setCustomization(prev => ({ ...prev, backgroundImage: '' }));
         return;
       }
-      validateImageUrl(value, (isValid) => {
+      validateImageUrl(processedValue, (isValid) => {
         if (isValid) {
           setBgImageError('');
-          setCustomization(prev => ({ ...prev, backgroundImage: value }));
+          setCustomization(prev => ({ ...prev, backgroundImage: processedValue }));
         } else {
           setBgImageError('Invalid image URL. Please use a direct/public image link.');
         }
       });
     } else if (field === 'logoImage') {
-      if (!value) {
+      if (!processedValue) {
         setLogoImageError('');
         setCustomization(prev => ({ ...prev, logoImage: '' }));
         return;
       }
-      validateImageUrl(value, (isValid) => {
+      validateImageUrl(processedValue, (isValid) => {
         if (isValid) {
           setLogoImageError('');
-          setCustomization(prev => ({ ...prev, logoImage: value }));
+          setCustomization(prev => ({ ...prev, logoImage: processedValue }));
         } else {
           setLogoImageError('Invalid logo image URL. Please use a direct/public image link.');
         }
@@ -139,31 +133,33 @@ const CustomizationPanel = ({ customization, setCustomization }) => {
     } else {
       setCustomization(prev => ({
         ...prev,
-        [field]: value
+        [field]: processedValue
       }));
     }
   };
 
   // Validate on blur or Enter
   const handleImageInputBlur = (field, value) => {
-    if (!value) {
+    // Convert Google Drive share link to direct link
+    const processedValue = convertGoogleDriveLink(value);
+    if (!processedValue) {
       if (field === 'backgroundImage') setBgImageError('');
       if (field === 'logoImage') setLogoImageError('');
       setCustomization(prev => ({ ...prev, [field]: '' }));
       return;
     }
-    validateImageUrl(value, (isValid) => {
+    validateImageUrl(processedValue, (isValid) => {
       if (field === 'backgroundImage') {
         if (isValid) {
           setBgImageError('');
-          setCustomization(prev => ({ ...prev, backgroundImage: value }));
+          setCustomization(prev => ({ ...prev, backgroundImage: processedValue }));
         } else {
           setBgImageError('Invalid image URL. Please use a direct/public image link.');
         }
       } else if (field === 'logoImage') {
         if (isValid) {
           setLogoImageError('');
-          setCustomization(prev => ({ ...prev, logoImage: value }));
+          setCustomization(prev => ({ ...prev, logoImage: processedValue }));
         } else {
           setLogoImageError('Invalid logo image URL. Please use a direct/public image link.');
         }
@@ -192,7 +188,19 @@ const CustomizationPanel = ({ customization, setCustomization }) => {
               <div
                 key={tpl.name}
                 className={`template-panel-card${isSelected ? ' selected' : ''}`}
-                onClick={() => setCustomization({ ...customization, ...tpl.customization })}
+                onClick={() => {
+                  // If dark mode, force textColor and backgroundColor
+                  if (tpl.name === 'Dark Mode') {
+                    setCustomization({
+                      ...customization,
+                      ...tpl.customization,
+                      textColor: '#fff',
+                      backgroundColor: '#18181b',
+                    });
+                  } else {
+                    setCustomization({ ...customization, ...tpl.customization });
+                  }
+                }}
                 style={{
                   background: tpl.preview.bg,
                   color: tpl.preview.text,

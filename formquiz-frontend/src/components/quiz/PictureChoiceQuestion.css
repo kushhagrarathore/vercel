@@ -1,0 +1,5 @@
+.image-label-input::placeholder,
+.question-input::placeholder {
+  color: #fff !important;
+  opacity: 1;
+} 
