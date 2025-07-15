@@ -29,6 +29,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from './supabase/client';
 import QuestionsPage from './pages/livequiz/QuestionsPage';
 import Plan from './pages/Plan';
+import UpdatePassword from './pages/UpdatePassword';
 
 // RequireAuth component for protected routes
 function RequireAuth({ children }) {
@@ -65,6 +66,7 @@ function App() {
             <Route path="/" element={<Login />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/update-password" element={<UpdatePassword />} />
             {/* Public user quiz route */}
             <Route path="/userend" element={<UserEnd />} />
             {/* Protected routes */}

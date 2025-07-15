@@ -138,6 +138,35 @@ function isUUID(str) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(str);
 }
 
+function getNowIST() {
+  // Get current UTC time, then add 5.5 hours for IST
+  const now = new Date();
+  const istOffset = 330; // IST is UTC+5:30 in minutes
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  return new Date(utc + (istOffset * 60000));
+}
+
+// Replace parseISTFromUTCString with parseISTFromISTString
+function parseISTFromISTString(istString) {
+  // Handles both 'YYYY-MM-DD HH:mm:ss' and 'YYYY-MM-DDTHH:mm:ss'
+  if (!istString) return null;
+  let datePart, timePart;
+  if (istString.includes('T')) {
+    [datePart, timePart] = istString.split('T');
+  } else if (istString.includes(' ')) {
+    [datePart, timePart] = istString.split(' ');
+  } else {
+    // Unexpected format
+    return null;
+  }
+  if (!datePart || !timePart) return null;
+  const [year, month, day] = datePart.split('-').map(Number);
+  const [hour = 0, minute = 0, second = 0] = timePart.split(':').map(Number);
+  // IST is UTC+5:30, so subtract 5.5 hours to get UTC
+  const utcMillis = Date.UTC(year, month - 1, day, hour - 5, minute - 30, second);
+  return new Date(utcMillis);
+}
+
 export default function LiveQuizUser() {
   const query = useQuery();
   // Allow joining via either ?quizId=... or ?code=...
@@ -159,6 +188,9 @@ export default function LiveQuizUser() {
   const [hasEnteredName, setHasEnteredName] = useState(false);
   const [showUserPrompt, setShowUserPrompt] = useState(false);
   const [quizWindowStatus, setQuizWindowStatus] = useState("open"); // 'open', 'not_started', 'ended'
+  const [quizStart, setQuizStart] = useState(null); // Store start_time
+  const [quizEnd, setQuizEnd] = useState(null); // Store end_time
+  const [isHost, setIsHost] = useState(false); // Store if current user is host
 
   // Show error if no quiz code/id is present
   useEffect(() => {
@@ -217,6 +249,8 @@ export default function LiveQuizUser() {
         }
         setCustomization(custom);
       }
+      setQuizStart(quizData.start_time ? parseISTFromISTString(quizData.start_time) : null);
+      setQuizEnd(quizData.end_time ? parseISTFromISTString(quizData.end_time) : null);
       // Always fetch slides, regardless of timer
       let slidesData, _slidesError;
       ({ data: slidesData, error: _slidesError } = await supabase
@@ -236,13 +270,24 @@ export default function LiveQuizUser() {
         setLoading(false);
         return;
       }
+      // Prompt for username if not logged in
+      const { data: authData } = await supabase.auth.getUser();
+      setUser(authData.user);
+      // Check if current user is the host (quiz creator)
+      let host = false;
+      if (authData.user && quizData.user_id && authData.user.id === quizData.user_id) {
+        host = true;
+      }
+      setIsHost(host);
       // Timer access control (after slides are fetched)
-      const now = new Date();
-      const start = quizData.start_time ? new Date(quizData.start_time) : null;
-      const end = quizData.end_time ? new Date(quizData.end_time) : null;
-      if (start && now < start) {
+      const nowIST = getNowIST();
+      const start = quizData.start_time ? parseISTFromISTString(quizData.start_time) : null;
+      const end = quizData.end_time ? parseISTFromISTString(quizData.end_time) : null;
+      if (host) {
+        setQuizWindowStatus("open"); // Host can always access
+      } else if (start && nowIST < start) {
         setQuizWindowStatus("not_started");
-      } else if (end && now > end) {
+      } else if (end && nowIST > end) {
         setQuizWindowStatus("ended");
       } else {
         setQuizWindowStatus("open");
@@ -257,11 +302,7 @@ export default function LiveQuizUser() {
         return { type: q.type };
       }));
       setLoading(false);
-      // Prompt for username if not logged in
-      supabase.auth.getUser().then(({ data }) => {
-        setUser(data.user);
-        if (!data.user) setShowUserPrompt(true);
-      });
+      if (!authData.user) setShowUserPrompt(true);
     }
     fetchQuizData();
   }, [quizId]);
@@ -527,10 +568,14 @@ export default function LiveQuizUser() {
   if (loading) return <div className="p-4">Loading...</div>;
   if (slides.length === 0) return <div style={{ color: 'red', padding: 40 }}>No slides found for this quiz.</div>;
   if (quizWindowStatus === "not_started") {
-    return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#b91c1c', fontWeight: 600, textAlign: 'center' }}>Sorry, the link is closed. Please contact the admin.<br/>The quiz has not started yet.</div>;
+    return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#b91c1c', fontWeight: 600, textAlign: 'center' }}>
+      Quiz starts at {quizStart ? quizStart.toLocaleString() : "scheduled time"}.
+    </div>;
   }
   if (quizWindowStatus === "ended") {
-    return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#b91c1c', fontWeight: 600, textAlign: 'center' }}>Sorry, the link is closed. Please contact the admin.<br/>The quiz has ended.</div>;
+    return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#b91c1c', fontWeight: 600, textAlign: 'center' }}>
+      Quiz has ended{quizEnd ? ` at ${quizEnd.toLocaleString()}` : ""}.
+    </div>;
   }
 
   if (showUserPrompt && !submitted) {

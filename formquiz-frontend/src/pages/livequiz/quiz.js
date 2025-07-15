@@ -1146,14 +1146,10 @@ export default function Quiz() {
                   <option value={32}>4xl</option>
                 </select>
               </div>
-              {/* --- Quiz Availability Section: moved up for visibility --- */}
+              {/* --- Quiz Availability Section: removed current IST time display --- */}
               <hr className="my-4 border-blue-200" />
               <div style={{ background: '#f3f6fd', borderRadius: 12, padding: 16, marginBottom: 8 }}>
                 <div className="font-semibold mb-2 text-blue-700" style={{ fontSize: 16 }}>Quiz Availability</div>
-                <div style={{ fontSize: 13, color: '#1e293b', marginBottom: 6 }}>
-                  <b>Current IST time:</b> {new Date(Date.now() + (5.5 * 60 * 60 * 1000 - new Date().getTimezoneOffset() * 60000)).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}<br/>
-                  <span style={{ color: '#64748b' }}>(All times are in IST)</span>
-                </div>
                 <div className="flex flex-col gap-3">
                   <label>
                     <span className="text-sm">Start Date & Time</span>
