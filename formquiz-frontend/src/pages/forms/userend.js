@@ -140,8 +140,7 @@ function isUUID(str) {
 
 export default function LiveQuizUser() {
   const query = useQuery();
-  // Allow joining via either ?quizId=... or ?code=...
-  const quizId = query.get("quizId") || query.get("code");
+  const quizId = query.get("quizId");
   const [questionIndex, setQuestionIndex] = useState(0);
   const [slides, setSlides] = useState([]);
   const [quizTitle, setQuizTitle] = useState("Quiz");
@@ -158,14 +157,6 @@ export default function LiveQuizUser() {
   const [username, setUsername] = useState("");
   const [hasEnteredName, setHasEnteredName] = useState(false);
   const [showUserPrompt, setShowUserPrompt] = useState(false);
-
-  // Show error if no quiz code/id is present
-  useEffect(() => {
-    if (!quizId) {
-      setError('Quiz code not found in the link.');
-      setLoading(false);
-    }
-  }, [quizId]);
 
   // Fetch slides and customization from Supabase
   useEffect(() => {

@@ -67,7 +67,6 @@ function App() {
             <Route path="/signup" element={<Signup />} />
             {/* Public user quiz route */}
             <Route path="/userend" element={<UserEnd />} />
-            <Route path="/quiz/user" element={<UserEnd />} />
             {/* Protected routes */}
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
             <Route path="/builder" element={<RequireAuth><FormBuilder /></RequireAuth>} />
