@@ -448,11 +448,8 @@ const FormBuilder = () => {
     }
   };
 
-  const baseURL = process.env.NODE_ENV === 'development'
-    ? window.location.origin
-    : 'https://inquizo-supa-5z4o.vercel.app/';
-
-  const formUrl = formId ? `${baseURL}/form/${formId}` : '';
+  // Use the same share URL as FormCardRow/Dashboard
+  const formUrl = formId ? `/form/${formId}` : '';
 
   // Preview mode render
   if (isPreviewMode) {
@@ -735,7 +732,7 @@ const FormBuilder = () => {
                     <div className="share-qr-code">
                       <label>QR Code:</label>
                       {formUrl ? (
-                        <QRCodeSVG value={formUrl} size={128} level="H" />
+                        <QRCodeSVG value={window.location.origin + formUrl} size={128} level="H" />
                       ) : (
                         <p>Save your form to generate a QR code.</p>
                       )}
@@ -936,7 +933,7 @@ const FormBuilder = () => {
                   <div className="share-qr-code">
                     <label>QR Code:</label>
                     {formUrl ? (
-                      <QRCodeSVG value={formUrl} size={128} level="H" />
+                      <QRCodeSVG value={window.location.origin + formUrl} size={128} level="H" />
                     ) : (
                       <p>Save your form to generate a QR code.</p>
                     )}
