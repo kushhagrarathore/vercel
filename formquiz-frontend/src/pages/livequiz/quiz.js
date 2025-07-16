@@ -1169,6 +1169,7 @@ export default function Quiz() {
                       className="w-full border rounded p-2 mt-1"
                     />
                   </label>
+                  <div className="text-xs text-gray-500 mt-1">Times are in your local timezone. Quiz will only be accessible between these times.</div>
                 </div>
               </div>
               <div>

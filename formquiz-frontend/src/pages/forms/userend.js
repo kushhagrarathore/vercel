@@ -569,12 +569,16 @@ export default function LiveQuizUser() {
   if (slides.length === 0) return <div style={{ color: 'red', padding: 40 }}>No slides found for this quiz.</div>;
   if (quizWindowStatus === "not_started") {
     return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#b91c1c', fontWeight: 600, textAlign: 'center' }}>
-      Quiz starts at {quizStart ? quizStart.toLocaleString() : "scheduled time"}.
+      This quiz is not currently active.<br />
+      Please return during the scheduled time:<br />
+      {quizStart && quizEnd && `${quizStart.toLocaleString()} – ${quizEnd.toLocaleString()}`}
     </div>;
   }
   if (quizWindowStatus === "ended") {
     return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#b91c1c', fontWeight: 600, textAlign: 'center' }}>
-      Quiz has ended{quizEnd ? ` at ${quizEnd.toLocaleString()}` : ""}.
+      This quiz is no longer active.<br />
+      The scheduled window was:<br />
+      {quizStart && quizEnd && `${quizStart.toLocaleString()} – ${quizEnd.toLocaleString()}`}
     </div>;
   }
 
