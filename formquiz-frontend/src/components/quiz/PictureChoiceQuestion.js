@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import '../PictureChoiceQuestion.css';
 
-const PictureChoiceQuestion = ({ question, questionIndex, onRemove, onQuestionTextChange, customization }) => { // Added customization prop
+const PictureChoiceQuestion = ({ question, questionIndex, onRemove, onQuestionTextChange, customization, dragHandleProps }) => { // Added customization and dragHandleProps
   const [imageOptions, setImageOptions] = useState([
     { id: 1, url: 'https://via.placeholder.com/100x100?text=Image+1' },
     { id: 2, url: 'https://via.placeholder.com/100x100?text=Image+2' },
@@ -31,7 +31,15 @@ const PictureChoiceQuestion = ({ question, questionIndex, onRemove, onQuestionTe
       }}
     >
       <div className="question-header">
-        <span className="question-number" style={{ color: textColor }}>Question {questionIndex}</span> {/* Apply textColor */}
+        {/* Drag handle at top-left */}
+        <div
+          className="drag-handle"
+          {...(dragHandleProps || {})}
+          title="Drag to reorder"
+        >
+          <span style={{ fontSize: '1.2em' }}>⠿</span>
+        </div>
+        <span className="question-number">Q{questionIndex}.</span>
         <button className="remove-question-button" onClick={onRemove}>✕</button>
       </div>
       <input

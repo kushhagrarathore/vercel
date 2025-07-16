@@ -2,14 +2,7 @@
 import React from 'react';
 import '../ShortTextQuestion.css';
 
-const ShortTextQuestion = ({
-  question,
-  questionIndex,
-  onRemove,
-  onQuestionTextChange,
-  onUpdateQuestion,
-  customization
-}) => {
+const ShortTextQuestion = ({ question, questionIndex, onRemove, onQuestionTextChange, onUpdateQuestion, customization, dragHandleProps }) => {
   const { textColor, borderRadius, buttonColor, fontFamily } = customization;
 
   return (
@@ -22,9 +15,15 @@ const ShortTextQuestion = ({
       }}
     >
       <div className="question-header">
-        <span className="question-number" style={{ color: textColor }}>
-          Question {questionIndex}
-        </span>
+        {/* Drag handle at top-left */}
+        <div
+          className="drag-handle"
+          {...(dragHandleProps || {})}
+          title="Drag to reorder"
+        >
+          <span style={{ fontSize: '1.2em' }}>⠿</span>
+        </div>
+        <span className="question-number">Q{questionIndex}.</span>
         <button className="remove-question-button" onClick={onRemove}>✕</button>
       </div>
 

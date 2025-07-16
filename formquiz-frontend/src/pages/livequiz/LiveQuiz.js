@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Play, Plus, Users, Trophy, Clock, Edit, Trash2, Copy, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import LiveQuizCardRow from '../../components/livequiz/LiveQuizCardRow';
 
 // Mock data for demonstration
 const mockQuizzes = [
@@ -134,6 +135,26 @@ const LiveQuizApp = () => {
 
 // Dashboard Component
 const Dashboard = ({ quizzes, sessions, setCurrentView, onCreateQuiz, onEditQuiz, onStartLive, onJoinQuiz }) => {
+  const [selectedQuizIds, setSelectedQuizIds] = React.useState([]);
+
+  const handleSelectQuiz = (quizId) => {
+    setSelectedQuizIds(prev =>
+      prev.includes(quizId)
+        ? prev.filter(id => id !== quizId)
+        : [...prev, quizId]
+    );
+  };
+
+  const handleEditQuiz = (quiz) => {
+    onEditQuiz(quiz);
+  };
+
+  const handleDeleteQuiz = (quiz) => {
+    // Implement delete logic or call a prop
+    // For now, just alert
+    alert(`Delete quiz: ${quiz.title}`);
+  };
+
   return (
     <div className="space-y-8">
       {/* Stats Cards */}
@@ -211,6 +232,27 @@ const Dashboard = ({ quizzes, sessions, setCurrentView, onCreateQuiz, onEditQuiz
             <Trophy className="h-5 w-5" />
             <span className="font-medium">View Analytics</span>
           </button>
+        </div>
+      </div>
+
+      {/* Quiz List with Checkbox Selection */}
+      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mt-8">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Live Quizzes</h2>
+        <div className="divide-y divide-gray-100">
+          {quizzes.length === 0 ? (
+            <div className="text-gray-500 py-8 text-center">No quizzes found.</div>
+          ) : (
+            quizzes.map((quiz) => (
+              <LiveQuizCardRow
+                key={quiz.id}
+                quiz={quiz}
+                selected={selectedQuizIds.includes(quiz.id)}
+                onSelect={handleSelectQuiz}
+                onEdit={handleEditQuiz}
+                onDelete={handleDeleteQuiz}
+              />
+            ))
+          )}
         </div>
       </div>
     </div>

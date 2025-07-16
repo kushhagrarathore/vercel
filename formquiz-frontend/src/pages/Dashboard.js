@@ -130,66 +130,97 @@ const Dashboard = () => {
 
         console.log("Fetched current user:", user);
 
+        if (userError) {
+          console.error("Error fetching user:", userError);
+          toast('Error fetching user data', 'error');
+          return;
+        }
+
         if (user && user.email) {
-          // Fetch profile name
-          const { data: profile, error: profileError } = await supabase
-            .from('users')
-            .select('name')
-            .eq('id', user.id)
-            .single();
+          // Fetch profile name with error handling
+          try {
+            const { data: profile, error: profileError } = await supabase
+              .from('users')
+              .select('name')
+              .eq('id', user.id)
+              .single();
 
-          if (profileError) {
-            console.error("Error fetching profile:", profileError);
-          } else if (profile?.name) {
-            setUsername(profile.name);
+            if (profileError && profileError.code !== 'PGRST116') { // PGRST116 is "not found"
+              console.error("Error fetching profile:", profileError);
+              toast('Error fetching profile', 'error');
+            } else if (profile?.name) {
+              setUsername(profile.name);
+            }
+          } catch (err) {
+            console.error("Profile fetch error:", err);
           }
 
-          // Fetch forms where created_by = email OR user_id = id
-          const { data: formData, error: formError } = await supabase
-            .from('forms')
-            .select('*')
-            .or(
-              `created_by.eq.${user.email},user_id.eq.${user.id}`,
-              { foreignTable: undefined }
-            )
-            .order('created_at', { ascending: false });
+          // Fetch forms with improved error handling
+          try {
+            const { data: formData, error: formError } = await supabase
+              .from('forms')
+              .select('*')
+              .or(
+                `created_by.eq.${user.email},user_id.eq.${user.id}`,
+                { foreignTable: undefined }
+              )
+              .order('created_at', { ascending: false });
 
-          if (formError) {
-            console.error("Error fetching forms:", formError);
-            toast('Error fetching forms', 'error');
-          } else {
-            console.log("Fetched forms:", formData);
-            setForms(formData || []);
+            if (formError) {
+              console.error("Error fetching forms:", formError);
+              if (formError.code !== '409') { // Don't show toast for 409 errors
+                toast('Error fetching forms', 'error');
+              }
+            } else {
+              console.log("Fetched forms:", formData);
+              setForms(formData || []);
+            }
+          } catch (err) {
+            console.error("Forms fetch error:", err);
           }
 
-          // Fetch quizzes where created_by = email OR user_id = id
-          const { data: quizData, error: quizError } = await supabase
-            .from('quizzes')
-            .select('*')
-            .or(
-              `created_by.eq.${user.email},user_id.eq.${user.id}`,
-              { foreignTable: undefined }
-            )
-            .order('created_at', { ascending: false });
+          // Fetch quizzes with improved error handling
+          try {
+            const { data: quizData, error: quizError } = await supabase
+              .from('quizzes')
+              .select('*')
+              .or(
+                `created_by.eq.${user.email},user_id.eq.${user.id}`,
+                { foreignTable: undefined }
+              )
+              .order('created_at', { ascending: false });
 
-          if (quizError) {
-            console.error("Error fetching quizzes:", quizError);
-            toast('Error fetching quizzes', 'error');
-          } else {
-            console.log("Fetched quizzes:", quizData);
-            setQuizzes(quizData || []);
+            if (quizError) {
+              console.error("Error fetching quizzes:", quizError);
+              if (quizError.code !== '409') { // Don't show toast for 409 errors
+                toast('Error fetching quizzes', 'error');
+              }
+            } else {
+              console.log("Fetched quizzes:", quizData);
+              setQuizzes(quizData || []);
+            }
+          } catch (err) {
+            console.error("Quizzes fetch error:", err);
           }
 
-          // Fetch live quizzes from lq_quizzes for this user
-          const { data: liveQuizData, error: liveQuizError } = await supabase
-            .from('lq_quizzes')
-            .select('*')
-            .eq('user_id', user.id);
+          // Fetch live quizzes with improved error handling
+          try {
+            const { data: liveQuizData, error: liveQuizError } = await supabase
+              .from('lq_quizzes')
+              .select('*')
+              .eq('user_id', user.id)
+              .order('created_at', { ascending: false });
 
-          if (liveQuizError) {
-            console.error("Error fetching live quizzes:", liveQuizError);
-          } else {
-            setLiveQuizzes(liveQuizData || []);
+            if (liveQuizError) {
+              console.error("Error fetching live quizzes:", liveQuizError);
+              if (liveQuizError.code !== '409') { // Don't show toast for 409 errors
+                toast('Error fetching live quizzes', 'error');
+              }
+            } else {
+              setLiveQuizzes(liveQuizData || []);
+            }
+          } catch (err) {
+            console.error("Live quizzes fetch error:", err);
           }
         } else {
           toast('User not logged in', 'error');
@@ -197,7 +228,7 @@ const Dashboard = () => {
         }
       } catch (err) {
         toast('Failed to fetch dashboard data', 'error');
-        console.error(err);
+        console.error("Dashboard fetch error:", err);
       } finally {
         setLoading(false);
       }
@@ -216,11 +247,16 @@ const Dashboard = () => {
       quiz.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
     ), [quizzes, debouncedSearchTerm]);
 
+  const filteredLiveQuizzes = useMemo(() =>
+    liveQuizzes.filter((quiz) =>
+      quiz.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+    ), [liveQuizzes, debouncedSearchTerm]);
+
   let currentData;
   if (activeTab === 'forms') {
     currentData = filteredForms;
   } else if (activeTab === 'livequiz') {
-    currentData = liveQuizzes;
+    currentData = filteredLiveQuizzes;
   } else if (activeTab === 'quizzes') {
     currentData = filteredQuizzes;
   } else {
@@ -228,16 +264,28 @@ const Dashboard = () => {
   }
 
   const handlePublishToggle = async (formId, newStatus) => {
-    await supabase
-      .from('forms')
-      .update({ is_published: newStatus })
-      .eq('id', formId);
-    setForms((prev) =>
-      prev.map((f) =>
-        f.id === formId ? { ...f, is_published: newStatus } : f
-      )
-    );
-    setExpandedCardId(newStatus ? formId : null);
+    try {
+      const { error } = await supabase
+        .from('forms')
+        .update({ is_published: newStatus })
+        .eq('id', formId);
+      
+      if (error) {
+        console.error("Error updating form publish status:", error);
+        toast('Error updating form status', 'error');
+        return;
+      }
+
+      setForms((prev) =>
+        prev.map((f) =>
+          f.id === formId ? { ...f, is_published: newStatus } : f
+        )
+      );
+      setExpandedCardId(newStatus ? formId : null);
+    } catch (err) {
+      console.error("Publish toggle error:", err);
+      toast('Error updating form status', 'error');
+    }
   };
 
   const handleDeleteForm = async (formId) => {
@@ -245,6 +293,11 @@ const Dashboard = () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
+      if (!user) {
+        toast('User not authenticated', 'error');
+        return;
+      }
 
       // First delete all questions associated with this form
       const { error: questionsError } = await supabase
@@ -286,6 +339,11 @@ const Dashboard = () => {
         data: { user },
       } = await supabase.auth.getUser();
 
+      if (!user) {
+        toast('User not authenticated', 'error');
+        return;
+      }
+
       const { error } = await supabase
         .from('quizzes')
         .delete()
@@ -293,9 +351,11 @@ const Dashboard = () => {
         .eq('user_id', user?.id);
 
       if (error) {
+        console.error('Error deleting quiz:', error);
         toast('Failed to delete quiz', 'error');
         return;
       }
+      
       setQuizzes((prev) => prev.filter((q) => q.id !== quizId));
       toast('Quiz deleted!', 'success');
     } catch (err) {
@@ -304,50 +364,115 @@ const Dashboard = () => {
     }
   };
 
+  const handleDeleteLiveQuiz = async (quizId) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast('User not authenticated', 'error');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('lq_quizzes')
+        .delete()
+        .eq('id', quizId)
+        .eq('user_id', user?.id);
+      
+      if (error) {
+        console.error('Error deleting live quiz:', error);
+        toast('Failed to delete live quiz', 'error');
+        return;
+      }
+      
+      setLiveQuizzes(prev => prev.filter(q => q.id !== quizId));
+      toast('Live quiz deleted!', 'success');
+    } catch (err) {
+      toast('Failed to delete live quiz', 'error');
+      console.error(err);
+    }
+  };
+
   const handleQuizPublishToggle = async (quizId, newStatus) => {
-    await supabase
-      .from('quizzes')
-      .update({ is_published: newStatus })
-      .eq('id', quizId);
-    setQuizzes((prev) =>
-      prev.map((q) =>
-        q.id === quizId ? { ...q, is_published: newStatus } : q
-      )
-    );
-    setExpandedCardId(newStatus ? quizId : null);
+    try {
+      const { error } = await supabase
+        .from('quizzes')
+        .update({ is_published: newStatus })
+        .eq('id', quizId);
+      
+      if (error) {
+        console.error("Error updating quiz publish status:", error);
+        toast('Error updating quiz status', 'error');
+        return;
+      }
+
+      setQuizzes((prev) =>
+        prev.map((q) =>
+          q.id === quizId ? { ...q, is_published: newStatus } : q
+        )
+      );
+      setExpandedCardId(newStatus ? quizId : null);
+    } catch (err) {
+      console.error("Quiz publish toggle error:", err);
+      toast('Error updating quiz status', 'error');
+    }
   };
 
   const handleTabToggle = (tab) => {
     setActiveTab(tab);
+    setSelectedIds([]); // Clear selections when switching tabs
   };
 
   // Handler for selecting/deselecting a card
   const handleSelect = (id, checked) => {
     setSelectedIds(prev => checked ? [...prev, id] : prev.filter(x => x !== id));
   };
+  
   // Handler for select all
   const handleSelectAll = () => {
     const ids = currentData.map(item => item.id);
     setSelectedIds(ids);
   };
+  
   const handleDeselectAll = () => setSelectedIds([]);
-  // Bulk delete
+  
+  // Bulk delete with improved error handling
   const handleBulkDelete = async () => {
     if (!window.confirm('Delete selected items?')) return;
-    if (activeTab === 'forms') {
-      for (const id of selectedIds) await handleDeleteForm(id);
-    } else if (activeTab === 'quizzes') {
-      for (const id of selectedIds) await handleDeleteQuiz(id);
-    } // Add livequiz delete if needed
+    
+    const deletePromises = selectedIds.map(async (id) => {
+      try {
+        if (activeTab === 'forms') {
+          await handleDeleteForm(id);
+        } else if (activeTab === 'quizzes') {
+          await handleDeleteQuiz(id);
+        } else if (activeTab === 'livequiz') {
+          await handleDeleteLiveQuiz(id);
+        }
+      } catch (err) {
+        console.error(`Error deleting item ${id}:`, err);
+      }
+    });
+
+    await Promise.allSettled(deletePromises);
     setSelectedIds([]);
   };
-  // Bulk activate/deactivate
+
+  // Bulk activate/deactivate with improved error handling
   const handleBulkActivate = async (activate) => {
-    if (activeTab === 'forms') {
-      for (const id of selectedIds) await handlePublishToggle(id, activate);
-    } else if (activeTab === 'quizzes') {
-      for (const id of selectedIds) await handleQuizPublishToggle(id, activate);
-    }
+    const updatePromises = selectedIds.map(async (id) => {
+      try {
+        if (activeTab === 'forms') {
+          await handlePublishToggle(id, activate);
+        } else if (activeTab === 'quizzes') {
+          await handleQuizPublishToggle(id, activate);
+        }
+      } catch (err) {
+        console.error(`Error updating item ${id}:`, err);
+      }
+    });
+
+    await Promise.allSettled(updatePromises);
     setSelectedIds([]);
   };
 
@@ -435,7 +560,7 @@ const Dashboard = () => {
 
         <section
           className={`dashboard-animated-section ${viewMode}`}
-          style={{ paddingBottom: 30 }} // Add extra bottom padding
+          style={{ paddingBottom: 30 }}
         >
           <AnimatePresence>
             {loading ? (
@@ -448,7 +573,8 @@ const Dashboard = () => {
                     bottom: 32,
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    background: '#fff',
+                    background: isDarkMode ? '#2a2d3a' : '#fff',
+                    color: isDarkMode ? '#fff' : '#000',
                     borderRadius: 16,
                     boxShadow: '0 4px 24px #a5b4fc33',
                     padding: '16px 32px',
@@ -460,8 +586,12 @@ const Dashboard = () => {
                   }}>
                     <span>{selectedIds.length} selected</span>
                     <button onClick={handleBulkDelete} style={{ color: '#ef4444', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Delete</button>
-                    <button onClick={() => handleBulkActivate(true)} style={{ color: '#22c55e', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Activate</button>
-                    <button onClick={() => handleBulkActivate(false)} style={{ color: '#6366f1', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Deactivate</button>
+                    {(activeTab === 'forms' || activeTab === 'quizzes') && (
+                      <>
+                        <button onClick={() => handleBulkActivate(true)} style={{ color: '#22c55e', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Activate</button>
+                        <button onClick={() => handleBulkActivate(false)} style={{ color: '#6366f1', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Deactivate</button>
+                      </>
+                    )}
                     <button onClick={handleSelectAll} style={{ color: '#6366f1', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Select All</button>
                     <button onClick={handleDeselectAll} style={{ color: '#6366f1', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Clear</button>
                   </div>
@@ -475,21 +605,54 @@ const Dashboard = () => {
                       exit={{ opacity: 0, scale: 0.95, y: 18 }}
                       transition={{ duration: 0.32, type: 'spring' }}
                       className="dashboard-animated-card"
-                      style={{ position: 'relative', borderLeft: '6px solid #a78bfa', background: '#fff', borderRadius: 18, boxShadow: '0 2px 12px #a5b4fc22', padding: 18, minHeight: 120, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 8, marginBottom: 30 }} // Add marginBottom to last card
+                      style={{ 
+                        position: 'relative', 
+                        borderLeft: '6px solid #a78bfa', 
+                        background: isDarkMode ? '#2a2d3a' : '#fff',
+                        color: isDarkMode ? '#fff' : '#000',
+                        borderRadius: 18, 
+                        boxShadow: '0 2px 12px #a5b4fc22', 
+                        padding: 18, 
+                        minHeight: 120, 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        justifyContent: 'center', 
+                        gap: 8, 
+                        marginBottom: 30,
+                        cursor: 'pointer'
+                      }}
                       onClick={() => navigate(`/livequiz/questions/${item.id}`)}
                     >
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(item.id)}
+                        onChange={e => {
+                          e.stopPropagation();
+                          handleSelect(item.id, e.target.checked);
+                        }}
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                          position: 'absolute',
+                          top: 18,
+                          right: 18,
+                          zIndex: 2,
+                          width: 20,
+                          height: 20,
+                        }}
+                        title="Select"
+                      />
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                         <span style={{ fontWeight: 700, fontSize: 18 }}>{item.title || 'Untitled Live Quiz'}</span>
                         <span style={{ background: '#fde68a', color: '#b45309', fontWeight: 600, fontSize: 13, borderRadius: 8, padding: '2px 10px', marginLeft: 6 }}>Draft</span>
                         <span style={{ background: '#a78bfa', color: '#fff', fontWeight: 600, fontSize: 13, borderRadius: 8, padding: '2px 10px', marginLeft: 4 }}>Live</span>
                       </div>
-                      <div style={{ color: '#555', fontSize: 15, wordBreak: 'break-all', marginBottom: 4 }}>Code: {item.code || item.id}</div>
-                      <div style={{ color: '#888', fontSize: 13, marginBottom: 8 }}>Created: {item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A'}</div>
+                      <div style={{ color: isDarkMode ? '#ccc' : '#555', fontSize: 15, wordBreak: 'break-all', marginBottom: 4 }}>Code: {item.code || item.id}</div>
+                      <div style={{ color: isDarkMode ? '#888' : '#888', fontSize: 13, marginBottom: 8 }}>Created: {item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A'}</div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
                         <button title="View" style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); navigate(`/livequiz/details/${item.id}`); }}><i className="fa fa-eye" /></button>
                         <button title="Results" style={{ background: 'none', border: 'none', color: '#22c55e', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); navigate(`/livequiz/details/${item.id}`); }}><i className="fa fa-bar-chart" /></button>
-                        <button title="Link" style={{ background: 'none', border: 'none', color: '#0ea5e9', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(window.location.origin + `/livequiz/details/${item.id}`); }}><i className="fa fa-link" /></button>
-                        <button title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); if (window.confirm('Delete this live quiz?')) {/* TODO: implement delete */} }}><i className="fa fa-trash" /></button>
+                        <button title="Link" style={{ background: 'none', border: 'none', color: '#0ea5e9', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(window.location.origin + `/livequiz/details/${item.id}`); toast('Link copied!', 'success'); }}><i className="fa fa-link" /></button>
+                        <button title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); if (window.confirm('Delete this live quiz?')) handleDeleteLiveQuiz(item.id); }}><i className="fa fa-trash" /></button>
                       </div>
                     </motion.div>
                   ) : (
@@ -500,7 +663,7 @@ const Dashboard = () => {
                       exit={{ opacity: 0, scale: 0.95, y: 18 }}
                       transition={{ duration: 0.32, type: 'spring' }}
                       className="dashboard-animated-card"
-                      style={{ marginBottom: 30 }} // Add marginBottom to last card
+                      style={{ marginBottom: 30 }}
                     >
                       <MemoFormCardRow
                         view={viewMode}
@@ -542,14 +705,13 @@ const Dashboard = () => {
                         }
                         expanded={expandedCardId === item.id}
                         setExpandedCardId={setExpandedCardId}
-                        titleStyle={{ fontWeight: 400, color: '#222' }}
+                        titleStyle={{ fontWeight: 400, color: isDarkMode ? '#fff' : '#222' }}
                         selected={selectedIds.includes(item.id)}
                         onSelect={handleSelect}
                       />
                     </motion.div>
                   )
                 ))}
-                {/* Extra spacer div for bottom gap */}
                 <div style={{ height: 30 }} />
               </>
             ) : (
@@ -558,6 +720,7 @@ const Dashboard = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
+                style={{ color: isDarkMode ? '#ccc' : '#666' }}
               >
                 {activeTab === 'forms'
                   ? 'No forms found.'

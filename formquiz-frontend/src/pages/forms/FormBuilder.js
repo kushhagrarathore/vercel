@@ -29,8 +29,8 @@ function SortableQuestion({ id, children }) {
     marginBottom: 12,
   };
   return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      {children}
+    <div ref={setNodeRef} style={style}>
+      {React.cloneElement(children, { dragHandleProps: { ...attributes, ...listeners } })}
     </div>
   );
 }
