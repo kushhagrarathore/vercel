@@ -10,6 +10,7 @@ import { supabase } from '../supabase';
 import { useToast } from '../components/Toast';
 import './Dashboard.css';
 import { FiSun, FiMoon } from 'react-icons/fi';
+import DeleteQuizButton from '../components/quiz/DeleteQuizButton';
 
 // Debounce hook
 function useDebounce(value, delay) {
@@ -585,7 +586,15 @@ const Dashboard = () => {
                     fontWeight: 700
                   }}>
                     <span>{selectedIds.length} selected</span>
-                    <button onClick={handleBulkDelete} style={{ color: '#ef4444', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Delete</button>
+                    {activeTab === 'livequiz' ? (
+                      <DeleteQuizButton
+                        quizIds={selectedIds}
+                        label="Delete Quiz"
+                        onDeleted={id => setLiveQuizzes(prev => prev.filter(q => q.id !== id))}
+                      />
+                    ) : (
+                      <button onClick={handleBulkDelete} style={{ color: '#ef4444', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Delete</button>
+                    )}
                     {(activeTab === 'forms' || activeTab === 'quizzes') && (
                       <>
                         <button onClick={() => handleBulkActivate(true)} style={{ color: '#22c55e', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Activate</button>
@@ -652,7 +661,6 @@ const Dashboard = () => {
                         <button title="View" style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); navigate(`/livequiz/details/${item.id}`); }}><i className="fa fa-eye" /></button>
                         <button title="Results" style={{ background: 'none', border: 'none', color: '#22c55e', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); navigate(`/livequiz/details/${item.id}`); }}><i className="fa fa-bar-chart" /></button>
                         <button title="Link" style={{ background: 'none', border: 'none', color: '#0ea5e9', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(window.location.origin + `/livequiz/details/${item.id}`); toast('Link copied!', 'success'); }}><i className="fa fa-link" /></button>
-                        <button title="Delete" style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); if (window.confirm('Delete this live quiz?')) handleDeleteLiveQuiz(item.id); }}><i className="fa fa-trash" /></button>
                       </div>
                     </motion.div>
                   ) : (
