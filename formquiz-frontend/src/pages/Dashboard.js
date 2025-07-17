@@ -380,7 +380,7 @@ const Dashboard = () => {
         .eq('user_id', user?.id);
       
       if (error) {
-        console.error('Error deleting live quiz:', error);
+        console.error('Error deleting live quiz:', error?.message || JSON.stringify(error, null, 2));
         toast('Failed to delete live quiz', 'error');
         return;
       }
@@ -389,7 +389,7 @@ const Dashboard = () => {
       toast('Live quiz deleted!', 'success');
     } catch (err) {
       toast('Failed to delete live quiz', 'error');
-      console.error(err);
+      console.error('Error deleting live quiz:', err?.message || JSON.stringify(err, null, 2));
     }
   };
 
