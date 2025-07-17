@@ -13,6 +13,7 @@ import { FiArrowLeft, FiEye, FiUpload, FiSun, FiMoon, FiSave, FiEdit2, FiTrash2,
 
 import { Button } from '../../components/buttonquiz';
 import { Input } from '../../components/input';
+import CustomizationPanel from '../../components/forms/CustomizationPanel';
 
 
 import { supabase } from "../../supabase";
@@ -367,6 +368,13 @@ export default function Quiz() {
       if (quizError || !quizData) return;
       setTitle(quizData.title || 'Untitled Presentation');
       setPublishedQuizId(quizId); // Ensure Save button is shown for existing quiz
+      // Load customization
+      if (quizData.customization_settings) {
+        setCustomization({
+          ...customization,
+          ...JSON.parse(quizData.customization_settings),
+        });
+      }
       // Fetch slides
       const { data: slidesData, error: slidesError } = await supabase
         .from('slides')
@@ -381,9 +389,9 @@ export default function Quiz() {
           question: s.question || '',
           options: s.options || ["", ""],
           correctAnswers: s.correct_answers || [],
-          background: s.background || '#ffffff',
-          textColor: s.text_color || '#000000',
-          fontFamily: s.font_family || textStyles[0].value,
+          background: s.background || customization.backgroundColor,
+          textColor: s.text_color || customization.textColor,
+          fontFamily: s.font_family || customization.fontFamily,
         })));
         setSelectedSlide(0);
       }
@@ -511,11 +519,7 @@ export default function Quiz() {
       return;
     }
     const { id: user_id, email } = user.user;
-    const customization_settings = JSON.stringify({
-      fontFamily: currentSlide?.fontFamily || textStyles[0].value,
-      textColor: currentSlide?.textColor || '#000000',
-      background: currentSlide?.background || '#ffffff',
-    });
+    const customization_settings = JSON.stringify(customization);
     let quizIdToUse = publishedQuizId;
     let quiz;
     if (!publishedQuizId) {
@@ -656,9 +660,9 @@ export default function Quiz() {
       question: s.question || '',
       options: s.options || ["", ""],
       correctAnswers: s.correct_answers || [],
-      background: s.background || '#ffffff',
-      textColor: s.text_color || '#000000',
-      fontFamily: s.font_family || textStyles[0].value,
+      background: s.background || customization.backgroundColor,
+      textColor: s.text_color || customization.textColor,
+      fontFamily: s.font_family || customization.fontFamily,
     })));
     // Reset selectedSlide if out of bounds
     setSelectedSlide(prev => (validSlides.length === 0 ? 0 : Math.min(prev, validSlides.length - 1)));
@@ -678,6 +682,18 @@ export default function Quiz() {
   const [customTab, setCustomTab] = useState('templates');
   const [startDateTime, setStartDateTime] = useState("");
   const [endDateTime, setEndDateTime] = useState("");
+  // Add customization state
+  const [customization, setCustomization] = useState({
+    backgroundColor: '#ffffff',
+    textColor: '#000000',
+    buttonColor: '#4a6bff',
+    buttonTextColor: '#ffffff',
+    backgroundImage: '',
+    logoImage: '',
+    fontFamily: 'Arial, sans-serif',
+    borderRadius: '18px',
+    glassmorphism: false,
+  });
 
   return (
     <div style={gradientBg}>
@@ -851,409 +867,349 @@ export default function Quiz() {
         </aside>
         {/* Main Content */}
         <main
-          className="flex-1 p-8 transition-all duration-300 flex flex-col items-center justify-start ml-60 mr-80"
-          style={{ maxWidth: 'calc(100vw - 15rem - 20rem)', width: '100%', overflowY: 'auto', background: 'var(--bg)', color: 'var(--text)' }}
+          className="flex-1 flex flex-col items-center justify-start ml-60 mr-80"
+          style={{
+            width: '100%',
+            minHeight: '100vh',
+            backgroundColor: customization.backgroundImage ? 'transparent' : customization.backgroundColor,
+            backgroundImage: customization.backgroundImage ? `url(${customization.backgroundImage})` : undefined,
+            backgroundSize: customization.backgroundImage ? 'cover' : undefined,
+            backgroundPosition: customization.backgroundImage ? 'center' : undefined,
+            backgroundRepeat: customization.backgroundImage ? 'no-repeat' : undefined,
+            fontFamily: customization.fontFamily,
+            transition: 'background 0.3s',
+            position: 'relative',
+            justifyContent: 'flex-start',
+            padding: '32px 0',
+          }}
         >
-          <div className="shadow-2xl max-w-2xl w-full mx-auto flex flex-col gap-10 justify-center items-center" style={{
-            background: currentSlide?.background || defaultSlideStyle.background,
-            borderRadius: (currentSlide?.borderRadius || defaultSlideStyle.borderRadius) * 0.7,
-            color: currentSlide?.textColor || defaultSlideStyle.textColor,
-            fontFamily: currentSlide?.fontFamily || defaultSlideStyle.fontFamily,
-            fontSize: currentSlide?.fontSize || defaultSlideStyle.fontSize,
-            fontWeight: currentSlide?.bold ? 'bold' : 'normal',
-            fontStyle: currentSlide?.italic ? 'italic' : 'normal',
-            boxShadow: currentSlide?.shadow ? '0 4px 16px 0 rgba(0,0,0,0.08)' : 'none',
-            padding: '2.5rem 2.5rem 3.5rem 2.5rem',
-            margin: '2.5rem',
-            textAlign: currentSlide?.alignment || defaultSlideStyle.alignment,
-            transition: 'all 0.3s',
-            boxSizing: 'border-box',
-            overflow: 'visible',
-            minHeight: '520px',
-            maxHeight: '700px',
-          }}>
-            <div className="font-semibold mb-2 text-blue-700">Slide {selectedSlide + 1} of {slides.length}</div>
-            <div className="flex gap-3 mb-4">
-              {questionTypes.map(qt => (
-                <button
-                  key={qt.value}
-                  className={`quizbuilder-question-type-btn${currentSlide?.type === qt.value ? ' active' : ''}`}
-                  style={{ padding: '6px 14px', fontSize: 14, borderRadius: 8, border: 'none', fontWeight: 600, background: currentSlide?.type === qt.value ? '#2563eb' : '#f7f8fa', color: currentSlide?.type === qt.value ? '#fff' : '#2563eb', marginRight: 8 }}
-                  onClick={() => {
-                    if (qt.value === 'true_false') {
-                      updateSlide('type', 'true_false');
-                      updateSlide('options', ['True', 'False']);
-                      updateSlide('correctAnswers', []);
-                    } else if (qt.value === 'one_word') {
-                      updateSlide('type', 'one_word');
-                      updateSlide('options', []);
-                      updateSlide('correctAnswers', []);
-                    } else {
-                      updateSlide('type', 'multiple');
-                      if (!Array.isArray(currentSlide?.options) || currentSlide?.options.length < 2) {
-                        updateSlide('options', ['', '']);
-                      }
-                      updateSlide('correctAnswers', []);
-                    }
-                  }}
-                >
-                  {qt.label}
-                </button>
-              ))}
+          {/* Optional dark overlay for background image */}
+          {customization.backgroundImage && !customization.glassmorphism && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              background: 'rgba(30,34,45,0.10)',
+              zIndex: 0,
+              pointerEvents: 'none',
+            }} />
+          )}
+          <div
+            className="quiz-card"
+            style={{
+              maxWidth: 700,
+              width: '100%',
+              margin: '0 auto',
+              background: customization.glassmorphism
+                ? 'rgba(255,255,255,0.35)'
+                : '#fff',
+              boxShadow: customization.glassmorphism
+                ? '0 8px 32px 0 rgba(31,38,135,0.18)'
+                : '0 4px 24px 0 rgba(44,62,80,0.13)',
+              borderRadius: customization.borderRadius,
+              padding: '32px 28px 36px 28px',
+              position: 'relative',
+              zIndex: 1,
+              backdropFilter: customization.glassmorphism ? 'blur(12px)' : undefined,
+              WebkitBackdropFilter: customization.glassmorphism ? 'blur(12px)' : undefined,
+              border: customization.glassmorphism ? '1.5px solid rgba(255,255,255,0.18)' : '1.5px solid #e5e7eb',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              minHeight: 420,
+              transition: 'all 0.3s',
+            }}
+          >
+            {customization.logoImage && (
+              <div className="quiz-logo" style={{ textAlign: 'center', marginBottom: 12 }}>
+                <img src={customization.logoImage} alt="Quiz Logo" style={{ maxHeight: 48, maxWidth: 140, borderRadius: 10, boxShadow: '0 2px 8px #a5b4fc22' }} />
+              </div>
+            )}
+            <div style={{ fontWeight: 700, fontSize: 22, color: '#6366f1', marginBottom: 10, textAlign: 'center', letterSpacing: '-0.5px' }}>{title}</div>
+            <div style={{ fontSize: 15, color: customization.textColor, marginBottom: 18, textAlign: 'center', opacity: 0.85 }}>
+              Slide {selectedSlide + 1} of {slides.length}
             </div>
-            <Input
-              placeholder="Your first question?"
-              value={currentSlide?.question}
-              onChange={(e) => updateSlide("question", e.target.value)}
-              className="quizbuilder-question-input w-full p-4 border border-gray-200 rounded-lg text-lg shadow-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-300 transition-all mb-4"
-              style={{ color: '#222', background: '#f8fafc', borderColor: '#e0e7ff', fontFamily: 'Inter, Arial, sans-serif' }}
-            />
-            {/* Render input UI based on type */}
-            {currentSlide?.type === 'multiple' && (
-              <div className="space-y-3 w-full">
-                {currentSlide?.options.map((opt, i) => {
-                  const isCorrect = currentSlide?.correctAnswers.includes(i);
-                  return (
-                    <div key={i} className="quizbuilder-option-row flex items-center px-4 py-2 rounded-full border transition-all duration-200 group mb-2" style={{ minHeight: '56px', position: 'relative', boxShadow: 'none', background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}>
-                      <input
-                        type="checkbox"
-                        name={`correct-answer-${selectedSlide}`}
-                        checked={isCorrect}
-                        onChange={() => {
-                          let newAnswers = currentSlide?.correctAnswers.includes(i)
-                            ? currentSlide?.correctAnswers.filter(idx => idx !== i)
-                            : [i];
-                          updateSlide('correctAnswers', newAnswers);
-                        }}
-                        className="accent-blue-600 mr-2"
-                      />
-                      <input
-                        type="text"
-                        value={opt}
-                        onChange={(e) => updateOption(i, e.target.value)}
-                        placeholder={`Option ${i + 1}`}
-                        className="flex-1 bg-transparent border-none outline-none px-2 py-2 text-base font-semibold rounded-full focus:ring-0 focus:outline-none"
-                        style={{ color: 'var(--text)', fontFamily: 'Inter, Arial, sans-serif', background: 'transparent' }}
-                      />
-                      {currentSlide?.options.length > 2 && (
-                        <button onClick={() => removeOption(i)} className="w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center transition-all ml-2" style={{ boxShadow: 'none', border: 'none', padding: 0, marginRight: 0 }} title="Delete option"><FiTrash2 /></button>
-                      )}
-                    </div>
-                  );
-                })}
-                {currentSlide?.options.length < 4 ? (
-                  <Button variant="outline" className="quizbuilder-add-option-btn w-full mt-2" style={{ borderColor: '#4f8cff', color: '#4f8cff', background: '#e0e7ff' }} onClick={() => {
-                    const updatedSlides = [...slides];
-                    updatedSlides[selectedSlide].options.push("");
-                    setSlides(updatedSlides);
-                  }}>+ Add Option</Button>
-                ) : null}
+            <div style={{ width: '100%', position: 'relative', zIndex: 1 }}>
+              <div className="flex gap-3 mb-4">
+                {questionTypes.map(qt => (
+                  <button
+                    key={qt.value}
+                    className={`quizbuilder-question-type-btn${currentSlide?.type === qt.value ? ' active' : ''}`}
+                    style={{ padding: '6px 14px', fontSize: 14, borderRadius: 8, border: 'none', fontWeight: 600, background: currentSlide?.type === qt.value ? '#2563eb' : '#f7f8fa', color: currentSlide?.type === qt.value ? '#fff' : '#2563eb', marginRight: 8 }}
+                    onClick={() => {
+                      if (qt.value === 'true_false') {
+                        updateSlide('type', 'true_false');
+                        updateSlide('options', ['True', 'False']);
+                        updateSlide('correctAnswers', []);
+                      } else if (qt.value === 'one_word') {
+                        updateSlide('type', 'one_word');
+                        updateSlide('options', []);
+                        updateSlide('correctAnswers', []);
+                      } else {
+                        updateSlide('type', 'multiple');
+                        if (!Array.isArray(currentSlide?.options) || currentSlide?.options.length < 2) {
+                          updateSlide('options', ['', '']);
+                        }
+                        updateSlide('correctAnswers', []);
+                      }
+                    }}
+                  >
+                    {qt.label}
+                  </button>
+                ))}
               </div>
-            )}
-            {currentSlide?.type === 'true_false' && (
-              <div className="space-y-3 w-full">
-                {['True', 'False'].map((opt, i) => {
-                  const isCorrect = currentSlide?.correctAnswers.includes(i);
-                  return (
-                    <div key={i} className="quizbuilder-option-row flex items-center px-4 py-2 rounded-full border transition-all duration-200 group mb-2" style={{ minHeight: '56px', position: 'relative', boxShadow: 'none', background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}>
-                      <input
-                        type="checkbox"
-                        name={`correct-answer-${selectedSlide}`}
-                        checked={isCorrect}
-                        onChange={() => {
-                          let newAnswers = currentSlide?.correctAnswers.includes(i)
-                            ? currentSlide?.correctAnswers.filter(idx => idx !== i)
-                            : [i];
-                          updateSlide('correctAnswers', newAnswers);
-                        }}
-                        className="accent-blue-600 mr-2"
-                      />
-                      <input
-                        type="text"
-                        value={opt}
-                        disabled
-                        className="flex-1 bg-transparent border-none outline-none px-2 py-2 text-base font-semibold rounded-full focus:ring-0 focus:outline-none"
-                        style={{ color: 'var(--text)', fontFamily: 'Inter, Arial, sans-serif', background: 'transparent' }}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            {currentSlide?.type === 'one_word' && (
-              <div className="space-y-3 w-full">
-                <div className="quizbuilder-option-row flex items-center px-4 py-2 rounded-full border transition-all duration-200 group mb-2" style={{ minHeight: '56px', position: 'relative', boxShadow: 'none', background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}>
-                  <span className="font-semibold mr-2">Correct Answer:</span>
-                  <input
-                    type="text"
-                    value={currentSlide?.correctAnswers[0] || ''}
-                    onChange={e => updateSlide('correctAnswers', [e.target.value])}
-                    placeholder="Enter the correct answer"
-                    className="flex-1 bg-transparent border-none outline-none px-2 py-2 text-base font-semibold rounded-full focus:ring-0 focus:outline-none"
-                    style={{ color: 'var(--text)', fontFamily: 'Inter, Arial, sans-serif', background: 'transparent' }}
-                  />
+              <Input
+                placeholder="Your first question?"
+                value={currentSlide?.question}
+                onChange={(e) => updateSlide("question", e.target.value)}
+                className="quizbuilder-question-input w-full p-4 border border-gray-200 rounded-lg text-lg shadow-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-300 transition-all mb-4"
+                style={{ color: '#222', background: '#f8fafc', borderColor: '#e0e7ff', fontFamily: 'Inter, Arial, sans-serif' }}
+              />
+              {/* Render input UI based on type */}
+              {currentSlide?.type === 'multiple' && (
+                <div className="space-y-3 w-full">
+                  {currentSlide?.options.map((opt, i) => {
+                    const isCorrect = currentSlide?.correctAnswers.includes(i);
+                    return (
+                      <div key={i} className="quizbuilder-option-row flex items-center px-4 py-2 rounded-full border transition-all duration-200 group mb-2" style={{ minHeight: '56px', position: 'relative', boxShadow: 'none', background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}>
+                        <input
+                          type="checkbox"
+                          name={`correct-answer-${selectedSlide}`}
+                          checked={isCorrect}
+                          onChange={() => {
+                            let newAnswers = currentSlide?.correctAnswers.includes(i)
+                              ? currentSlide?.correctAnswers.filter(idx => idx !== i)
+                              : [i];
+                            updateSlide('correctAnswers', newAnswers);
+                          }}
+                          className="accent-blue-600 mr-2"
+                        />
+                        <input
+                          type="text"
+                          value={opt}
+                          onChange={(e) => updateOption(i, e.target.value)}
+                          placeholder={`Option ${i + 1}`}
+                          className="flex-1 bg-transparent border-none outline-none px-2 py-2 text-base font-semibold rounded-full focus:ring-0 focus:outline-none"
+                          style={{ color: 'var(--text)', fontFamily: 'Inter, Arial, sans-serif', background: 'transparent' }}
+                        />
+                        {currentSlide?.options.length > 2 && (
+                          <button onClick={() => removeOption(i)} className="w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center transition-all ml-2" style={{ boxShadow: 'none', border: 'none', padding: 0, marginRight: 0 }} title="Delete option"><FiTrash2 /></button>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {currentSlide?.options.length < 4 ? (
+                    <Button variant="outline" className="quizbuilder-add-option-btn w-full mt-2" style={{ borderColor: '#4f8cff', color: '#4f8cff', background: '#e0e7ff' }} onClick={() => {
+                      const updatedSlides = [...slides];
+                      updatedSlides[selectedSlide].options.push("");
+                      setSlides(updatedSlides);
+                    }}>+ Add Option</Button>
+                  ) : null}
                 </div>
-              </div>
-            )}
+              )}
+              {currentSlide?.type === 'true_false' && (
+                <div className="space-y-3 w-full">
+                  {['True', 'False'].map((opt, i) => {
+                    const isCorrect = currentSlide?.correctAnswers.includes(i);
+                    return (
+                      <div key={i} className="quizbuilder-option-row flex items-center px-4 py-2 rounded-full border transition-all duration-200 group mb-2" style={{ minHeight: '56px', position: 'relative', boxShadow: 'none', background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}>
+                        <input
+                          type="checkbox"
+                          name={`correct-answer-${selectedSlide}`}
+                          checked={isCorrect}
+                          onChange={() => {
+                            let newAnswers = currentSlide?.correctAnswers.includes(i)
+                              ? currentSlide?.correctAnswers.filter(idx => idx !== i)
+                              : [i];
+                            updateSlide('correctAnswers', newAnswers);
+                          }}
+                          className="accent-blue-600 mr-2"
+                        />
+                        <input
+                          type="text"
+                          value={opt}
+                          disabled
+                          className="flex-1 bg-transparent border-none outline-none px-2 py-2 text-base font-semibold rounded-full focus:ring-0 focus:outline-none"
+                          style={{ color: 'var(--text)', fontFamily: 'Inter, Arial, sans-serif', background: 'transparent' }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {currentSlide?.type === 'one_word' && (
+                <div className="space-y-3 w-full">
+                  <div className="quizbuilder-option-row flex items-center px-4 py-2 rounded-full border transition-all duration-200 group mb-2" style={{ minHeight: '56px', position: 'relative', boxShadow: 'none', background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}>
+                    <span className="font-semibold mr-2">Correct Answer:</span>
+                    <input
+                      type="text"
+                      value={currentSlide?.correctAnswers[0] || ''}
+                      onChange={e => updateSlide('correctAnswers', [e.target.value])}
+                      placeholder="Enter the correct answer"
+                      className="flex-1 bg-transparent border-none outline-none px-2 py-2 text-base font-semibold rounded-full focus:ring-0 focus:outline-none"
+                      style={{ color: 'var(--text)', fontFamily: 'Inter, Arial, sans-serif', background: 'transparent' }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </main>
-        {/* Right Panel: Customization */}
-        <aside className="fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-80 min-w-[16rem] shadow-lg z-20 transition-transform duration-300 flex flex-col" style={{ borderRadius: 20, margin: '1.5rem 1.5rem 1.5rem 0', padding: '2rem 1.5rem', overflowY: 'auto', background: 'var(--card)', color: 'var(--text)', boxShadow: '0 4px 24px 0 var(--border)' }}>
-          <div className="flex mb-6 border-b" style={{ borderColor: 'var(--border)' }}>
-            <button
-              className={`flex-1 py-2 text-center font-semibold ${customTab === 'templates' ? 'border-b-2 border-blue-500 text-blue-700' : 'text-gray-500'}`}
-              onClick={() => setCustomTab('templates')}
-              type="button"
-              style={{ background: 'none', borderColor: customTab === 'templates' ? '#3b82f6' : 'transparent', color: customTab === 'templates' ? 'var(--accent)' : 'var(--text-secondary)' }}
-            >
-              Templates
-            </button>
-            <button
-              className={`flex-1 py-2 text-center font-semibold ${customTab === 'advanced' ? 'border-b-2 border-blue-500 text-blue-700' : 'text-gray-500'}`}
-              onClick={() => setCustomTab('advanced')}
-              type="button"
-              style={{ background: 'none', borderColor: customTab === 'advanced' ? '#3b82f6' : 'transparent', color: customTab === 'advanced' ? 'var(--accent)' : 'var(--text-secondary)' }}
-            >
-              Advanced
-            </button>
-          </div>
-          {/* Templates Tab */}
-          {customTab === 'templates' && (
-            <div className="flex flex-col gap-6 mb-4">
-              {/* Dark Mode Template */}
+          {/* Right Panel: Customization */}
+          <aside className="fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-80 min-w-[16rem] shadow-lg z-20 transition-transform duration-300 flex flex-col" style={{ borderRadius: 20, margin: '1.5rem 1.5rem 1.5rem 0', padding: '2rem 1.5rem', overflowY: 'auto', background: 'var(--card)', color: 'var(--text)', boxShadow: '0 4px 24px 0 var(--border)' }}>
+            <div className="flex mb-6 border-b" style={{ borderColor: 'var(--border)' }}>
               <button
+                className={`flex-1 py-2 text-center font-semibold ${customTab === 'templates' ? 'border-b-2 border-blue-500 text-blue-700' : 'text-gray-500'}`}
+                onClick={() => setCustomTab('templates')}
                 type="button"
-                className={`flex items-center gap-4 rounded-2xl border-2 p-5 transition group ${currentSlide?.background === '#222' && currentSlide?.textColor === '#fff' ? 'border-black shadow-lg' : 'border-gray-300'} bg-[#222] hover:shadow-2xl hover:-translate-y-1`}
-                style={{ color: '#fff' }}
-                onClick={() => updateSlide('background', '#222') || updateSlide('textColor', '#fff')}
+                style={{ background: 'none', borderColor: customTab === 'templates' ? '#3b82f6' : 'transparent', color: customTab === 'templates' ? 'var(--accent)' : 'var(--text-secondary)' }}
               >
-                <div className="w-2 h-14 rounded-l-xl" style={{ background: '#222' }}></div>
-                <div className="flex flex-col items-start">
-                  <span className="font-bold text-lg group-hover:underline" style={{ color: '#fff' }}>Dark Mode</span>
-                  <span className="text-xs" style={{ color: '#e5e7eb' }}>bg-gray-900 text-white</span>
-                </div>
+                Templates
               </button>
-              {/* Light Mode Template */}
               <button
+                className={`flex-1 py-2 text-center font-semibold ${customTab === 'advanced' ? 'border-b-2 border-blue-500 text-blue-700' : 'text-gray-500'}`}
+                onClick={() => setCustomTab('advanced')}
                 type="button"
-                className={`flex items-center gap-4 rounded-2xl border-2 p-5 transition group ${currentSlide?.background === '#fff' && currentSlide?.textColor === '#111' ? 'border-black shadow-lg' : 'border-gray-200'} bg-white hover:shadow-2xl hover:-translate-y-1`}
-                style={{ color: '#111' }}
-                onClick={() => updateSlide('background', '#fff') || updateSlide('textColor', '#111')}
+                style={{ background: 'none', borderColor: customTab === 'advanced' ? '#3b82f6' : 'transparent', color: customTab === 'advanced' ? 'var(--accent)' : 'var(--text-secondary)' }}
               >
-                <div className="w-2 h-14 rounded-l-xl" style={{ background: '#fff', border: '1px solid #e5e7eb' }}></div>
-                <div className="flex flex-col items-start">
-                  <span className="font-bold text-lg group-hover:underline" style={{ color: '#111' }}>Light Mode</span>
-                  <span className="text-xs" style={{ color: '#6b7280' }}>bg-white text-black</span>
-                </div>
+                Advanced
               </button>
-              {/* Ocean Blue Template */}
-              <button
-                type="button"
-                className={`flex items-center gap-4 rounded-2xl border-2 p-5 transition group ${currentSlide?.background === '#dbeafe' && currentSlide?.textColor === '#1e3a8a' ? 'border-blue-500 shadow-lg' : 'border-blue-300'} bg-[#dbeafe] hover:shadow-2xl hover:-translate-y-1`}
-                style={{ color: '#1e3a8a' }}
-                onClick={() => updateSlide('background', '#dbeafe') || updateSlide('textColor', '#1e3a8a')}
-              >
-                <div className="w-2 h-14 rounded-l-xl" style={{ background: '#60a5fa' }}></div>
-                <div className="flex flex-col items-start">
-                  <span className="font-bold text-lg group-hover:underline" style={{ color: '#1e3a8a' }}>Ocean Blue</span>
-                  <span className="text-xs" style={{ color: '#1e3a8a' }}>bg-blue-100 text-blue-900</span>
-                </div>
-              </button>
-              {/* Sunshine Yellow Template */}
-              <button
-                type="button"
-                className={`flex items-center gap-4 rounded-2xl border-2 p-5 transition group ${currentSlide?.background === '#fef9c3' && currentSlide?.textColor === '#a16207' ? 'border-yellow-400 shadow-lg' : 'border-yellow-200'} bg-[#fef9c3] hover:shadow-2xl hover:-translate-y-1`}
-                style={{ color: '#a16207' }}
-                onClick={() => updateSlide('background', '#fef9c3') || updateSlide('textColor', '#a16207')}
-              >
-                <div className="w-2 h-14 rounded-l-xl" style={{ background: '#fde68a' }}></div>
-                <div className="flex flex-col items-start">
-                  <span className="font-bold text-lg group-hover:underline" style={{ color: '#a16207' }}>Sunshine Yellow</span>
-                  <span className="text-xs" style={{ color: '#a16207' }}>bg-yellow-100 text-yellow-900</span>
-                </div>
-              </button>
-              <div className="text-xs text-gray-500 text-center mt-2">Click a template to apply its style instantly.</div>
             </div>
-          )}
-          {/* Advanced Tab */}
-          {customTab === 'advanced' && (
-            <div className="space-y-6">
-              <div>
-                <div className="font-semibold mb-2 text-blue-700">Text Style</div>
-                <select
-                  className="w-full border rounded-lg p-3 mb-4 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                  style={{ background: '#f9fafb', color: '#222', borderColor: '#e0e7ff' }}
-                  value={currentSlide?.fontFamily || textStyles[0].value}
-                  onChange={e => updateSlide('fontFamily', e.target.value)}
+            {/* Templates Tab */}
+            {customTab === 'templates' && (
+              <div className="flex flex-col gap-6 mb-4">
+                {/* Dark Mode Template */}
+                <button
+                  type="button"
+                  className={`flex items-center gap-4 rounded-2xl border-2 p-5 transition group ${currentSlide?.background === '#222' && currentSlide?.textColor === '#fff' ? 'border-black shadow-lg' : 'border-gray-300'} bg-[#222] hover:shadow-2xl hover:-translate-y-1`}
+                  style={{ color: '#fff' }}
+                  onClick={() => updateSlide('background', '#222') || updateSlide('textColor', '#fff')}
                 >
-                  {textStyles.map(style => (
-                    <option key={style.value} value={style.value} style={{ fontFamily: style.value }}>{style.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <div className="font-semibold mb-2 text-blue-700">Colors</div>
-                <div className="flex items-end gap-6 mb-2">
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-xs text-gray-500">Text</span>
-                    <div
-                      className="w-8 h-8 rounded-full mb-1 border-2 shadow cursor-pointer"
-                      style={{ background: currentSlide?.textColor, borderColor: '#e0e7ff' }}
-                      onClick={() => setOpenColorPicker(openColorPicker === 'text' ? null : 'text')}
-                    />
-                    {openColorPicker === 'text' && (
-                      <input
-                        type="color"
-                        value={currentSlide?.textColor}
-                        onChange={e => { updateSlide('textColor', e.target.value); setOpenColorPicker(null); }}
-                        className="w-10 h-10 p-0 border-2 rounded-lg bg-transparent cursor-pointer shadow-sm mt-1"
-                        style={{ background: 'none', borderColor: '#e0e7ff' }}
-                        autoFocus
-                        onBlur={() => setOpenColorPicker(null)}
-                      />
-                    )}
+                  <div className="w-2 h-14 rounded-l-xl" style={{ background: '#222' }}></div>
+                  <div className="flex flex-col items-start">
+                    <span className="font-bold text-lg group-hover:underline" style={{ color: '#fff' }}>Dark Mode</span>
+                    <span className="text-xs" style={{ color: '#e5e7eb' }}>bg-gray-900 text-white</span>
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-xs text-gray-500">BG</span>
-                    <div
-                      className="w-8 h-8 rounded-full mb-1 border-2 shadow cursor-pointer"
-                      style={{ background: currentSlide?.background, borderColor: '#e0e7ff' }}
-                      onClick={() => setOpenColorPicker(openColorPicker === 'bg' ? null : 'bg')}
-                    />
-                    {openColorPicker === 'bg' && (
-                      <input
-                        type="color"
-                        value={currentSlide?.background}
-                        onChange={e => { updateSlide('background', e.target.value); setOpenColorPicker(null); }}
-                        className="w-10 h-10 p-0 border-2 rounded-lg bg-transparent cursor-pointer shadow-sm mt-1"
-                        style={{ background: 'none', borderColor: '#e0e7ff' }}
-                        autoFocus
-                        onBlur={() => setOpenColorPicker(null)}
-                      />
-                    )}
+                </button>
+                {/* Light Mode Template */}
+                <button
+                  type="button"
+                  className={`flex items-center gap-4 rounded-2xl border-2 p-5 transition group ${currentSlide?.background === '#fff' && currentSlide?.textColor === '#111' ? 'border-black shadow-lg' : 'border-gray-200'} bg-white hover:shadow-2xl hover:-translate-y-1`}
+                  style={{ color: '#111' }}
+                  onClick={() => updateSlide('background', '#fff') || updateSlide('textColor', '#111')}
+                >
+                  <div className="w-2 h-14 rounded-l-xl" style={{ background: '#fff', border: '1px solid #e5e7eb' }}></div>
+                  <div className="flex flex-col items-start">
+                    <span className="font-bold text-lg group-hover:underline" style={{ color: '#111' }}>Light Mode</span>
+                    <span className="text-xs" style={{ color: '#6b7280' }}>bg-white text-black</span>
                   </div>
-                </div>
+                </button>
+                {/* Ocean Blue Template */}
+                <button
+                  type="button"
+                  className={`flex items-center gap-4 rounded-2xl border-2 p-5 transition group ${currentSlide?.background === '#dbeafe' && currentSlide?.textColor === '#1e3a8a' ? 'border-blue-500 shadow-lg' : 'border-blue-300'} bg-[#dbeafe] hover:shadow-2xl hover:-translate-y-1`}
+                  style={{ color: '#1e3a8a' }}
+                  onClick={() => updateSlide('background', '#dbeafe') || updateSlide('textColor', '#1e3a8a')}
+                >
+                  <div className="w-2 h-14 rounded-l-xl" style={{ background: '#60a5fa' }}></div>
+                  <div className="flex flex-col items-start">
+                    <span className="font-bold text-lg group-hover:underline" style={{ color: '#1e3a8a' }}>Ocean Blue</span>
+                    <span className="text-xs" style={{ color: '#1e3a8a' }}>bg-blue-100 text-blue-900</span>
+                  </div>
+                </button>
+                {/* Sunshine Yellow Template */}
+                <button
+                  type="button"
+                  className={`flex items-center gap-4 rounded-2xl border-2 p-5 transition group ${currentSlide?.background === '#fef9c3' && currentSlide?.textColor === '#a16207' ? 'border-yellow-400 shadow-lg' : 'border-yellow-200'} bg-[#fef9c3] hover:shadow-2xl hover:-translate-y-1`}
+                  style={{ color: '#a16207' }}
+                  onClick={() => updateSlide('background', '#fef9c3') || updateSlide('textColor', '#a16207')}
+                >
+                  <div className="w-2 h-14 rounded-l-xl" style={{ background: '#fde68a' }}></div>
+                  <div className="flex flex-col items-start">
+                    <span className="font-bold text-lg group-hover:underline" style={{ color: '#a16207' }}>Sunshine Yellow</span>
+                    <span className="text-xs" style={{ color: '#a16207' }}>bg-yellow-100 text-yellow-900</span>
+                  </div>
+                </button>
+                <div className="text-xs text-gray-500 text-center mt-2">Click a template to apply its style instantly.</div>
               </div>
-              <div>
-                <div className="font-semibold mb-2 text-blue-700">Font Size</div>
-                <select value={currentSlide?.fontSize || 20} onChange={e => updateSlide('fontSize', parseInt(e.target.value))} className="w-full border rounded p-1">
-                  <option value={14}>sm</option>
-                  <option value={16}>base</option>
-                  <option value={18}>lg</option>
-                  <option value={20}>xl</option>
-                  <option value={24}>2xl</option>
-                  <option value={28}>3xl</option>
-                  <option value={32}>4xl</option>
-                </select>
-              </div>
-              {/* --- Quiz Availability Section: removed current IST time display --- */}
-              <hr className="my-4 border-blue-200" />
-              <div style={{ background: '#f3f6fd', borderRadius: 12, padding: 16, marginBottom: 8 }}>
-                <div className="font-semibold mb-2 text-blue-700" style={{ fontSize: 16 }}>Quiz Availability</div>
-                <div className="flex flex-col gap-3">
-                  <label>
-                    <span className="text-sm">Start Date & Time</span>
-                    <input
-                      type="datetime-local"
-                      value={startDateTime}
-                      onChange={e => setStartDateTime(e.target.value)}
-                      className="w-full border rounded p-2 mt-1"
-                    />
-                  </label>
-                  <label>
-                    <span className="text-sm">End Date & Time</span>
-                    <input
-                      type="datetime-local"
-                      value={endDateTime}
-                      onChange={e => setEndDateTime(e.target.value)}
-                      className="w-full border rounded p-2 mt-1"
-                    />
-                  </label>
-                  <div className="text-xs text-gray-500 mt-1">Times are in your local timezone. Quiz will only be accessible between these times.</div>
-                </div>
-              </div>
-              <div>
-                <div className="font-semibold mb-2 text-blue-700">Text Alignment</div>
-                <select value={currentSlide?.alignment || 'center'} onChange={e => updateSlide('alignment', e.target.value)} className="w-full border rounded p-1">
-                  <option value="left">Left</option>
-                  <option value="center">Center</option>
-                  <option value="right">Right</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-4 mt-3">
-                <label className="font-medium flex items-center gap-1"><input type="checkbox" checked={currentSlide?.bold ?? false} onChange={e => updateSlide('bold', e.target.checked)} /> Bold</label>
-                <label className="font-medium flex items-center gap-1"><input type="checkbox" checked={currentSlide?.italic ?? false} onChange={e => updateSlide('italic', e.target.checked)} /> Italic</label>
-              </div>
-            </div>
-          )}
-        </aside>
-      </div>
-      {/* Results Tab (unchanged) */}
-      {activeTab !== 'edit' && (
-        <div className="bg-white rounded-xl shadow p-6 max-w-4xl mx-auto mt-10">
-          <h2 className="text-xl font-bold mb-4">Responses</h2>
-          {responses.length === 0 ? (
-            <div className="text-gray-500">No responses yet.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border">
-                <thead>
-                  <tr>
-                    <th className="p-2 border-b">User</th>
-                    <th className="p-2 border-b">Submitted At</th>
-                    <th className="p-2 border-b">Score</th>
-                    {slides.map((slide, idx) => (
-                      <th key={slide.id || idx} className="p-2 border-b">Q{idx + 1}</th>
-                    ))}
-                  </tr>
-                  <tr>
-                    <th></th>
-                    <th></th>
-                    <th></th>
-                    {slides.map((slide, idx) => (
-                      <th key={slide.id || idx} className="p-2 border-b text-xs font-normal">{slide.question}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {responses.map((resp, i) => (
-                    <tr key={i}>
-                      <td className="p-2 border-b">{resp.username || resp.user_id || 'Anonymous'}</td>
-                      <td className="p-2 border-b">{resp.submitted_at ? new Date(resp.submitted_at).toLocaleString() : ''}</td>
-                      <td className="p-2 border-b">{calculateScore(slides, resp.answers)} / {slides.length}</td>
-                      {slides.map((slide, idx) => {
-                        const userAnswer = resp.answers?.[idx];
-                        let answerDisplay = '';
-                        let correctDisplay = '';
-                        if (slide.type === 'multiple' || slide.type === 'true_false') {
-                          answerDisplay = typeof userAnswer?.selectedIndex === 'number' && slide.options && slide.options[userAnswer.selectedIndex] !== undefined
-                            ? slide.options[userAnswer.selectedIndex]
-                            : 'No answer';
-                          correctDisplay = slide.correctAnswers && slide.correctAnswers.length > 0
-                            ? slide.options[slide.correctAnswers[0]]
-                            : '';
-                        } else if (slide.type === 'one_word') {
-                          answerDisplay = userAnswer?.text ? userAnswer.text : 'No answer';
-                          correctDisplay = slide.correctAnswers?.[0] || '';
-                        } else {
-                          answerDisplay = 'No answer';
-                          correctDisplay = '';
-                        }
-                        return (
-                          <td key={slide.id || idx} className="p-2 border-b">
-                            <div><span className="font-medium">User:</span> {answerDisplay}</div>
-                            <div><span className="font-medium">Correct:</span> {correctDisplay}</div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+            )}
+            {/* Advanced Tab */}
+            {customTab === 'advanced' && (
+              <CustomizationPanel
+                customization={customization}
+                setCustomization={setCustomization}
+              />
+            )}
+          </aside>
         </div>
-      )}
-    </div>
-  );
-}
+        {/* Results Tab (unchanged) */}
+        {activeTab !== 'edit' && (
+          <div className="bg-white rounded-xl shadow p-6 max-w-4xl mx-auto mt-10">
+            <h2 className="text-xl font-bold mb-4">Responses</h2>
+            {responses.length === 0 ? (
+              <div className="text-gray-500">No responses yet.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border">
+                  <thead>
+                    <tr>
+                      <th className="p-2 border-b">User</th>
+                      <th className="p-2 border-b">Submitted At</th>
+                      <th className="p-2 border-b">Score</th>
+                      {slides.map((slide, idx) => (
+                        <th key={slide.id || idx} className="p-2 border-b">Q{idx + 1}</th>
+                      ))}
+                    </tr>
+                    <tr>
+                      <th></th>
+                      <th></th>
+                      <th></th>
+                      {slides.map((slide, idx) => (
+                        <th key={slide.id || idx} className="p-2 border-b text-xs font-normal">{slide.question}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {responses.map((resp, i) => (
+                      <tr key={i}>
+                        <td className="p-2 border-b">{resp.username || resp.user_id || 'Anonymous'}</td>
+                        <td className="p-2 border-b">{resp.submitted_at ? new Date(resp.submitted_at).toLocaleString() : ''}</td>
+                        <td className="p-2 border-b">{calculateScore(slides, resp.answers)} / {slides.length}</td>
+                        {slides.map((slide, idx) => {
+                          const userAnswer = resp.answers?.[idx];
+                          let answerDisplay = '';
+                          let correctDisplay = '';
+                          if (slide.type === 'multiple' || slide.type === 'true_false') {
+                            answerDisplay = typeof userAnswer?.selectedIndex === 'number' && slide.options && slide.options[userAnswer.selectedIndex] !== undefined
+                              ? slide.options[userAnswer.selectedIndex]
+                              : 'No answer';
+                            correctDisplay = slide.correctAnswers && slide.correctAnswers.length > 0
+                              ? slide.options[slide.correctAnswers[0]]
+                              : '';
+                          } else if (slide.type === 'one_word') {
+                            answerDisplay = userAnswer?.text ? userAnswer.text : 'No answer';
+                            correctDisplay = slide.correctAnswers?.[0] || '';
+                          } else {
+                            answerDisplay = 'No answer';
+                            correctDisplay = '';
+                          }
+                          return (
+                            <td key={slide.id || idx} className="p-2 border-b">
+                              <div><span className="font-medium">User:</span> {answerDisplay}</div>
+                              <div><span className="font-medium">Correct:</span> {correctDisplay}</div>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
