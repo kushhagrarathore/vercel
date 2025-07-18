@@ -5,7 +5,16 @@ import { QRCodeSVG } from 'qrcode.react';
 import QuestionPreview from './QuestionPreview';
 import { useNavigate } from 'react-router-dom';
 import Confetti from 'react-confetti';
-import { useWindowSize } from '@react-hook/window-size';
+
+function useWindowSizeSimple() {
+  const [size, setSize] = React.useState([window.innerWidth, window.innerHeight]);
+  React.useEffect(() => {
+    const handleResize = () => setSize([window.innerWidth, window.innerHeight]);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  return size;
+}
 
 export default function AdminPage() {
   const navigate = useNavigate();
@@ -426,7 +435,7 @@ export default function AdminPage() {
 
   // Podium state
   const [showPodium, setShowPodium] = useState(false);
-  const [width, height] = useWindowSize();
+  const [width, height] = useWindowSizeSimple();
 
   const podiumGradients = [
     'bg-gradient-to-t from-yellow-400 via-yellow-200 to-white', // 1st
