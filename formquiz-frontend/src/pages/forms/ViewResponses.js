@@ -1,10 +1,83 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '../../supabase';
 import FormLayout from '../../components/forms/FormLayout';
 import '../../components/forms/FormLayout.css';
 import { FaUser, FaClock, FaArrowLeft } from 'react-icons/fa';
-import ShareDropdown from './ShareDropdown';
+
+const FormResultsDropdown = ({ responses, questions, questionIds }) => {
+  const [open, setOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleCopyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    alert('Sharable link copied!');
+    setOpen(false);
+  };
+
+  const handleExportResults = () => {
+    const headers = [
+      'User',
+      'Submitted At',
+      ...questionIds.map(qid => {
+        const q = questions.find(q => q.id === qid);
+        return q ? (q.question_text || q.title) : qid;
+      })
+    ];
+    const rows = [headers];
+    responses.forEach(resp => {
+      let answersObj = {};
+      try {
+        answersObj = typeof resp.answers === 'string' ? JSON.parse(resp.answers) : resp.answers;
+      } catch (e) {
+        answersObj = {};
+      }
+      const row = [
+        resp.users?.email || 'Anonymous',
+        new Date(resp.submitted_at).toLocaleString(),
+        ...questionIds.map(qid => (answersObj && answersObj[qid]) ? answersObj[qid] : '-')
+      ];
+      rows.push(row);
+    });
+    const csv = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'form_responses.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setOpen(false);
+  };
+
+  return (
+    <div ref={dropdownRef} style={{ position: 'absolute', top: 48, right: 48, zIndex: 20 }}>
+      <button onClick={() => setOpen(o => !o)} style={{ padding: '10px 22px', borderRadius: 10, background: '#4a6bff', color: '#fff', fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 2px 8px #a5b4fc22', fontSize: '1.08rem' }}>
+        More Actions ▼
+      </button>
+      {open && (
+        <div style={{
+          position: 'absolute', right: 0, top: '110%', background: '#fff', border: '1px solid #e5e7eb', borderRadius: 10, boxShadow: '0 2px 8px #a5b4fc22', zIndex: 10, minWidth: 200
+        }}>
+          <button onClick={handleCopyLink} style={{ width: '100%', padding: '14px 18px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '1.08rem' }}>Copy Sharable Link</button>
+          <button onClick={handleExportResults} style={{ width: '100%', padding: '14px 18px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '1.08rem' }}>Export Results as Excel</button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const ViewResponses = () => {
   const { formId, quizId } = useParams();
@@ -86,7 +159,10 @@ const ViewResponses = () => {
       alignItems: 'center',
       fontFamily: 'Inter, Segoe UI, Arial, sans-serif',
       padding: 0,
+      position: 'relative',
     }}>
+      {/* Dropdown for share/export */}
+      <FormResultsDropdown responses={responses} questions={questions} questionIds={questionIds} />
       <div style={{ width: '100%', maxWidth: 900, margin: '0 auto', padding: '48px 0 24px 0', textAlign: 'center', position: 'relative' }}>
         <button
           onClick={() => navigate(-1)}
@@ -202,22 +278,6 @@ const ViewResponses = () => {
           </table>
         </div>
       )}
-      {/* Share Results Button */}
-      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', margin: '32px 0 0 0' }}>
-        <ShareDropdown responses={responses.map(resp => {
-          let answersObj = {};
-          try {
-            answersObj = typeof resp.answers === 'string' ? JSON.parse(resp.answers) : resp.answers;
-          } catch (e) {
-            answersObj = {};
-          }
-          return {
-            User: resp.users?.email || 'Anonymous',
-            SubmittedAt: new Date(resp.submitted_at).toLocaleString(),
-            ...answersObj
-          };
-        })} />
-      </div>
       <style>{`
         @keyframes fadeInCard {
           from { opacity: 0; transform: translateY(24px) scale(0.98); }
