@@ -3,7 +3,7 @@ import { supabase } from '../../supabase.js';
 import { useQuiz } from '../../pages/livequiz/QuizContext';
 import { QRCodeSVG } from 'qrcode.react';
 import QuestionPreview from './QuestionPreview';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 // Remove Confetti import
 // import Confetti from 'react-confetti';
 
@@ -24,6 +24,7 @@ function useWindowSizeSimple() {
 
 export default function AdminPage() {
   const navigate = useNavigate();
+  const { quizId } = useParams();
   const {
     session,
     setSession,
@@ -35,12 +36,11 @@ export default function AdminPage() {
     setQuizPhase,
   } = useQuiz();
 
+  const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [quizzes, setQuizzes] = useState([]);
-  const [selectedQuizId, setSelectedQuizId] = useState("");
   const [timeLeft, setTimeLeft] = useState(0);
   const [showCorrect, setShowCorrect] = useState(false);
   const [pollResults, setPollResults] = useState([]);
@@ -81,15 +81,43 @@ export default function AdminPage() {
     return { ...settingsDefaults, ...(obj || {}) };
   }
 
+  // Fetch quiz and questions on mount
   useEffect(() => {
-    fetchQuizzes();
-  }, []);
-
-  useEffect(() => {
-    if (selectedQuizId) {
-      fetchQuestions(selectedQuizId);
+    async function fetchQuizAndQuestions() {
+      setLoading(true);
+      setError(null);
+      if (!quizId) {
+        setError('No quiz ID provided in URL.');
+        setLoading(false);
+        return;
+      }
+      // Only fetch from lq_quizzes
+      const { data: quizData, error: quizError } = await supabase.from('lq_quizzes').select('*').eq('id', quizId).single();
+      if (quizError || !quizData) {
+        setError('Quiz not found.');
+        setLoading(false);
+        return;
+      }
+      setQuiz(quizData);
+      // Only fetch from lq_questions
+      const { data: questionsData, error: qError } = await supabase
+        .from('lq_questions')
+        .select('*')
+        .eq('quiz_id', quizId)
+        .order('created_at', { ascending: true });
+      if (qError || !questionsData || questionsData.length === 0) {
+        setError('No questions found for this quiz.');
+        setLoading(false);
+        return;
+      }
+      setQuestions(questionsData);
+      setCurrentQuestion(questionsData[0]);
+      setCurrentQuestionIndex(0);
+      setLoading(false);
     }
-  }, [selectedQuizId]);
+    fetchQuizAndQuestions();
+    // eslint-disable-next-line
+  }, [quizId]);
 
   // --- Timer logic: requestAnimationFrame-based, server-synced ---
   const timerAnimationRef = useRef();
@@ -124,10 +152,11 @@ export default function AdminPage() {
   }, [session, currentQuestion, quizPhase]);
 
   useEffect(() => {
-    if (selectedQuizId) {
-      fetchQuestions(selectedQuizId);
+    if (quizId) {
+      // This useEffect is now redundant as quizId is in URL
+      // Keeping it for now, but it will be removed if not used elsewhere
     }
-  }, [selectedQuizId]);
+  }, [quizId]);
 
   // Fetch and subscribe to participants for the current session
   useEffect(() => {
@@ -251,44 +280,6 @@ export default function AdminPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [presentationMode]);
 
-  async function fetchQuestions(quizId) {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('lq_questions')
-        .select('*')
-        .eq('quiz_id', quizId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setQuestions(data || []);
-      if (data && data.length > 0) {
-        setCurrentQuestion(data[0]);
-        setCurrentQuestionIndex(0);
-      } else {
-        setCurrentQuestion(null);
-        setCurrentQuestionIndex(0);
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function fetchQuizzes() {
-    try {
-      const { data, error } = await supabase.from('lq_quizzes').select('*');
-      if (error) throw error;
-      setQuizzes(data || []);
-      if (data && data.length > 0 && !selectedQuizId) {
-        setSelectedQuizId(data[0].id);
-      }
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
   async function fetchParticipants(sessionId) {
     if (!sessionId) return;
     const { data, error } = await supabase
@@ -304,8 +295,8 @@ export default function AdminPage() {
   }
 
   async function startQuiz() {
-    if (!selectedQuizId) {
-      setError('Please select a quiz.');
+    if (!quizId || !questions.length) {
+      setError('Quiz or questions not loaded.');
       return;
     }
     try {
@@ -317,7 +308,7 @@ export default function AdminPage() {
             code: sessionCode,
             is_live: true,
             phase: 'lobby',
-            quiz_id: selectedQuizId,
+            quiz_id: quizId,
             current_question_id: questions[0]?.id,
           },
         ])
@@ -587,7 +578,6 @@ export default function AdminPage() {
       )}
       <div className={`w-full ${presentationMode ? 'h-full flex flex-col justify-center items-center' : 'max-w-4xl mx-auto p-2 sm:p-6'}`}
         style={presentationMode ? { maxWidth: '100vw', maxHeight: '100vh', padding: 0, marginTop: '4.5rem' } : {}}>
-        {/* Removed redundant Quiz Admin and Exit Presentation Mode from leaderboard area */}
         {/* Quiz Start Flow: After creating session, show code, participant list, and Start Quiz button */}
         {waitingToStart && session && !presentationMode ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
@@ -679,26 +669,29 @@ export default function AdminPage() {
           </div>
         ) :
         !session ? (
-          <div>
-            <label className="block mb-2 font-semibold">Select Quiz</label>
-            <select
-              value={selectedQuizId}
-              onChange={e => setSelectedQuizId(e.target.value)}
-              className="mb-4 p-3 border rounded-lg w-full text-lg shadow-sm focus:ring-2 focus:ring-blue-300"
-            >
-              {quizzes.length === 0 && <option value="">No quizzes available</option>}
-              {quizzes.map(quiz => (
-                <option key={quiz.id} value={quiz.id}>{quiz.title}</option>
-              ))}
-            </select>
-            <button
-              onClick={startQuiz}
-              disabled={!selectedQuizId}
-              className="w-full py-3 rounded-lg bg-blue-500 text-white font-bold text-lg shadow hover:bg-blue-600 disabled:bg-gray-400 transition-all"
-            >
-              Start New Quiz Session
-            </button>
-          </div>
+          loading ? (
+            <div className="p-4">Loading...</div>
+          ) : error ? (
+            <div className="p-4 text-red-500">Error: {error}</div>
+          ) : quiz ? (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
+              <div className="w-full max-w-lg mx-auto bg-white/80 rounded-xl shadow-lg p-6 animate-fade-in relative">
+                <h2 className="text-2xl font-bold text-blue-700 mb-4 text-center">Quiz: {quiz.title}</h2>
+                <div className="mb-4 text-center">
+                  <span className="text-lg font-semibold text-gray-800">Ready to start this quiz session?</span>
+                </div>
+                <div className="flex justify-center">
+                  <button
+                    onClick={startQuiz}
+                    className="px-8 py-3 bg-blue-500 text-white rounded-2xl font-bold text-xl shadow-lg hover:bg-blue-600 transition-all"
+                    style={{ minWidth: '120px' }}
+                  >
+                    Start New Quiz Session
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null
         ) : (
           <div className="space-y-8">
             {/* Show leaderboard only, hide question/response containers when leaderboard is visible */}

@@ -265,7 +265,6 @@ export default function QuestionsPage() {
 
   const handleMenuCreateQuiz = async () => {
     if (quizNameInputRef.current) {
-      quizNameInputRef.current.focus();
     }
     setLoading(true);
     setSuccessMessage('');
@@ -309,6 +308,8 @@ export default function QuestionsPage() {
         setQuestions([]);
         setQuizName('');
         setSuccessMessage('Quiz created successfully.');
+        // Immediately navigate to the admin pre-quiz screen for the new quiz
+        navigate(`/admin/${data.id}`);
       } else {
         setError(error.message);
       }
@@ -316,7 +317,6 @@ export default function QuestionsPage() {
       setError(err.message);
     } finally {
       setLoading(false);
-      fetchQuestions();
     }
   };
 
@@ -523,7 +523,10 @@ export default function QuestionsPage() {
               fontSize: '1.15rem',
               marginRight: '0.5rem',
             }}
-            onClick={() => navigate('/Admin')}
+            onClick={() => {
+              const id = selectedQuizId || quizId;
+              if (id) navigate(`/admin/${id}`);
+            }}
           >
             Start Quiz →
           </button>

@@ -100,7 +100,7 @@ function App() {
             <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
             <Route path="/plans" element={<RequireAuth><Plan /></RequireAuth>} />
             {/* Live Quiz Admin */}
-            <Route path="/Admin" element={<RequireAuth><QuizProvider><AdminPage /></QuizProvider></RequireAuth>} />
+            <Route path="/admin/:quizId" element={<RequireAuth><QuizProvider><AdminPage /></QuizProvider></RequireAuth>} />
 
           </Routes>
         </LiveQuizProvider>
