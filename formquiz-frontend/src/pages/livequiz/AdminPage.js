@@ -4,6 +4,17 @@ import { useQuiz } from '../../pages/livequiz/QuizContext';
 import { QRCodeSVG } from 'qrcode.react';
 import QuestionPreview from './QuestionPreview';
 import { useNavigate } from 'react-router-dom';
+import Confetti from 'react-confetti';
+
+function useWindowSizeSimple() {
+  const [size, setSize] = React.useState([window.innerWidth, window.innerHeight]);
+  React.useEffect(() => {
+    const handleResize = () => setSize([window.innerWidth, window.innerHeight]);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  return size;
+}
 
 export default function AdminPage() {
   const navigate = useNavigate();
@@ -424,6 +435,7 @@ export default function AdminPage() {
 
   // Podium state
   const [showPodium, setShowPodium] = useState(false);
+  const [width, height] = useWindowSizeSimple();
 
   const podiumGradients = [
     'bg-gradient-to-t from-yellow-400 via-yellow-200 to-white', // 1st
@@ -467,6 +479,7 @@ export default function AdminPage() {
     const places = ['1st', '2nd', '3rd'];
     return (
       <div className="relative flex flex-col items-center justify-center w-full h-full min-h-screen min-w-screen bg-white/90 p-0 m-0 overflow-hidden" style={{position:'absolute',top:0,left:0}}>
+        <Confetti width={width} height={height} numberOfPieces={250} recycle={false} gravity={0.2} initialVelocityY={8} />
         <h3 className="text-[6vw] sm:text-5xl font-extrabold text-gray-800 mb-8 text-center tracking-wide drop-shadow animate-fade-in">🏆 Podium</h3>
         <div className="flex flex-row items-end justify-center gap-[4vw] w-full mb-8" style={{height:'40vh'}}>
           {/* 2nd place */}
