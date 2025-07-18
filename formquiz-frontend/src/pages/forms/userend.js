@@ -642,7 +642,15 @@ export default function LiveQuizUser() {
 
   if (submitted)
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: customization.background, fontFamily: customization.fontFamily }}>
+      <div className="min-h-screen w-full flex flex-col" style={{
+        backgroundColor: customization.backgroundImage ? 'transparent' : (customization.background || customization.backgroundColor || '#fff'),
+        backgroundImage: customization.backgroundImage ? `url(${customization.backgroundImage})` : undefined,
+        backgroundSize: customization.backgroundImage ? 'cover' : undefined,
+        backgroundPosition: customization.backgroundImage ? 'center' : undefined,
+        backgroundRepeat: customization.backgroundImage ? 'no-repeat' : undefined,
+        fontFamily: customization.fontFamily,
+        color: customization.textColor
+      }}>
         <div className="bg-white shadow-2xl rounded-3xl p-8 max-w-2xl w-full text-center">
           <h2 className="text-4xl font-extrabold mb-6" style={{ color: customization.textColor }}>🎉 Quiz Submitted!</h2>
           <p className="text-xl mb-8" style={{ color: customization.textColor }}>Thank you for submitting your answers!</p>
@@ -753,7 +761,15 @@ export default function LiveQuizUser() {
     );
 
   return (
-    <div className="min-h-screen w-full flex flex-col" style={{ background: customization.background || customization.backgroundColor || '#fff', fontFamily: customization.fontFamily, color: customization.textColor }}>
+    <div className="min-h-screen w-full flex flex-col" style={{
+      backgroundColor: customization.backgroundImage ? 'transparent' : (customization.background || customization.backgroundColor || '#fff'),
+      backgroundImage: customization.backgroundImage ? `url(${customization.backgroundImage})` : undefined,
+      backgroundSize: customization.backgroundImage ? 'cover' : undefined,
+      backgroundPosition: customization.backgroundImage ? 'center' : undefined,
+      backgroundRepeat: customization.backgroundImage ? 'no-repeat' : undefined,
+      fontFamily: customization.fontFamily,
+      color: customization.textColor
+    }}>
       {/* Top Bar */}
       <div className="flex items-center justify-between px-6 py-4 shadow-sm border-b bg-white/80 sticky top-0 z-20" style={{ fontFamily: customization.fontFamily }}>
         <button onClick={handleExit} className="text-blue-600 font-bold text-lg hover:underline">Exit Quiz</button>
