@@ -613,7 +613,7 @@ const Dashboard = () => {
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: 18 }}
                       transition={{ duration: 0.32, type: 'spring' }}
-                      className="dashboard-animated-card"
+                      className="dashboard-animated-card livequiz-card-hover"
                       style={{ 
                         position: 'relative', 
                         borderLeft: '6px solid #a78bfa', 
@@ -628,9 +628,15 @@ const Dashboard = () => {
                         justifyContent: 'center', 
                         gap: 8, 
                         marginBottom: 30,
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        transition: 'box-shadow 0.2s, transform 0.2s',
                       }}
                       onClick={() => navigate(`/livequiz/questions/${item.id}`)}
+                      whileHover={{
+                        boxShadow: '0 8px 32px 0 rgba(44,62,80,0.18)',
+                        scale: 1.025,
+                        zIndex: 10
+                      }}
                     >
                       <input
                         type="checkbox"
@@ -670,8 +676,13 @@ const Dashboard = () => {
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: 18 }}
                       transition={{ duration: 0.32, type: 'spring' }}
-                      className="dashboard-animated-card"
-                      style={{ marginBottom: 30 }}
+                      className="dashboard-animated-card formquiz-card-hover"
+                      style={{ marginBottom: 30, transition: 'box-shadow 0.2s, transform 0.2s' }}
+                      whileHover={{
+                        boxShadow: '0 8px 32px 0 rgba(44,62,80,0.18)',
+                        scale: 1.025,
+                        zIndex: 10
+                      }}
                     >
                       <MemoFormCardRow
                         view={viewMode}
