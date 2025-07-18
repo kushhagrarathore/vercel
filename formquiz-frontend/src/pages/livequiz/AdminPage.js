@@ -79,7 +79,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (!session || !currentQuestion || quizPhase !== 'question') {
       setTimeLeft(0);
-      setShowCorrect(false);
+      setShowCorrect(false); // Always reset when not in question phase
       return;
     }
     let end;
@@ -89,6 +89,7 @@ export default function AdminPage() {
       end = new Date();
       end.setSeconds(end.getSeconds() + (currentQuestion.timer || 20));
     }
+    setShowCorrect(false); // Reset at the start of each question
     function updateTime() {
       const now = Date.now();
       const secondsLeft = Math.max(0, Math.floor((end.getTime() - now) / 1000));
@@ -833,7 +834,7 @@ export default function AdminPage() {
                       <li
                         key={index}
                         className={
-                          `${showCorrect && index === currentQuestion.correct_answer_index ? 'text-green-600 font-semibold' : 'text-gray-700'} flex items-center gap-2`
+                          `${showCorrect && timeLeft === 0 && index === currentQuestion.correct_answer_index ? 'text-green-600 font-semibold' : 'text-gray-700'} flex items-center gap-2`
                         }
                       >
                         <span
@@ -853,7 +854,7 @@ export default function AdminPage() {
                         >
                           {option}
                         </span>
-                        {showCorrect && index === currentQuestion.correct_answer_index && <span className="ml-2 text-green-600 font-bold">✓</span>}
+                        {showCorrect && timeLeft === 0 && index === currentQuestion.correct_answer_index && <span className="ml-2 text-green-600 font-bold">✓</span>}
                       </li>
                     ))}
                   </ul>
