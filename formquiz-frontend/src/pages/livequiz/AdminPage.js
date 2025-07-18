@@ -522,6 +522,8 @@ export default function AdminPage() {
     return <div className="p-4 text-red-500">Error: {error}</div>;
   }
 
+  // Define a constant for the top bar height
+  const TOP_BAR_HEIGHT = '4.5rem';
   return (
     <div
       ref={presentationRef}
@@ -555,7 +557,7 @@ export default function AdminPage() {
       {/* Fixed Presentation Mode Top Bar */}
       {presentationMode && (
         <div className="fixed top-0 left-0 w-full z-50 bg-white/90 shadow-md flex items-center justify-between px-8 py-3 gap-4"
-          style={{ minHeight: '4.5rem', backdropFilter: 'blur(8px)' }}
+          style={{ minHeight: TOP_BAR_HEIGHT, height: TOP_BAR_HEIGHT, backdropFilter: 'blur(8px)' }}
         >
           <span className="text-lg md:text-2xl font-bold text-blue-700 tracking-wider">Quiz Code: <span className="text-gray-800">{session?.code}</span></span>
           <span className="text-base md:text-xl font-semibold text-gray-700">Q{currentQuestionIndex + 1} of {questions.length}</span>
@@ -576,8 +578,9 @@ export default function AdminPage() {
           </div>
         </div>
       )}
-      <div className={`w-full ${presentationMode ? 'h-full flex flex-col justify-center items-center' : 'max-w-4xl mx-auto p-2 sm:p-6'}`}
-        style={presentationMode ? { maxWidth: '100vw', maxHeight: '100vh', padding: 0, marginTop: '4.5rem' } : {}}>
+      <div
+        className={`w-full ${presentationMode ? 'h-full flex flex-col justify-center items-center' : 'max-w-4xl mx-auto p-2 sm:p-6'}`}
+        style={presentationMode ? { maxWidth: '100vw', maxHeight: '100vh', padding: 0, marginTop: TOP_BAR_HEIGHT, minHeight: `calc(100vh - ${TOP_BAR_HEIGHT})`, boxSizing: 'border-box', overflow: 'auto' } : { marginTop: TOP_BAR_HEIGHT }}>
         {/* Quiz Start Flow: After creating session, show code, participant list, and Start Quiz button */}
         {waitingToStart && session && !presentationMode ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
@@ -693,13 +696,42 @@ export default function AdminPage() {
             </div>
           ) : null
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-8" style={{ width: '100%', marginTop: 0, paddingTop: 0 }}>
             {/* Show leaderboard only, hide question/response containers when leaderboard is visible */}
-            {showPodium ? renderPodium() : showLeaderboard ? (
-              <div className="flex flex-col items-center justify-center w-full h-full min-h-screen min-w-screen bg-white/90 p-0 m-0" style={{position:'absolute',top:0,left:0}}>
-                <div className="w-full h-full flex flex-col items-center justify-center animate-fade-in">
-                  <h3 className="text-[6vw] sm:text-5xl font-extrabold text-gray-800 mb-8 text-center tracking-wide drop-shadow">Leaderboard</h3>
-                  <ol className="w-full max-w-5xl mx-auto grid grid-rows-5 gap-6 px-2 sm:px-8">
+            {showPodium ? (
+              <div style={{ paddingTop: TOP_BAR_HEIGHT, minHeight: `calc(100vh - ${TOP_BAR_HEIGHT})`, boxSizing: 'border-box', width: '100vw', overflow: 'auto' }}>
+                {renderPodium()}
+              </div>
+            ) : showLeaderboard ? (
+              <div
+                className="flex flex-col items-center justify-center w-full min-h-screen min-w-screen bg-white/90 p-0 m-0"
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  width: '100vw',
+                  height: '100vh',
+                  paddingTop: TOP_BAR_HEIGHT,
+                  boxSizing: 'border-box',
+                  zIndex: 10, // Lower than menu bar
+                  pointerEvents: 'auto',
+                }}
+              >
+                {/* Responsive leaderboard container with scroll if needed */}
+                <div
+                  className="w-full flex flex-col items-center justify-start animate-fade-in"
+                  style={{
+                    maxWidth: '900px',
+                    margin: '0 auto',
+                    width: '100%',
+                    flex: 1,
+                    maxHeight: 'calc(100vh - 8.5rem)', // 4.5rem menu + 4rem for Next btn
+                    overflowY: 'auto',
+                    paddingBottom: '2rem',
+                  }}
+                >
+                  <h3 className="text-[6vw] sm:text-5xl font-extrabold text-gray-800 mb-6 text-center tracking-wide drop-shadow" style={{marginTop: 0}}>Leaderboard</h3>
+                  <ol className="w-full max-w-5xl mx-auto grid grid-rows-5 gap-4 px-2 sm:px-8">
                     {(() => {
                       const sorted = participants
                         .map(p => ({ ...p, score: participantScores[p.id] || 0 }))
@@ -708,21 +740,36 @@ export default function AdminPage() {
                       while (sorted.length < 5) sorted.push(null);
                       return sorted.map((p, i) => (
                         <li key={p ? p.id : `empty-${i}`}
-                          className={`flex items-center justify-between px-8 py-8 rounded-2xl border-4 shadow-lg ${p ? 'bg-gray-50 border-gray-300' : 'bg-gray-100 border-gray-200'} text-[2vw] sm:text-2xl font-bold`}
-                          style={{minHeight:'6vh'}}
+                          className={`flex items-center justify-between px-4 py-4 sm:px-8 sm:py-8 rounded-2xl border-4 shadow-lg ${p ? 'bg-gray-50 border-gray-300' : 'bg-gray-100 border-gray-200'} text-lg sm:text-2xl font-bold`}
+                          style={{minHeight:'3.5rem'}}
                         >
-                          <span className="w-10 text-center text-gray-500 text-[2vw] sm:text-2xl">{i + 1}</span>
-                          <span className="flex-1 text-center text-gray-800 text-[2vw] sm:text-2xl truncate max-w-[60vw]">{p ? (p.username || 'Anonymous') : '—'}</span>
-                          <span className="w-20 text-right text-gray-700 text-[2vw] sm:text-2xl">{p ? p.score : '—'}</span>
+                          <span className="w-8 sm:w-10 text-center text-gray-500">{i + 1}</span>
+                          <span className="flex-1 text-center text-gray-800 truncate max-w-[60vw]">{p ? (p.username || 'Anonymous') : '—'}</span>
+                          <span className="w-12 sm:w-20 text-right text-gray-700">{p ? p.score : '—'}</span>
                         </li>
                       ));
                     })()}
                   </ol>
+                </div>
+                {/* Next button pinned to bottom, always visible, responsive, never covers menu bar */}
+                <div
+                  style={{
+                    position: 'fixed',
+                    left: 0,
+                    bottom: 0,
+                    width: '100vw',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(to top, rgba(255,255,255,0.97) 80%, rgba(255,255,255,0.7) 100%)',
+                    padding: '1rem 0 1.2rem 0',
+                    zIndex: 20, // Above leaderboard, below menu
+                    pointerEvents: 'auto',
+                  }}
+                >
                   <button
                     onClick={handleLeaderboardNext}
-                    className="mt-12 px-12 py-5 bg-gray-700 text-white rounded-xl font-bold text-[2vw] shadow hover:bg-gray-800 transition-all"
-                    style={{minWidth:'200px'}}
-                  >
+                    className="px-8 py-4 sm:px-12 sm:py-5 bg-gray-700 text-white rounded-xl font-bold text-lg sm:text-2xl shadow hover:bg-gray-800 transition-all"
+                    style={{minWidth:'160px', maxWidth:'90vw'}}>
                     Next
                   </button>
                 </div>
