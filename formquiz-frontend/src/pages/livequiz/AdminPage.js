@@ -4,15 +4,21 @@ import { useQuiz } from '../../pages/livequiz/QuizContext';
 import { QRCodeSVG } from 'qrcode.react';
 import QuestionPreview from './QuestionPreview';
 import { useNavigate } from 'react-router-dom';
-import Confetti from 'react-confetti';
+// Remove Confetti import
+// import Confetti from 'react-confetti';
 
 function useWindowSizeSimple() {
-  const [size, setSize] = React.useState([window.innerWidth, window.innerHeight]);
+  const isClient = typeof window !== 'undefined';
+  const [size, setSize] = React.useState([
+    isClient ? window.innerWidth : 0,
+    isClient ? window.innerHeight : 0
+  ]);
   React.useEffect(() => {
+    if (!isClient) return;
     const handleResize = () => setSize([window.innerWidth, window.innerHeight]);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [isClient]);
   return size;
 }
 
@@ -367,7 +373,7 @@ export default function AdminPage() {
   async function handleLeaderboardNext() {
     if (currentQuestionIndex >= questions.length - 1) {
       // Show podium leaderboard after last question
-      setShowPodium(true);
+      if (!showPodium) setShowPodium(true); // Only set if not already true
       return;
     }
     const nextIndex = currentQuestionIndex + 1;
@@ -448,7 +454,7 @@ export default function AdminPage() {
     'shadow-[0_8px_32px_rgba(255,191,0,0.18)]',
   ];
   const medalEmojis = ['🥇', '🥈', '🥉'];
-  const defaultAvatar = '/public/logo192.png'; // fallback avatar
+  const defaultAvatar = '/logo192.png'; // fallback avatar
 
   const AnimatedPodiumBar = ({ height, delay, children, ...props }) => (
     <div
@@ -475,39 +481,35 @@ export default function AdminPage() {
       .sort((a, b) => b.score - a.score)
       .slice(0, 3);
     while (sorted.length < 3) sorted.push(null);
-    const heights = ['36vh', '26vh', '20vh'];
+    const heights = ['32vh', '22vh', '16vh']; // slightly reduced for better balance
     const places = ['1st', '2nd', '3rd'];
     return (
       <div className="relative flex flex-col items-center justify-center w-full h-full min-h-screen min-w-screen bg-white/90 p-0 m-0 overflow-hidden" style={{position:'absolute',top:0,left:0}}>
-        <Confetti width={width} height={height} numberOfPieces={250} recycle={false} gravity={0.2} initialVelocityY={8} />
         <h3 className="text-[6vw] sm:text-5xl font-extrabold text-gray-800 mb-8 text-center tracking-wide drop-shadow animate-fade-in">🏆 Podium</h3>
-        <div className="flex flex-row items-end justify-center gap-[4vw] w-full mb-8" style={{height:'40vh'}}>
+        <div className="flex flex-row items-end justify-center gap-[4vw] w-full mb-8" style={{height:'38vh', alignItems:'flex-end'}}>
           {/* 2nd place */}
-          <div className="flex flex-col items-center flex-1">
-            <AnimatedPodiumBar height={heights[1]} delay={0.2} className={`w-[18vw] min-w-[90px] rounded-t-xl ${podiumGradients[1]} ${podiumShadows[1]} flex flex-col items-center justify-end relative`}>
-              <span className="absolute -top-10 left-1/2 -translate-x-1/2 text-[3vw] animate-fade-in" style={{animationDelay:'0.7s'}}>{medalEmojis[1]}</span>
-              <img src={sorted[1]?.avatar || defaultAvatar} alt="avatar" className="w-[6vw] h-[6vw] min-w-[48px] min-h-[48px] rounded-full border-4 border-white shadow-lg mb-2 animate-fade-in" style={{animationDelay:'0.7s'}} />
-              <span className="text-[2vw] font-medium text-gray-700 mb-2 truncate max-w-[90%] text-center animate-fade-in" style={{animationDelay:'0.8s'}}>{sorted[1]?.username || '—'}</span>
-              <span className="text-[2vw] font-semibold text-gray-600 mb-4 animate-fade-in" style={{animationDelay:'0.9s'}}>{sorted[1]?.score ?? '—'}</span>
-            </AnimatedPodiumBar>
+          <div className="flex flex-col items-center flex-1 justify-end">
+            <div className={`w-[16vw] min-w-[80px] rounded-t-xl ${podiumGradients[1]} ${podiumShadows[1]} flex flex-col items-center justify-end relative transition-all duration-300`} style={{height:heights[1], minHeight:'120px'}}>
+              <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-[2.5vw] animate-fade-in" style={{animationDelay:'0.7s'}}>{medalEmojis[1]}</span>
+              <span className="text-[1.7vw] font-medium text-gray-700 mb-2 truncate max-w-[90%] text-center animate-fade-in" style={{animationDelay:'0.8s'}}>{sorted[1]?.username || '—'}</span>
+              <span className="text-[1.7vw] font-semibold text-gray-600 mb-4 animate-fade-in" style={{animationDelay:'0.9s'}}>{sorted[1]?.score ?? '—'}</span>
+            </div>
           </div>
           {/* 1st place */}
-          <div className="flex flex-col items-center flex-1">
-            <AnimatedPodiumBar height={heights[0]} delay={0} className={`w-[22vw] min-w-[110px] rounded-t-xl ${podiumGradients[0]} ${podiumShadows[0]} flex flex-col items-center justify-end border-4 border-yellow-400 relative`}>
-              <span className="absolute -top-12 left-1/2 -translate-x-1/2 text-[4vw] animate-fade-in" style={{animationDelay:'0.5s'}}>{medalEmojis[0]}</span>
-              <img src={sorted[0]?.avatar || defaultAvatar} alt="avatar" className="w-[7vw] h-[7vw] min-w-[56px] min-h-[56px] rounded-full border-4 border-white shadow-xl mb-2 animate-fade-in" style={{animationDelay:'0.6s'}} />
-              <span className="text-[2.5vw] font-bold text-gray-800 mb-2 truncate max-w-[90%] text-center animate-fade-in" style={{animationDelay:'0.7s'}}>{sorted[0]?.username || '—'}</span>
-              <span className="text-[2.5vw] font-bold text-gray-700 mb-4 animate-fade-in" style={{animationDelay:'0.8s'}}>{sorted[0]?.score ?? '—'}</span>
-            </AnimatedPodiumBar>
+          <div className="flex flex-col items-center flex-1 justify-end">
+            <div className={`w-[20vw] min-w-[100px] rounded-t-xl ${podiumGradients[0]} ${podiumShadows[0]} flex flex-col items-center justify-end border-4 border-yellow-400 relative transition-all duration-300`} style={{height:heights[0], minHeight:'150px'}}>
+              <span className="absolute -top-10 left-1/2 -translate-x-1/2 text-[3vw] animate-fade-in" style={{animationDelay:'0.5s'}}>{medalEmojis[0]}</span>
+              <span className="text-[2vw] font-bold text-gray-800 mb-2 truncate max-w-[90%] text-center animate-fade-in" style={{animationDelay:'0.7s'}}>{sorted[0]?.username || '—'}</span>
+              <span className="text-[2vw] font-bold text-gray-700 mb-4 animate-fade-in" style={{animationDelay:'0.8s'}}>{sorted[0]?.score ?? '—'}</span>
+            </div>
           </div>
           {/* 3rd place */}
-          <div className="flex flex-col items-center flex-1">
-            <AnimatedPodiumBar height={heights[2]} delay={0.4} className={`w-[18vw] min-w-[90px] rounded-t-xl ${podiumGradients[2]} ${podiumShadows[2]} flex flex-col items-center justify-end relative`}>
-              <span className="absolute -top-10 left-1/2 -translate-x-1/2 text-[3vw] animate-fade-in" style={{animationDelay:'0.9s'}}>{medalEmojis[2]}</span>
-              <img src={sorted[2]?.avatar || defaultAvatar} alt="avatar" className="w-[6vw] h-[6vw] min-w-[48px] min-h-[48px] rounded-full border-4 border-white shadow-lg mb-2 animate-fade-in" style={{animationDelay:'1s'}} />
-              <span className="text-[2vw] font-medium text-gray-700 mb-2 truncate max-w-[90%] text-center animate-fade-in" style={{animationDelay:'1.1s'}}>{sorted[2]?.username || '—'}</span>
-              <span className="text-[2vw] font-semibold text-gray-600 mb-4 animate-fade-in" style={{animationDelay:'1.2s'}}>{sorted[2]?.score ?? '—'}</span>
-            </AnimatedPodiumBar>
+          <div className="flex flex-col items-center flex-1 justify-end">
+            <div className={`w-[16vw] min-w-[80px] rounded-t-xl ${podiumGradients[2]} ${podiumShadows[2]} flex flex-col items-center justify-end relative transition-all duration-300`} style={{height:heights[2], minHeight:'100px'}}>
+              <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-[2.5vw] animate-fade-in" style={{animationDelay:'0.9s'}}>{medalEmojis[2]}</span>
+              <span className="text-[1.7vw] font-medium text-gray-700 mb-2 truncate max-w-[90%] text-center animate-fade-in" style={{animationDelay:'1.1s'}}>{sorted[2]?.username || '—'}</span>
+              <span className="text-[1.7vw] font-semibold text-gray-600 mb-4 animate-fade-in" style={{animationDelay:'1.2s'}}>{sorted[2]?.score ?? '—'}</span>
+            </div>
           </div>
         </div>
         <button
