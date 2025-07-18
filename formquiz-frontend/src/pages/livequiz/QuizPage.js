@@ -20,6 +20,7 @@ export default function QuizPage() {
   const [pointsEarned, setPointsEarned] = useState(null);
   const [liveScore, setLiveScore] = useState(null);
   const [cumulativeScore, setCumulativeScore] = useState(0);
+  const [isRemoved, setIsRemoved] = useState(false);
 
   // Auto-fill session code from URL query param 'code' on mount
   useEffect(() => {
@@ -34,6 +35,22 @@ export default function QuizPage() {
     if (!participant?.id) return;
     const cleanup = setupRealtimeSubscriptions();
     return cleanup;
+  }, [participant?.id]);
+
+  // Listen for removal event from admin
+  useEffect(() => {
+    if (!participant?.id) return;
+    console.log('[QuizPage] Setting up removal listener for', participant.id);
+    const channel = supabase.channel('removal_' + participant.id);
+    channel.on('broadcast', { event: 'you_were_removed' }, () => {
+      console.log('[QuizPage] Received removal event!');
+      setIsRemoved(true);
+      supabase.removeAllChannels();
+    });
+    channel.subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [participant?.id]);
 
   // --- Timer logic: requestAnimationFrame-based, server-synced (robust) ---
@@ -280,7 +297,11 @@ export default function QuizPage() {
   }
 
   async function submitAnswer(selectedIndex) {
-    console.log('submitAnswer called with:', selectedIndex);
+    console.log('[QuizPage] submitAnswer called. isRemoved:', isRemoved);
+    if (isRemoved) {
+      console.log('[QuizPage] Blocked submitAnswer because user is removed.');
+      return;
+    }
     if (!participant?.id || !currentQuestion?.id || selectedAnswer !== null) return;
 
     try {
@@ -310,6 +331,19 @@ export default function QuizPage() {
     } catch (err) {
       setError(err.message);
     }
+  }
+
+  if (isRemoved) {
+    console.log('[QuizPage] Rendering removal UI because isRemoved is true');
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-red-100 to-red-300 font-sans transition-all duration-500 px-2 sm:px-4">
+        <div className="flex flex-col items-center justify-center h-72 sm:h-96 w-full max-w-xl bg-white/80 rounded-xl shadow-lg p-4 sm:p-8 animate-fade-in">
+          <svg className="w-12 h-12 mb-4 text-red-400 animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" /><path d="M12 8v4l3 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-red-700 text-center">You have been removed from the quiz by the admin.</h1>
+          <div className="text-gray-600 text-lg text-center">If you believe this was a mistake, please contact the quiz host.</div>
+        </div>
+      </div>
+    );
   }
 
   if (!participant) {

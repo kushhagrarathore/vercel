@@ -114,19 +114,33 @@ export default function AdminPage() {
   // Fetch and subscribe to participants for the current session
   useEffect(() => {
     if (!session?.id) return;
+
+    // Fetch participants immediately when session.id is available
     fetchParticipants(session.id);
-    // Real-time subscription for session_participants (score updates)
+
+    // Subscribe to real-time changes for participants in this session
     const channel = supabase
       .channel('participants-' + session.id)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'lq_session_participants', filter: `session_id=eq.${session.id}` },
-        () => fetchParticipants(session.id)
+        (payload) => {
+          console.log('Real-time participant event:', payload);
+          fetchParticipants(session.id);
+        }
       )
       .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
     };
+  }, [session?.id]);
+
+  // Clear participants when session ends or is unset
+  useEffect(() => {
+    if (!session?.id) {
+      setParticipants([]);
+    }
   }, [session?.id]);
 
   // Always fetch latest participants after each question ends
@@ -267,6 +281,7 @@ export default function AdminPage() {
       console.error('Error fetching participants:', error);
       return;
     }
+    console.log('Fetched participants:', data);
     setParticipants(data || []);
   }
 
@@ -378,13 +393,28 @@ export default function AdminPage() {
     }
   }
 
+  // Remove a participant and broadcast removal event
   async function removeParticipant(participantId) {
     try {
+      // 1. Broadcast removal event to the participant (await subscription)
+      const removalChannel = supabase.channel('removal_' + participantId);
+      await removalChannel.subscribe();
+      await removalChannel.send({
+        type: 'broadcast',
+        event: 'you_were_removed',
+        payload: { removed: true }
+      });
+      console.log('[AdminPage] Sent removal event to', participantId);
+      // 2. Remove participant from DB
       await supabase
         .from('lq_session_participants')
         .delete()
         .eq('id', participantId);
-
+      // 3. Remove the channel after use
+      supabase.removeChannel(removalChannel);
+      // 4. Optimistically update UI before refetch
+      setParticipants(prev => prev.filter(p => p.id !== participantId));
+      // 5. Refetch participants immediately for UI responsiveness
       await fetchParticipants(session.id);
     } catch (err) {
       setError(err.message);
@@ -555,6 +585,12 @@ export default function AdminPage() {
                       className="flex justify-between items-center p-2 bg-gray-50 rounded-lg shadow-sm"
                     >
                       <span className="truncate max-w-[10rem] font-medium text-gray-800">{participant.username}</span>
+                      <button
+                        onClick={() => removeParticipant(participant.id)}
+                        className="px-2 py-1 text-red-500 hover:bg-red-100 rounded transition-all"
+                      >
+                        Remove
+                      </button>
                     </div>
                   ))}
                 </div>
