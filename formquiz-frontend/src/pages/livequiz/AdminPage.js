@@ -503,13 +503,20 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
-        <button
-          onClick={() => setShowPodium(false)}
-          className="mt-8 px-12 py-5 bg-gray-700 text-white rounded-xl font-bold text-[2vw] shadow hover:bg-gray-800 transition-all"
-          style={{minWidth:'200px'}}
-        >
-          Close
-        </button>
+        <div className="flex flex-col items-center gap-4 mt-8">
+          <button
+            onClick={() => setShowPodium(false)}
+            className="px-12 py-5 bg-gray-700 text-white rounded-xl font-bold text-[2vw] shadow hover:bg-gray-800 transition-all"
+            style={{minWidth:'200px'}}>
+            Close
+          </button>
+          <button
+            onClick={() => navigate(`/admin/${quizId}/summary`)}
+            className="px-12 py-5 bg-blue-600 text-white rounded-xl font-bold text-[2vw] shadow hover:bg-blue-800 transition-all"
+            style={{minWidth:'200px'}}>
+            View Full Summary
+          </button>
+        </div>
       </div>
     );
   };

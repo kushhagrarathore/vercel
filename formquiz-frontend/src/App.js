@@ -30,6 +30,8 @@ import { supabase } from './supabase/client';
 import QuestionsPage from './pages/livequiz/QuestionsPage';
 import Plan from './pages/Plan';
 import UpdatePassword from './pages/UpdatePassword';
+import AdminSummaryPage from './pages/livequiz/AdminSummaryPage';
+import QuizSessionsPage from './pages/livequiz/QuizSessionsPage';
 
 // RequireAuth component for protected routes
 function RequireAuth({ children }) {
@@ -101,6 +103,9 @@ function App() {
             <Route path="/plans" element={<RequireAuth><Plan /></RequireAuth>} />
             {/* Live Quiz Admin */}
             <Route path="/admin/:quizId" element={<RequireAuth><QuizProvider><AdminPage /></QuizProvider></RequireAuth>} />
+            <Route path="/admin/:quizId/summary" element={<RequireAuth><AdminSummaryPage /></RequireAuth>} />
+            <Route path="/admin/:quizId/sessions" element={<RequireAuth><QuizSessionsPage /></RequireAuth>} />
+            <Route path="/admin/:quizId/summary/:sessionId" element={<RequireAuth><AdminSummaryPage /></RequireAuth>} />
 
           </Routes>
         </LiveQuizProvider>
