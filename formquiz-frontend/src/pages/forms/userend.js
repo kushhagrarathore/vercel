@@ -642,7 +642,7 @@ export default function LiveQuizUser() {
 
   if (submitted)
     return (
-      <div className="min-h-screen w-full flex flex-col" style={{
+      <div className="min-h-screen w-full flex items-center justify-center" style={{
         backgroundColor: customization.backgroundImage ? 'transparent' : (customization.background || customization.backgroundColor || '#fff'),
         backgroundImage: customization.backgroundImage ? `url(${customization.backgroundImage})` : undefined,
         backgroundSize: customization.backgroundImage ? 'cover' : undefined,
