@@ -49,7 +49,7 @@ const FormBuilder = () => {
       : []
   );
   const [formId, setFormId] = useState(null);
-  const [activeTab, setActiveTab] = useState('standard');
+  const [isCustomizePanelOpen, setIsCustomizePanelOpen] = useState(true);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const navigate = useNavigate();
@@ -388,6 +388,14 @@ const FormBuilder = () => {
     setIsPreviewMode(true);
   };
 
+  const handleNavigateToResults = () => {
+    if (!formId) {
+      toast('Please save your form to see the results.', 'info');
+      return;
+    }
+    navigate(`/forms/${formId}/results`);
+  };
+
   const renderQuestion = (question, index) => {
     // Normalize question data for components
     const normalizedQuestion = {
@@ -591,160 +599,134 @@ const FormBuilder = () => {
         {loading && <div style={{ margin: '40px auto', textAlign: 'center' }}><Spinner size={40} /></div>}
         {!loading && (
           <>
-            <header className="form-builder-header">
-              <div className="header-left">
-                <button className="back-to-dashboard-button" onClick={handleBackToDashboard}>
+            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 24px', backgroundColor: '#fff', borderBottom: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#4a5568' }} onClick={handleBackToDashboard}>
                   ← Back to Dashboard
                 </button>
                 <input
                   type="text"
                   placeholder="Untitled Form"
-                  className="form-title-input header-title-input"
                   value={title}
                   onChange={(e) => {
                     setTitle(e.target.value);
                     setHasUnsavedChanges(true);
                   }}
+                  style={{ fontSize: '1.75rem', fontWeight: '700', border: 'none', outline: 'none', background: 'transparent', color: '#1a202c', width: '300px' }}
                 />
               </div>
-              <nav className="header-nav">
-                <button className={`nav-tab${activeSection === 'build' ? ' active' : ''}`} onClick={() => setActiveSection('build')}>Build</button>
-                <button className={`nav-tab${activeSection === 'share' ? ' active' : ''}`} onClick={() => setActiveSection('share')}>Share</button>
-                <button className={`nav-tab${activeSection === 'results' ? ' active' : ''}`} onClick={() => setActiveSection('results')}>Results</button>
+              <nav style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '4px' }}>
+                <button
+                  onClick={() => setActiveSection('build')}
+                  style={{ padding: '8px 16px', border: 'none', background: activeSection === 'build' ? '#6366f1' : 'transparent', color: activeSection === 'build' ? '#fff' : '#1a202c', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s ease-in-out' }}
+                >
+                  Build
+                </button>
+                <button
+                  onClick={() => setActiveSection('share')}
+                  style={{ padding: '8px 16px', border: 'none', background: activeSection === 'share' ? '#6366f1' : 'transparent', color: activeSection === 'share' ? '#fff' : '#1a202c', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s ease-in-out' }}
+                >
+                  Share
+                </button>
+                <button
+                  onClick={handleNavigateToResults}
+                  style={{ padding: '8px 16px', border: 'none', background: 'transparent', color: '#1a202c', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s ease-in-out' }}
+                >
+                  Results
+                </button>
               </nav>
-              <div className="header-right">
-                <button className="save-button" onClick={saveForm}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <button
+                  onClick={saveForm}
+                  style={{ padding: '8px 16px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+                >
                   Save Form
                 </button>
-                <button className="preview-button" onClick={handlePreviewClick}>
+                <button
+                  onClick={handlePreviewClick}
+                  style={{ padding: '8px 16px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+                >
                   Preview
                 </button>
-                <button className="delete-button" onClick={handleDeleteForm}>
+                <button
+                  onClick={handleDeleteForm}
+                  style={{ padding: '8px 16px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+                >
                   Delete Form
+                </button>
+                <button
+                  onClick={() => setIsCustomizePanelOpen(!isCustomizePanelOpen)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', color: '#4a5568' }}
+                >
+                  Customize
                 </button>
               </div>
             </header>
 
-            <div className="form-builder-content">
-              {activeSection === 'build' && (
-                <>
-                  <aside className="question-types-sidebar">
-                    <div className="sidebar-tabs">
-                      <button
-                        className={`tab-button ${activeTab === 'standard' ? ' active' : ''}`}
-                        onClick={() => setActiveTab('standard')}
-                      >
-                        Questions
-                      </button>
-                      <button
-                        className={`tab-button ${activeTab === 'premium' ? ' active' : ''}`}
-                        onClick={() => setActiveTab('premium')}
-                        title="Premium features coming soon!"
-                      >
-                        Premium
-                      </button>
-                      <button
-                        className={`tab-button ${activeTab === 'customize' ? ' active' : ''}`}
-                        onClick={() => setActiveTab('customize')}
-                      >
-                        Customize
-                      </button>
-                    </div>
+            <div className="flex w-full">
+              {/* Left Sidebar: Question Types */}
+              <aside className="w-[20%] p-4 bg-gray-50 border-r">
+                <h3 className="text-lg font-semibold mb-4">Questions</h3>
+                <ul className="question-list">
+                  {questionTypes['standard'].map((qType) => (
+                    <li key={qType.type} onClick={() => addQuestion(qType.type)}>
+                      <span className="icon">{qType.icon}</span>
+                      {qType.name}
+                    </li>
+                  ))}
+                </ul>
+              </aside>
 
-                    {activeTab !== 'customize' && (
-                      <ul className="question-list">
-                        {questionTypes[activeTab].map((qType) => (
-                          <li key={qType.type} onClick={() => addQuestion(qType.type)}>
-                            <span className="icon">{qType.icon}</span>
-                            {qType.name}
-                          </li>
+              {/* Center: Form Editor */}
+              <main className="flex-1 p-8">
+                <div className="form-title-block">
+                  <p className="form-editor-area-title-placeholder">
+                    Form Title: <span className="current-title">{title}</span>
+                  </p>
+                  <textarea
+                    className="form-description-textarea"
+                    placeholder="Add a short description about this form..."
+                    value={description}
+                    onChange={(e) => {
+                      setDescription(e.target.value);
+                      setHasUnsavedChanges(true);
+                    }}
+                  />
+                </div>
+                {questions.length > 0 ? (
+                  <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={questions.map(q => q.id)} strategy={verticalListSortingStrategy}>
+                      <div className="questions-container">
+                        {questions.map((q, i) => (
+                          <SortableQuestion key={q.id} id={q.id}>
+                            {renderQuestion(q, i)}
+                          </SortableQuestion>
                         ))}
-                      </ul>
-                    )}
-
-                    {activeTab === 'customize' && (
-                      <CustomizationPanel
-                        customization={customization}
-                        setCustomization={(newCustomization) => {
-                          setCustomization(newCustomization);
-                          setHasUnsavedChanges(true);
-                        }}
-                        ChromePicker={ChromePicker}
-                      />
-                    )}
-                  </aside>
-
-                  <main className="form-editor-area">
-                    <div className="form-title-block">
-                      <p className="form-editor-area-title-placeholder">
-                        Form Title: <span className="current-title">{title}</span>
-                      </p>
-                      <textarea
-                        className="form-description-textarea"
-                        placeholder="Add a short description about this form..."
-                        value={description}
-                        onChange={(e) => {
-                          setDescription(e.target.value);
-                          setHasUnsavedChanges(true);
-                        }}
-                      />
-                    </div>
-
-                    {questions.length > 0 ? (
-                      <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                        <SortableContext items={questions.map(q => q.id)} strategy={verticalListSortingStrategy}>
-                          <div className="questions-container">
-                            {questions.map((q, i) => (
-                              <SortableQuestion key={q.id} id={q.id}>
-                                {renderQuestion(q, i)}
-                              </SortableQuestion>
-                            ))}
-                          </div>
-                        </SortableContext>
-                      </DndContext>
-                    ) : (
-                      <div className="empty-form-message">
-                        <p>Start by adding questions from the left sidebar!</p>
                       </div>
-                    )}
-                  </main>
-                </>
-              )}
-              {activeSection === 'share' && (
-                <div className="share-panel">
-                  <h2>Share Your Form</h2>
-                  <div className="share-options">
-                    <div className="share-url">
-                      <label>Form URL:</label>
-                      <input
-                        type="text"
-                        value={formUrl}
-                        readOnly
-                        onClick={(e) => {
-                          e.target.select();
-                          navigator.clipboard.writeText(formUrl).then(() => {
-                            toast('Form URL copied!', 'success');
-                          });
-                        }}
-                      />
-                      <button className="copy-url-button" onClick={() => {navigator.clipboard.writeText(formUrl); toast('Form URL copied!', 'success');}}>Copy URL</button>
-                    </div>
-                    <div className="share-qr-code">
-                      <label>QR Code:</label>
-                      {formUrl ? (
-                        <QRCodeSVG value={formUrl} size={128} level="H" />
-                      ) : (
-                        <p>Save your form to generate a QR code.</p>
-                      )}
-                    </div>
+                    </SortableContext>
+                  </DndContext>
+                ) : (
+                  <div className="empty-form-message">
+                    <p>Start by adding questions from the left sidebar!</p>
                   </div>
-                </div>
-              )}
-              {activeSection === 'results' && (
-                <div className="results-panel">
-                  <h2>Form Results</h2>
-                  <button className="view-responses-button" onClick={() => navigate(`/form/${formId}/results`)}>View Responses</button>
-                </div>
+                )}
+              </main>
+
+              {/* Right Sidebar: Customization */}
+              {isCustomizePanelOpen && (
+                <aside className="w-[20%] p-4 bg-gray-50 border-l shadow-lg">
+                  <h3 className="text-lg font-semibold mb-4">Customize</h3>
+                  <div className="space-y-4">
+                    <CustomizationPanel
+                      customization={customization}
+                      setCustomization={(newCustomization) => {
+                        setCustomization(newCustomization);
+                        setHasUnsavedChanges(true);
+                      }}
+                      ChromePicker={ChromePicker}
+                    />
+                  </div>
+                </aside>
               )}
             </div>
           </>
@@ -782,92 +764,89 @@ const FormBuilder = () => {
       {loading && <div style={{ margin: '40px auto', textAlign: 'center' }}><Spinner size={40} /></div>}
       {!loading && (
         <>
-          <header className="form-builder-header">
-            <div className="header-left">
-              <button className="back-to-dashboard-button" onClick={handleBackToDashboard}>
+          <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 24px', backgroundColor: '#fff', borderBottom: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+              <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#4a5568' }} onClick={handleBackToDashboard}>
                 ← Back to Dashboard
               </button>
               <input
                 type="text"
                 placeholder="Untitled Form"
-                className="form-title-input header-title-input"
                 value={title}
                 onChange={(e) => {
                   setTitle(e.target.value);
                   setHasUnsavedChanges(true);
                 }}
+                style={{ fontSize: '1.75rem', fontWeight: '700', border: 'none', outline: 'none', background: 'transparent', color: '#1a202c', width: '300px' }}
               />
             </div>
-            <nav className="header-nav">
-              <button className={`nav-tab${activeSection === 'build' ? ' active' : ''}`} onClick={() => setActiveSection('build')}>Build</button>
-              <button className={`nav-tab${activeSection === 'share' ? ' active' : ''}`} onClick={() => setActiveSection('share')}>Share</button>
-              <button className={`nav-tab${activeSection === 'results' ? ' active' : ''}`} onClick={() => setActiveSection('results')}>Results</button>
+            <nav style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '4px' }}>
+              <button
+                onClick={() => setActiveSection('build')}
+                style={{ padding: '8px 16px', border: 'none', background: activeSection === 'build' ? '#6366f1' : 'transparent', color: activeSection === 'build' ? '#fff' : '#1a202c', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s ease-in-out' }}
+              >
+                Build
+              </button>
+              <button
+                onClick={() => setActiveSection('share')}
+                style={{ padding: '8px 16px', border: 'none', background: activeSection === 'share' ? '#6366f1' : 'transparent', color: activeSection === 'share' ? '#fff' : '#1a202c', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s ease-in-out' }}
+              >
+                Share
+              </button>
+              <button
+                onClick={handleNavigateToResults}
+                style={{ padding: '8px 16px', border: 'none', background: 'transparent', color: '#1a202c', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s ease-in-out' }}
+              >
+                Results
+              </button>
             </nav>
-            <div className="header-right">
-              <button className="save-button" onClick={saveForm}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <button
+                onClick={saveForm}
+                style={{ padding: '8px 16px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+              >
                 Save Form
               </button>
-              <button className="preview-button" onClick={handlePreviewClick}>
+              <button
+                onClick={handlePreviewClick}
+                style={{ padding: '8px 16px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+              >
                 Preview
               </button>
-              <button className="delete-button" onClick={handleDeleteForm}>
+              <button
+                onClick={handleDeleteForm}
+                style={{ padding: '8px 16px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+              >
                 Delete Form
+              </button>
+              <button
+                onClick={() => setIsCustomizePanelOpen(!isCustomizePanelOpen)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', color: '#4a5568' }}
+              >
+                Customize
               </button>
             </div>
           </header>
 
           {/* Removed Debug Panel */}
 
-          <div className="form-builder-content page-layout">
+          <div className="flex w-full">
             {activeSection === 'build' && (
               <>
-                <aside className="question-types-sidebar sidebar">
-                  <div className="sidebar-tabs">
-                    <button
-                      className={`tab-button ${activeTab === 'standard' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('standard')}
-                    >
-                      Questions
-                    </button>
-                    <button
-                      className={`tab-button ${activeTab === 'premium' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('premium')}
-                      title="Premium features coming soon!"
-                    >
-                      Premium
-                    </button>
-                    <button
-                      className={`tab-button ${activeTab === 'customize' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('customize')}
-                    >
-                      Customize
-                    </button>
-                  </div>
-
-                  {activeTab !== 'customize' && (
-                    <ul className="question-list">
-                      {questionTypes[activeTab].map((qType) => (
-                        <li key={qType.type} onClick={() => addQuestion(qType.type)}>
-                          <span className="icon">{qType.icon}</span>
-                          {qType.name}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  {activeTab === 'customize' && (
-                    <CustomizationPanel
-                      customization={customization}
-                      setCustomization={(newCustomization) => {
-                        setCustomization(newCustomization);
-                        setHasUnsavedChanges(true);
-                      }}
-                      ChromePicker={ChromePicker}
-                    />
-                  )}
+                {/* Left Sidebar: Question Types */}
+                <aside className="w-[20%] p-4 bg-gray-50 border-r">
+                  <h3 className="text-lg font-semibold mb-4">Questions</h3>
+                  <ul className="question-list">
+                    {questionTypes['standard'].map((qType) => (
+                      <li key={qType.type} onClick={() => addQuestion(qType.type)}>
+                        <span className="icon">{qType.icon}</span>
+                        {qType.name}
+                      </li>
+                    ))}
+                  </ul>
                 </aside>
-
-                <main className="form-editor-area main-content">
+                {/* Center: Form Editor */}
+                <main className="flex-1 p-8">
                   <div className="form-title-block">
                     <p className="form-editor-area-title-placeholder">
                       Form Title: <span className="current-title">{title}</span>
@@ -901,6 +880,22 @@ const FormBuilder = () => {
                     </div>
                   )}
                 </main>
+                {/* Right Sidebar: Customization */}
+                {isCustomizePanelOpen && (
+                  <aside className="w-[20%] p-4 bg-gray-50 border-l shadow-lg">
+                    <h3 className="text-lg font-semibold mb-4">Customize</h3>
+                    <div className="space-y-4">
+                      <CustomizationPanel
+                        customization={customization}
+                        setCustomization={(newCustomization) => {
+                          setCustomization(newCustomization);
+                          setHasUnsavedChanges(true);
+                        }}
+                        ChromePicker={ChromePicker}
+                      />
+                    </div>
+                  </aside>
+                )}
               </>
             )}
             {activeSection === 'integrate' && (
