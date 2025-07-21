@@ -3,6 +3,23 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../../supabase.js';
 import QuestionPreview from './QuestionPreview';
 
+// Custom Confirm Modal
+function ConfirmLeaveModal({ open, onConfirm, onCancel }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full flex flex-col items-center">
+        <div className="text-lg font-bold mb-4 text-amber-700">You have unsaved changes</div>
+        <div className="mb-6 text-gray-700 text-center">Are you sure you want to leave? Unsaved changes will be lost.</div>
+        <div className="flex gap-4 w-full justify-center">
+          <button onClick={onCancel} className="px-6 py-2 rounded-lg bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300">Stay</button>
+          <button onClick={onConfirm} className="px-6 py-2 rounded-lg bg-red-500 text-white font-bold hover:bg-red-600">Leave</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function QuestionsPage() {
   const { quizId } = useParams();
   const [questions, setQuestions] = useState([]);
@@ -32,6 +49,9 @@ export default function QuestionsPage() {
   const navigate = useNavigate();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [deletedQuestionIds, setDeletedQuestionIds] = useState([]);
+  const isSavingRef = useRef(false);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
+  const pendingNavigationRef = useRef(null);
 
   // Centralized theme/customization defaults (must match AdminPage.js)
   const settingsDefaults = {
@@ -244,9 +264,8 @@ export default function QuestionsPage() {
   }
 
   function addOption() {
-    if (form.options.length < 4) {
-      setForm({ ...form, options: [...form.options, ''] });
-    }
+    if (form.options.length >= 4) return;
+    setForm({ ...form, options: [...form.options, ''] });
   }
 
   function removeOption(index) {
@@ -390,8 +409,43 @@ export default function QuestionsPage() {
     setHasUnsavedChanges(true);
   };
 
+  // --- UNSAVED CHANGES: Native browser warning ---
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (hasUnsavedChanges && !isSavingRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // --- UNSAVED CHANGES: Intercept internal navigation (Back to Dashboard) ---
+  const handleBackToDashboard = (e) => {
+    if (hasUnsavedChanges && !isSavingRef.current) {
+      e.preventDefault();
+      setShowLeaveModal(true);
+      pendingNavigationRef.current = () => navigate('/dashboard');
+    } else {
+      navigate('/dashboard');
+    }
+  };
+  const handleLeaveConfirm = () => {
+    setShowLeaveModal(false);
+    if (pendingNavigationRef.current) {
+      pendingNavigationRef.current();
+      pendingNavigationRef.current = null;
+    }
+  };
+  const handleLeaveCancel = () => {
+    setShowLeaveModal(false);
+    pendingNavigationRef.current = null;
+  };
+
   // --- CREATE or SAVE QUIZ LOGIC ---
   const handleCreateOrSaveQuiz = async () => {
+    isSavingRef.current = true;
     setLoading(true);
     setSuccessMessage('');
     setQuizTitleError('');
@@ -407,6 +461,7 @@ export default function QuestionsPage() {
       setTimeout(() => setShowTitlePrompt(false), 3500);
       setTimeout(() => setTitleInputGlow(false), 2500);
       setTimeout(() => setTitleInputBg(false), 2500);
+      isSavingRef.current = false;
       return;
     }
     try {
@@ -414,6 +469,7 @@ export default function QuestionsPage() {
       if (userError || !user) {
         setError('Unable to get user info. Please log in again.');
         setLoading(false);
+        isSavingRef.current = false;
         return;
       }
       const userId = user.id;
@@ -457,7 +513,16 @@ export default function QuestionsPage() {
       setError(err.message);
     } finally {
       setLoading(false);
+      isSavingRef.current = false;
     }
+  };
+
+  // --- START QUIZ LOGIC (disable warning during start) ---
+  const handleStartQuiz = () => {
+    isSavingRef.current = true;
+    const id = selectedQuizId || quizId;
+    if (id) navigate(`/admin/${id}`);
+    setTimeout(() => { isSavingRef.current = false; }, 1000); // fallback
   };
 
   // Track unsaved changes on any edit
@@ -490,7 +555,7 @@ export default function QuestionsPage() {
           <button
             className="text-blue-400 font-bold text-base hover:underline focus:outline-none"
             style={{background:'none',border:'none',padding:0}}
-            onClick={() => navigate('/dashboard')}
+            onClick={handleBackToDashboard}
           >
             ← Back to Dashboard
           </button>
@@ -523,10 +588,7 @@ export default function QuestionsPage() {
               fontSize: '1.15rem',
               marginRight: '0.5rem',
             }}
-            onClick={() => {
-              const id = selectedQuizId || quizId;
-              if (id) navigate(`/admin/${id}`);
-            }}
+            onClick={handleStartQuiz}
           >
             Start Quiz →
           </button>
@@ -547,7 +609,9 @@ export default function QuestionsPage() {
           </button>
         </div>
       </div>
-        {/* Floating Prompt Box */}
+      {/* Confirm Leave Modal */}
+      <ConfirmLeaveModal open={showLeaveModal} onConfirm={handleLeaveConfirm} onCancel={handleLeaveCancel} />
+      {/* Floating Prompt Box */}
         {showTitlePrompt && (
           <div
             className="fixed left-1/2 top-16 z-50 -translate-x-1/2 animate-fade-in-out"
@@ -788,8 +852,12 @@ export default function QuestionsPage() {
                   <button
                     type="button"
                     onClick={addOption}
-                    className="px-6 py-3 bg-blue-100 text-blue-700 rounded-xl font-semibold hover:bg-blue-200 transition-colors text-lg"
-                    disabled={form.options.length >= 4}
+                    className="px-6 py-3 bg-blue-100 text-blue-700 rounded-xl font-semibold transition-colors text-lg"
+                    style={{
+                      opacity: form.options.length >= 4 ? 0.6 : 1,
+                      cursor: form.options.length >= 4 ? 'not-allowed' : 'pointer',
+                      pointerEvents: 'auto',
+                    }}
                   >
                     Add Option
                   </button>
