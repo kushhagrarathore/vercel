@@ -57,6 +57,11 @@ const FormBuilder = () => {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState('build');
+  const [isAddQuestionModalOpen, setIsAddQuestionModalOpen] = useState(false);
+
+  const PencilIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>;
+  const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
+  const CloseIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
 
   const [customization, setCustomization] = useState({
     backgroundColor: '#ffffff',
@@ -664,21 +669,31 @@ const FormBuilder = () => {
             </header>
 
             <div className="flex w-full">
-              {/* Left Sidebar: Question Types */}
-              <aside className="w-[20%] p-4 bg-gray-50 border-r">
-                <h3 className="text-lg font-semibold mb-4">Questions</h3>
-                <ul className="question-list">
-                  {questionTypes['standard'].map((qType) => (
-                    <li key={qType.type} onClick={() => addQuestion(qType.type)}>
-                      <span className="icon">{qType.icon}</span>
-                      {qType.name}
-                    </li>
+              {/* Left Sidebar: Slide Selector */}
+              <div className="w-[280px] p-4 bg-white border-r rounded-xl shadow-md">
+                <button
+                  onClick={() => setIsAddQuestionModalOpen(true)}
+                  className="w-full text-white font-semibold py-2 rounded-md bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 transition-all mb-4"
+                >
+                  + Add Question
+                </button>
+                <div className="space-y-2">
+                  {questions.map((q, index) => (
+                    <div key={q.id} className="p-3 rounded-lg bg-gray-100 hover:bg-gray-200 flex justify-between items-center cursor-pointer">
+                      <div className="flex items-center gap-3">
+                        <span className="text-gray-500 font-bold">{String(index + 1).padStart(2, '0')}</span>
+                        <span className="font-semibold text-gray-800 truncate">{q.question_text || 'Untitled Question'}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button className="p-1 rounded-full text-gray-500 hover:bg-gray-300 hover:text-red-600 transition-colors" onClick={() => removeQuestion(q.id)}><TrashIcon /></button>
+                      </div>
+                    </div>
                   ))}
-                </ul>
-              </aside>
+                </div>
+              </div>
 
               {/* Center: Form Editor */}
-              <main className="flex-1 p-8">
+              <main className="flex-1 p-8 bg-slate-100">
                 <div className="form-title-block">
                   <p className="form-editor-area-title-placeholder">
                     Form Title: <span className="current-title">{title}</span>
@@ -706,15 +721,16 @@ const FormBuilder = () => {
                     </SortableContext>
                   </DndContext>
                 ) : (
-                  <div className="empty-form-message">
-                    <p>Start by adding questions from the left sidebar!</p>
+                  <div className="text-center py-24 px-8 bg-white rounded-xl border-2 border-dashed border-gray-300">
+                    <h3 className="text-xl font-semibold text-gray-700">Your form is empty!</h3>
+                    <p className="text-gray-500 mt-2">Click the "+ Add Question" button to start building your form.</p>
                   </div>
                 )}
               </main>
 
               {/* Right Sidebar: Customization */}
               {isCustomizePanelOpen && (
-                <aside className="w-[20%] p-4 bg-gray-50 border-l shadow-lg">
+                <aside className="w-[20%] p-4 bg-white border-l shadow-lg">
                   <h3 className="text-lg font-semibold mb-4">Customize</h3>
                   <div className="space-y-4">
                     <CustomizationPanel
@@ -729,6 +745,33 @@ const FormBuilder = () => {
                 </aside>
               )}
             </div>
+            {isAddQuestionModalOpen && (
+              <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+                <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg transform transition-all">
+                  <div className="flex justify-between items-start mb-6">
+                    <h3 className="text-2xl font-bold text-gray-900">Choose a question type</h3>
+                    <button onClick={() => setIsAddQuestionModalOpen(false)} className="p-2 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-800 transition-colors">
+                      <CloseIcon />
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {questionTypes['standard'].map((qType) => (
+                      <div
+                        key={qType.type}
+                        onClick={() => {
+                          addQuestion(qType.type);
+                          setIsAddQuestionModalOpen(false);
+                        }}
+                        className="p-4 border rounded-lg hover:bg-indigo-50 hover:border-indigo-400 cursor-pointer flex items-center gap-4 transition-all group"
+                      >
+                        <span className="text-3xl transition-transform group-hover:scale-110">{qType.icon}</span>
+                        <span className="font-semibold text-gray-700 group-hover:text-indigo-800">{qType.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -828,25 +871,33 @@ const FormBuilder = () => {
             </div>
           </header>
 
-          {/* Removed Debug Panel */}
-
           <div className="flex w-full">
             {activeSection === 'build' && (
               <>
-                {/* Left Sidebar: Question Types */}
-                <aside className="w-[20%] p-4 bg-gray-50 border-r">
-                  <h3 className="text-lg font-semibold mb-4">Questions</h3>
-                  <ul className="question-list">
-                    {questionTypes['standard'].map((qType) => (
-                      <li key={qType.type} onClick={() => addQuestion(qType.type)}>
-                        <span className="icon">{qType.icon}</span>
-                        {qType.name}
-                      </li>
+                {/* Left Sidebar: Slide Selector */}
+                <div className="w-[280px] p-4 bg-white border-r rounded-xl shadow-md">
+                  <button
+                    onClick={() => setIsAddQuestionModalOpen(true)}
+                    className="w-full text-white font-semibold py-2 rounded-md bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 transition-all mb-4"
+                  >
+                    + Add Question
+                  </button>
+                  <div className="space-y-2">
+                    {questions.map((q, index) => (
+                      <div key={q.id} className="p-3 rounded-lg bg-gray-100 hover:bg-gray-200 flex justify-between items-center cursor-pointer">
+                        <div className="flex items-center gap-3">
+                          <span className="text-gray-500 font-bold">{String(index + 1).padStart(2, '0')}</span>
+                          <span className="font-semibold text-gray-800 truncate">{q.question_text || 'Untitled Question'}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button className="p-1 rounded-full text-gray-500 hover:bg-gray-300 hover:text-red-600 transition-colors" onClick={() => removeQuestion(q.id)}><TrashIcon /></button>
+                        </div>
+                      </div>
                     ))}
-                  </ul>
-                </aside>
+                  </div>
+                </div>
                 {/* Center: Form Editor */}
-                <main className="flex-1 p-8">
+                <main className="flex-1 p-8 bg-slate-100">
                   <div className="form-title-block">
                     <p className="form-editor-area-title-placeholder">
                       Form Title: <span className="current-title">{title}</span>
@@ -875,20 +926,21 @@ const FormBuilder = () => {
                       </SortableContext>
                     </DndContext>
                   ) : (
-                    <div className="empty-form-message">
-                      <p>Start by adding questions from the left sidebar!</p>
+                    <div className="text-center py-24 px-8 bg-white rounded-xl border-2 border-dashed border-gray-300">
+                      <h3 className="text-xl font-semibold text-gray-700">Your form is empty!</h3>
+                      <p className="text-gray-500 mt-2">Click the "+ Add Question" button to start building your form.</p>
                     </div>
                   )}
                 </main>
                 {/* Right Sidebar: Customization */}
                 {isCustomizePanelOpen && (
-                  <aside className="w-[20%] p-4 bg-gray-50 border-l shadow-lg">
+                  <aside className="w-[20%] p-4 bg-white border-l shadow-lg">
                     <h3 className="text-lg font-semibold mb-4">Customize</h3>
                     <div className="space-y-4">
                       <CustomizationPanel
                         customization={customization}
-                        setCustomization={(newCustomization) => {
-                          setCustomization(newCustomization);
+                        setCustomization={(_newCustomization) => {
+                          setCustomization(_newCustomization);
                           setHasUnsavedChanges(true);
                         }}
                         ChromePicker={ChromePicker}
@@ -897,14 +949,6 @@ const FormBuilder = () => {
                   </aside>
                 )}
               </>
-            )}
-            {activeSection === 'integrate' && (
-              <div className="integrate-panel">
-                <h2>Integrate Your Form</h2>
-                <p>Embed this form on your website using the following code:</p>
-                <pre className="embed-code">{'<iframe src="' + formUrl + '" width="100%" height="600" frameborder="0"></iframe>'}</pre>
-                <button className="copy-embed-button" onClick={() => {navigator.clipboard.writeText('<iframe src="' + formUrl + '" width="100%" height="600" frameborder="0"></iframe>'); toast('Embed code copied!', 'success');}}>Copy Embed Code</button>
-              </div>
             )}
             {activeSection === 'share' && (
               <div className="share-panel">
@@ -943,6 +987,33 @@ const FormBuilder = () => {
               </div>
             )}
           </div>
+          {isAddQuestionModalOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+              <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg transform transition-all">
+                <div className="flex justify-between items-start mb-6">
+                  <h3 className="text-2xl font-bold text-gray-900">Choose a question type</h3>
+                  <button onClick={() => setIsAddQuestionModalOpen(false)} className="p-2 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-800 transition-colors">
+                    <CloseIcon />
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {questionTypes['standard'].map((qType) => (
+                    <div
+                      key={qType.type}
+                      onClick={() => {
+                        addQuestion(qType.type);
+                        setIsAddQuestionModalOpen(false);
+                      }}
+                      className="p-4 border rounded-lg hover:bg-indigo-50 hover:border-indigo-400 cursor-pointer flex items-center gap-4 transition-all group"
+                    >
+                      <span className="text-3xl transition-transform group-hover:scale-110">{qType.icon}</span>
+                      <span className="font-semibold text-gray-700 group-hover:text-indigo-800">{qType.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>
