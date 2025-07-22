@@ -192,7 +192,7 @@ function toLocalDateTimeInputValue(utcISOString) {
 export default function Quiz() {
   const { quizId } = useParams();
   const location = useLocation();
-  const [title, setTitle] = useState("Untitled Presentation");
+  const [title, setTitle] = useState("");
   const [slides, setSlides] = useState([{
     id: Date.now() + Math.random(),
     name: "Slide 1",
@@ -721,7 +721,7 @@ export default function Quiz() {
             style={{ color: '#6b7280', background: 'transparent', minWidth: 140, maxWidth: 260, fontSize: 22, fontWeight: 600, letterSpacing: '-0.5px' }}
             value={title}
             onChange={e => setTitle(e.target.value)}
-            placeholder="Untitled Presentation"
+            placeholder="Untitled Quiz"
           />
           <div className="flex gap-2 ml-6">
             <Button
@@ -1071,6 +1071,54 @@ export default function Quiz() {
                   <span className="font-bold text-lg group-hover:underline" style={{ color: '#a16207' }}>Sunshine Yellow</span>
                   <span className="text-xs" style={{ color: '#a16207' }}>bg-yellow-100 text-yellow-900</span>
                 </div>
+              </button>
+              {/* Apply to All Button */}
+              <button
+                type="button"
+                className="flex items-center gap-3 rounded-2xl border-2 p-5 transition font-bold bg-blue-50 border-blue-500 text-blue-700 hover:bg-blue-100 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
+                style={{ boxShadow: '0 2px 12px #3b82f633', marginTop: 8 }}
+                onClick={() => {
+                  const {
+                    background = '#ffffff',
+                    textColor = '#000000',
+                    fontFamily = textStyles[0].value,
+                    fontSize = 20,
+                    alignment = 'center',
+                    bold = false,
+                    italic = false,
+                    shadow = false,
+                    borderRadius = 20,
+                  } = currentSlide || {};
+                  setSlides(prev => prev.map(slide => ({
+                    ...slide,
+                    background,
+                    textColor,
+                    fontFamily,
+                    fontSize,
+                    alignment,
+                    bold,
+                    italic,
+                    shadow,
+                    borderRadius,
+                  })));
+                  setDefaultSlideStyle(style => ({
+                    ...style,
+                    background,
+                    textColor,
+                    fontFamily,
+                    fontSize,
+                    alignment,
+                    bold,
+                    italic,
+                    shadow,
+                    borderRadius,
+                  }));
+                  setNotification('Applied customization to all slides!');
+                  setTimeout(() => setNotification(null), 2000);
+                }}
+              >
+                <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2M7 12l5 5 5-5M12 17V3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                Apply to All
               </button>
               <div className="text-xs text-gray-500 text-center mt-2">Click a template to apply its style instantly.</div>
             </div>
