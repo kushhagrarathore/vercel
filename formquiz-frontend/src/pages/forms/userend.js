@@ -227,6 +227,8 @@ export default function LiveQuizUser() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [anonymousName, setAnonymousName] = useState("");
   const [showQuizUI, setShowQuizUI] = useState(true); // controls if quiz UI is shown after submission
+  // Add state for copy-to-clipboard feedback
+  const [copied, setCopied] = useState(false);
 
   // Show error if no quiz code/id is present
   useEffect(() => {
@@ -868,17 +870,47 @@ export default function LiveQuizUser() {
     );
   }
 
-  // 4. After submission, before end_time, always show confirmation/result code screen for both anonymous and logged-in users
-  if (submitted && (!quizEnd || new Date() <= quizEnd)) {
+  // 4. After submission, before end_time OR after end_time (in the same session), always show confirmation/result code screen for both anonymous and logged-in users
+  if (submitted) {
+    // UX: Thank you, code, copy feature
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: customization.background, fontFamily: customization.fontFamily }}>
         <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md text-center">
-          <h2 className="text-2xl font-bold mb-4 text-green-700">✅ Your responses have been submitted.</h2>
-          <p className="mb-4 text-lg">Save this code to view your score after the quiz ends:</p>
-          <div className="text-3xl font-mono font-extrabold bg-yellow-100 text-yellow-800 rounded-lg px-6 py-4 mb-4 tracking-widest border-2 border-yellow-400 shadow-lg select-all">
-            {resultCode}
+          <h2 className="text-3xl font-extrabold mb-4 text-green-700">Thank you for participating!</h2>
+          <p className="mb-4 text-lg">Your responses have been submitted.</p>
+          <div className="mb-4">
+            <span className="block text-lg font-semibold mb-2">Your result code:</span>
+            <div
+              className="text-3xl font-mono font-extrabold bg-yellow-100 text-yellow-800 rounded-lg px-6 py-4 mb-2 tracking-widest border-2 border-yellow-400 shadow-lg select-all inline-flex items-center justify-center cursor-pointer transition hover:bg-yellow-200"
+              style={{ userSelect: 'all' }}
+              onClick={() => {
+                navigator.clipboard.writeText(resultCode);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1500);
+              }}
+              title="Click to copy"
+            >
+              {resultCode}
+              <button
+                aria-label="Copy code"
+                style={{ marginLeft: 12, background: 'none', border: 'none', cursor: 'pointer', outline: 'none' }}
+                tabIndex={-1}
+                onClick={e => {
+                  e.stopPropagation();
+                  navigator.clipboard.writeText(resultCode);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                }}
+              >
+                {copied ? (
+                  <span style={{ color: '#059669', fontWeight: 700, fontSize: 18, marginLeft: 4 }}>✔ Copied!</span>
+                ) : (
+                  <svg width="20" height="20" fill="none" stroke="#b45309" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24" style={{ marginLeft: 4, verticalAlign: 'middle' }}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+                )}
+              </button>
+            </div>
+            <div className="text-gray-600 text-sm mt-2">Save this code to view your responses later.</div>
           </div>
-          <p className="text-gray-600">You will be able to view your score and answers after the quiz ends.<br/>Please save this code to access your result.</p>
         </div>
       </div>
     );
