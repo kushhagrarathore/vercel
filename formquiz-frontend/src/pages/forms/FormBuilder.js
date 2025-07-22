@@ -1,3 +1,4 @@
+// Move all imports to the very top of the file
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { supabase } from '../../supabase';
@@ -16,6 +17,7 @@ import FormLayout from '../../components/forms/FormLayout';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { PlusIcon, EyeIcon, TrashIcon, SaveIcon } from 'lucide-react';
 // Remove react-beautiful-dnd imports and onDragEnd
 
 // Add SortableQuestion component above FormBuilder
@@ -604,9 +606,10 @@ const FormBuilder = () => {
         {loading && <div style={{ margin: '40px auto', textAlign: 'center' }}><Spinner size={40} /></div>}
         {!loading && (
           <>
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 24px', backgroundColor: '#fff', borderBottom: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-                <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#4a5568' }} onClick={handleBackToDashboard}>
+            {/* 2. Update the header/top bar with sticky, card-like container and redesigned buttons */}
+            <header className="sticky top-0 z-30 bg-white border border-gray-200 shadow-md rounded-xl p-4 flex justify-between items-center mb-4">
+              <div className="flex items-center gap-6">
+                <button className="bg-transparent border-none cursor-pointer text-sm text-gray-500 hover:text-indigo-600 transition" onClick={handleBackToDashboard}>
                   ← Back to Dashboard
                 </button>
                 <input
@@ -617,51 +620,34 @@ const FormBuilder = () => {
                     setTitle(e.target.value);
                     setHasUnsavedChanges(true);
                   }}
-                  style={{ fontSize: '1.75rem', fontWeight: '700', border: 'none', outline: 'none', background: 'transparent', color: '#1a202c', width: '300px' }}
+                  className="text-2xl font-bold border-none outline-none bg-transparent text-gray-900 w-72"
                 />
               </div>
-              <nav style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '4px' }}>
-                <button
-                  onClick={() => setActiveSection('build')}
-                  style={{ padding: '8px 16px', border: 'none', background: activeSection === 'build' ? '#6366f1' : 'transparent', color: activeSection === 'build' ? '#fff' : '#1a202c', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s ease-in-out' }}
-                >
-                  Build
-                </button>
-                <button
-                  onClick={() => setActiveSection('share')}
-                  style={{ padding: '8px 16px', border: 'none', background: activeSection === 'share' ? '#6366f1' : 'transparent', color: activeSection === 'share' ? '#fff' : '#1a202c', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s ease-in-out' }}
-                >
-                  Share
-                </button>
-                <button
-                  onClick={handleNavigateToResults}
-                  style={{ padding: '8px 16px', border: 'none', background: 'transparent', color: '#1a202c', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s ease-in-out' }}
-                >
-                  Results
-                </button>
-              </nav>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div className="flex gap-4">
                 <button
                   onClick={saveForm}
-                  style={{ padding: '8px 16px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+                  className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
                 >
+                  <SaveIcon className="w-4 h-4 text-gray-600" />
                   Save Form
                 </button>
                 <button
                   onClick={handlePreviewClick}
-                  style={{ padding: '8px 16px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+                  className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
                 >
+                  <EyeIcon className="w-4 h-4 text-gray-600" />
                   Preview
                 </button>
                 <button
                   onClick={handleDeleteForm}
-                  style={{ padding: '8px 16px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+                  className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
                 >
-                  Delete Form
+                  <TrashIcon className="w-4 h-4 text-gray-600" />
+                  Delete
                 </button>
                 <button
                   onClick={() => setIsCustomizePanelOpen(!isCustomizePanelOpen)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', color: '#4a5568' }}
+                  className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
                 >
                   Customize
                 </button>
@@ -671,10 +657,12 @@ const FormBuilder = () => {
             <div className="flex w-full">
               {/* Left Sidebar: Slide Selector */}
               <div className="w-[280px] p-4 bg-white border-r rounded-xl shadow-md">
+                {/* 3. Update the + Add Question button in the sidebar */}
                 <button
                   onClick={() => setIsAddQuestionModalOpen(true)}
-                  className="w-full text-white font-semibold py-2 rounded-md bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 transition-all mb-4"
+                  className="flex items-center justify-center gap-2 w-full px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base mb-4"
                 >
+                  <PlusIcon className="w-4 h-4 text-gray-600" />
                   + Add Question
                 </button>
                 <div className="space-y-2">
@@ -682,10 +670,13 @@ const FormBuilder = () => {
                     <div key={q.id} className="p-3 rounded-lg bg-gray-100 hover:bg-gray-200 flex justify-between items-center cursor-pointer">
                       <div className="flex items-center gap-3">
                         <span className="text-gray-500 font-bold">{String(index + 1).padStart(2, '0')}</span>
-                        <span className="font-semibold text-gray-800 truncate">{q.question_text || 'Untitled Question'}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button className="p-1 rounded-full text-gray-500 hover:bg-gray-300 hover:text-red-600 transition-colors" onClick={() => removeQuestion(q.id)}><TrashIcon /></button>
+                        <span
+                          className="font-semibold text-gray-800 truncate max-w-[140px] px-1"
+                          style={{ wordBreak: 'break-all' }}
+                          title={q.question_text || 'Untitled Question'}
+                        >
+                          {q.question_text || 'Untitled Question'}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -746,30 +737,50 @@ const FormBuilder = () => {
               )}
             </div>
             {isAddQuestionModalOpen && (
-              <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
-                <div className="bg-white p-8 rounded-xl shadow-2xl w-full max-w-lg transform transition-all">
-                  <div className="flex justify-between items-start mb-6">
-                    <h3 className="text-2xl font-bold text-gray-900">Choose a question type</h3>
-                    <button onClick={() => setIsAddQuestionModalOpen(false)} className="p-2 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-800 transition-colors">
-                      <CloseIcon />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm">
+                <div className="relative w-full max-w-lg mx-4 sm:mx-auto rounded-2xl shadow-xl bg-white/70 backdrop-blur-lg border border-white/30 p-8 animate-pop-in" style={{ boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.18)' }}>
+                  <button onClick={() => setIsAddQuestionModalOpen(false)} className="absolute top-4 right-4 p-2 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-800 transition-colors">
+                    <CloseIcon />
+                  </button>
+                  <h3 className="text-2xl font-bold text-center mb-6 text-gray-900">Choose a question type</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {questionTypes['standard'].map((qType) => (
-                      <div
+                      <button
                         key={qType.type}
                         onClick={() => {
                           addQuestion(qType.type);
                           setIsAddQuestionModalOpen(false);
                         }}
-                        className="p-4 border rounded-lg hover:bg-indigo-50 hover:border-indigo-400 cursor-pointer flex items-center gap-4 transition-all group"
+                        className="flex flex-col items-center justify-center rounded-xl bg-white/80 border border-gray-200 shadow-md px-6 py-8 transition-all duration-200 hover:bg-indigo-50 hover:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300 group cursor-pointer"
+                        type="button"
                       >
-                        <span className="text-3xl transition-transform group-hover:scale-110">{qType.icon}</span>
-                        <span className="font-semibold text-gray-700 group-hover:text-indigo-800">{qType.name}</span>
-                      </div>
+                        <span className="text-3xl mb-2 text-indigo-500 group-hover:scale-110 transition-transform">
+                          {/* Use a relevant icon for each type */}
+                          {qType.type === 'short-text' && <span>📝</span>}
+                          {qType.type === 'long-text' && <span>✒️</span>}
+                          {qType.type === 'multiple-choice' && <span>🔘</span>}
+                          {qType.type === 'picture-choice' && <span>🖼️</span>}
+                        </span>
+                        <span className="font-semibold text-lg text-gray-800 mb-1 text-center">{qType.name}</span>
+                        <span className="text-gray-500 text-sm text-center">
+                          {qType.type === 'short-text' && 'Single-line text answer'}
+                          {qType.type === 'long-text' && 'Multi-line text answer'}
+                          {qType.type === 'multiple-choice' && 'Select one from options'}
+                          {qType.type === 'picture-choice' && 'Choose from images'}
+                        </span>
+                      </button>
                     ))}
                   </div>
                 </div>
+                <style>{`
+                  @keyframes pop-in {
+                    0% { opacity: 0; transform: scale(0.92); }
+                    100% { opacity: 1; transform: scale(1); }
+                  }
+                  .animate-pop-in {
+                    animation: pop-in 0.32s cubic-bezier(0.4,0,0.2,1);
+                  }
+                `}</style>
               </div>
             )}
           </>
@@ -807,9 +818,10 @@ const FormBuilder = () => {
       {loading && <div style={{ margin: '40px auto', textAlign: 'center' }}><Spinner size={40} /></div>}
       {!loading && (
         <>
-          <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 24px', backgroundColor: '#fff', borderBottom: '1px solid #e2e8f0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-              <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#4a5568' }} onClick={handleBackToDashboard}>
+          {/* 2. Update the header/top bar with sticky, card-like container and redesigned buttons */}
+          <header className="sticky top-0 z-30 bg-white border border-gray-200 shadow-md rounded-xl p-4 flex justify-between items-center mb-4">
+            <div className="flex items-center gap-6">
+              <button className="bg-transparent border-none cursor-pointer text-sm text-gray-500 hover:text-indigo-600 transition" onClick={handleBackToDashboard}>
                 ← Back to Dashboard
               </button>
               <input
@@ -820,51 +832,34 @@ const FormBuilder = () => {
                   setTitle(e.target.value);
                   setHasUnsavedChanges(true);
                 }}
-                style={{ fontSize: '1.75rem', fontWeight: '700', border: 'none', outline: 'none', background: 'transparent', color: '#1a202c', width: '300px' }}
+                className="text-2xl font-bold border-none outline-none bg-transparent text-gray-900 w-72"
               />
             </div>
-            <nav style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '4px' }}>
-              <button
-                onClick={() => setActiveSection('build')}
-                style={{ padding: '8px 16px', border: 'none', background: activeSection === 'build' ? '#6366f1' : 'transparent', color: activeSection === 'build' ? '#fff' : '#1a202c', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s ease-in-out' }}
-              >
-                Build
-              </button>
-              <button
-                onClick={() => setActiveSection('share')}
-                style={{ padding: '8px 16px', border: 'none', background: activeSection === 'share' ? '#6366f1' : 'transparent', color: activeSection === 'share' ? '#fff' : '#1a202c', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s ease-in-out' }}
-              >
-                Share
-              </button>
-              <button
-                onClick={handleNavigateToResults}
-                style={{ padding: '8px 16px', border: 'none', background: 'transparent', color: '#1a202c', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', transition: 'all 0.2s ease-in-out' }}
-              >
-                Results
-              </button>
-            </nav>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div className="flex gap-4">
               <button
                 onClick={saveForm}
-                style={{ padding: '8px 16px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+                className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
               >
+                <SaveIcon className="w-4 h-4 text-gray-600" />
                 Save Form
               </button>
               <button
                 onClick={handlePreviewClick}
-                style={{ padding: '8px 16px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+                className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
               >
+                <EyeIcon className="w-4 h-4 text-gray-600" />
                 Preview
               </button>
               <button
                 onClick={handleDeleteForm}
-                style={{ padding: '8px 16px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}
+                className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
               >
-                Delete Form
+                <TrashIcon className="w-4 h-4 text-gray-600" />
+                Delete
               </button>
               <button
                 onClick={() => setIsCustomizePanelOpen(!isCustomizePanelOpen)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontWeight: '600', color: '#4a5568' }}
+                className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
               >
                 Customize
               </button>
@@ -876,10 +871,12 @@ const FormBuilder = () => {
               <>
                 {/* Left Sidebar: Slide Selector */}
                 <div className="w-[280px] p-4 bg-white border-r rounded-xl shadow-md">
+                  {/* 3. Update the + Add Question button in the sidebar */}
                   <button
                     onClick={() => setIsAddQuestionModalOpen(true)}
-                    className="w-full text-white font-semibold py-2 rounded-md bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 transition-all mb-4"
+                    className="flex items-center justify-center gap-2 w-full px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base mb-4"
                   >
+                    <PlusIcon className="w-4 h-4 text-gray-600" />
                     + Add Question
                   </button>
                   <div className="space-y-2">
@@ -887,7 +884,13 @@ const FormBuilder = () => {
                       <div key={q.id} className="p-3 rounded-lg bg-gray-100 hover:bg-gray-200 flex justify-between items-center cursor-pointer">
                         <div className="flex items-center gap-3">
                           <span className="text-gray-500 font-bold">{String(index + 1).padStart(2, '0')}</span>
-                          <span className="font-semibold text-gray-800 truncate">{q.question_text || 'Untitled Question'}</span>
+                          <span
+                            className="font-semibold text-gray-800 truncate max-w-[140px] px-1"
+                            style={{ wordBreak: 'break-all' }}
+                            title={q.question_text || 'Untitled Question'}
+                          >
+                            {q.question_text || 'Untitled Question'}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <button className="p-1 rounded-full text-gray-500 hover:bg-gray-300 hover:text-red-600 transition-colors" onClick={() => removeQuestion(q.id)}><TrashIcon /></button>
@@ -1006,7 +1009,6 @@ const FormBuilder = () => {
                       }}
                       className="p-4 border rounded-lg hover:bg-indigo-50 hover:border-indigo-400 cursor-pointer flex items-center gap-4 transition-all group"
                     >
-                      <span className="text-3xl transition-transform group-hover:scale-110">{qType.icon}</span>
                       <span className="font-semibold text-gray-700 group-hover:text-indigo-800">{qType.name}</span>
                     </div>
                   ))}
