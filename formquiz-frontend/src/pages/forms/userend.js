@@ -3,6 +3,7 @@ import { Button } from '../../components/buttonquiz';
 import { supabase } from '../../supabase';
 import { CheckCircle } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
+import toast from 'react-hot-toast';
 
 // Fisher-Yates shuffle algorithm
 function shuffleArray(array) {
@@ -167,6 +168,28 @@ function parseISTFromISTString(istString) {
   return new Date(utcMillis);
 }
 
+// Utility to fetch server time from Supabase
+async function fetchServerTime() {
+  // Use Supabase RPC to get server time
+  const { data, error } = await supabase.rpc('get_server_time');
+  if (error || !data) {
+    // fallback: use Date.now(), but warn
+    console.warn('Failed to fetch server time from Supabase, using local time.');
+    return new Date();
+  }
+  return new Date(data);
+}
+
+// Utility to generate a 6-digit alphanumeric code
+function generateResultCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
 export default function LiveQuizUser() {
   const query = useQuery();
   // Allow joining via either ?quizId=... or ?code=...
@@ -191,6 +214,19 @@ export default function LiveQuizUser() {
   const [quizStart, setQuizStart] = useState(null); // Store start_time
   const [quizEnd, setQuizEnd] = useState(null); // Store end_time
   const [isHost, setIsHost] = useState(false); // Store if current user is host
+  const [serverNow, setServerNow] = useState(null); // server time
+  const [countdown, setCountdown] = useState(null); // seconds left
+  const [autoSubmitted, setAutoSubmitted] = useState(false);
+  const [resultCode, setResultCode] = useState('');
+  const [codeInput, setCodeInput] = useState('');
+  const [codeVerified, setCodeVerified] = useState(false);
+  const [showCodePrompt, setShowCodePrompt] = useState(false);
+  const [fiveMinWarned, setFiveMinWarned] = useState(false);
+  const [oneMinWarned, setOneMinWarned] = useState(false);
+  const [resultViewData, setResultViewData] = useState(null); // for result lookup by code
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [anonymousName, setAnonymousName] = useState("");
+  const [showQuizUI, setShowQuizUI] = useState(true); // controls if quiz UI is shown after submission
 
   // Show error if no quiz code/id is present
   useEffect(() => {
@@ -315,64 +351,94 @@ export default function LiveQuizUser() {
   // Remove auto-assign Anonymous and always show prompt before quiz
   // (Remove the useEffect that sets username to 'Anonymous' automatically)
 
-  const currentQuestion = slides[questionIndex];
-  const totalQuestions = slides.length;
-  const isFirst = questionIndex === 0;
-  const isLast = questionIndex === totalQuestions - 1;
-
-  // Animate transitions
+  // Show username prompt for anonymous users before quiz starts
   useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.classList.remove('fadein');
-      void containerRef.current.offsetWidth;
-      containerRef.current.classList.add('fadein');
-    }
-  }, [questionIndex]);
-
-  // Handle answer selection/input
-  const handleAnswer = (value) => {
-    setAnswers(prev => prev.map((a, i) => i === questionIndex ? { ...a, ...value } : a));
-  };
-
-  // Validation
-  const validate = () => {
-    for (let i = 0; i < slides.length; i++) {
-      const q = slides[i];
-      const a = answers[i];
-      if (q.required) {
-        if ((a.type === 'multiple' || a.type === 'true_false') && (a.selectedIndex === null || a.selectedIndex === undefined)) {
-          return `Please answer question ${i + 1}`;
-        }
-        if (a.type === 'one_word' && (!a.text || a.text.trim() === '')) {
-          return `Please answer question ${i + 1}`;
-        }
+    async function checkUser() {
+      const { data: authData } = await supabase.auth.getUser();
+      if (!authData.user) {
+        setShowUserPrompt(true);
       }
     }
-    return null;
-  };
+    checkUser();
+  }, []);
 
-  // Submit answers to Supabase
-  const handleSubmit = async () => {
+  // Countdown timer logic
+  useEffect(() => {
+    if (!quizEnd || !serverNow || submitted) return;
+    let timer;
+    function updateCountdown() {
+      const now = new Date();
+      const diff = Math.floor((quizEnd.getTime() - now.getTime()) / 1000);
+      setCountdown(diff > 0 ? diff : 0);
+      if (diff <= 0) {
+        setCountdown(0);
+      }
+    }
+    updateCountdown();
+    timer = setInterval(updateCountdown, 1000);
+    return () => clearInterval(timer);
+  }, [quizEnd, serverNow, submitted]);
+
+  // 5-min and 1-min warnings: show only once, exactly at 300s and 60s left
+  useEffect(() => {
+    if (countdown === null || submitted) return;
+    if (countdown === 300 && !fiveMinWarned) {
+      toast('⚠️ 5 minutes left! Please review and submit.', { icon: '⏰' });
+      setFiveMinWarned(true);
+    }
+    if (countdown === 60 && !oneMinWarned) {
+      toast('⏳ 1 minute left! Your quiz will be auto-submitted.', { icon: '⏳' });
+      setOneMinWarned(true);
+    }
+    // Auto-submit at 0 (only once)
+    if (countdown === 0 && !submitted && slides.length > 0 && !autoSubmitted) {
+      setAutoSubmitted(true);
+      handleSubmit(true); // auto-submit
+    }
+  }, [countdown, submitted, slides.length, fiveMinWarned, oneMinWarned, autoSubmitted]);
+
+  // On submission, generate and save result code in quiz_responses (not quizzes)
+  const handleSubmit = async (auto = false) => {
+    if (isSubmitting || submitted) return;
+    setIsSubmitting(true);
     const validationError = validate();
-    if (validationError) {
+    if (validationError && !auto) {
       setError(validationError);
+      setIsSubmitting(false);
       return;
     }
     setError(null);
     let user_id = null;
+    let usernameToSave = '';
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      user_id = user?.id || null;
-    } catch {}
+      if (user) {
+        user_id = user.id;
+        usernameToSave = username;
+      } else {
+        user_id = null;
+        usernameToSave = anonymousName || 'Anonymous';
+      }
+    } catch {
+      user_id = null;
+      usernameToSave = anonymousName || 'Anonymous';
+    }
     // Calculate score before submitting (robust, always correct)
     const score = calculateScore(slides, answers);
+    // Generate result code for this response (only once)
+    let code = resultCode;
+    if (!code) {
+      code = generateResultCode();
+      setResultCode(code);
+    }
     const responseData = {
       quiz_id: quizId || localStorage.getItem('quizId') || null,
       user_id,
-      username: username && username.trim() ? username : 'Anonymous',
+      username: usernameToSave,
       answers,
       score, // push the robust score into the DB
       submitted_at: new Date().toISOString(),
+      response_id: code,
     };
     if (responseData.quiz_id) {
       const { error: insertError } = await supabase
@@ -380,11 +446,28 @@ export default function LiveQuizUser() {
         .insert([responseData]);
       if (insertError) {
         setError('Failed to submit response: ' + insertError.message);
+        setIsSubmitting(false);
         return;
       }
     }
     setSubmitted(true);
+    setShowQuizUI(false);
+    setIsSubmitting(false);
+    if (auto) toast("⏳ Time's up! Your quiz has been auto-submitted.", { icon: '⏳' });
   };
+
+  // After submission, hide score/answers until after end_time and code entry
+  const canShowResults = (submitted && quizEnd && new Date() > quizEnd && codeVerified) || (!!resultViewData);
+
+  // After end_time, show code prompt if not verified
+  useEffect(() => {
+    if ((submitted && quizEnd && new Date() > quizEnd && !codeVerified) || (quizEnd && new Date() > quizEnd && !submitted)) {
+      setShowCodePrompt(true);
+    }
+  }, [submitted, quizEnd, codeVerified]);
+
+  // Disable all inputs if auto-submitted or time is up or after submission
+  const inputsDisabled = autoSubmitted || (countdown === 0 && !submitted) || submitted || isSubmitting;
 
   // Top bar actions
   const handleExit = () => navigate('/dashboard');
@@ -563,27 +646,60 @@ export default function LiveQuizUser() {
     fetchScores();
   }, [submitted, quizId]);
 
-  // In the main render, only block quiz participation if quizWindowStatus is not 'open', but always show quiz title and questions if slides exist.
+  const currentQuestion = slides[questionIndex];
+  const totalQuestions = slides.length;
+  const isFirst = questionIndex === 0;
+  const isLast = questionIndex === totalQuestions - 1;
+
+  // Animate transitions
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.classList.remove('fadein');
+      void containerRef.current.offsetWidth;
+      containerRef.current.classList.add('fadein');
+    }
+  }, [questionIndex]);
+
+  // Handle answer selection/input
+  const handleAnswer = (value) => {
+    setAnswers(prev => prev.map((a, i) => i === questionIndex ? { ...a, ...value } : a));
+  };
+
+  // Validation
+  const validate = () => {
+    for (let i = 0; i < slides.length; i++) {
+      const q = slides[i];
+      const a = answers[i];
+      if (q.required) {
+        if ((a.type === 'multiple' || a.type === 'true_false') && (a.selectedIndex === null || a.selectedIndex === undefined)) {
+          return `Please answer question ${i + 1}`;
+        }
+        if (a.type === 'one_word' && (!a.text || a.text.trim() === '')) {
+          return `Please answer question ${i + 1}`;
+        }
+      }
+    }
+    return null;
+  };
+
+  // Fetch server time and sync every 10s
+  useEffect(() => {
+    let interval;
+    async function syncServerTime() {
+      const now = await fetchServerTime();
+      setServerNow(now);
+    }
+    syncServerTime();
+    interval = setInterval(syncServerTime, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // In the main render, update the UI as follows:
   if (error) return <div style={{ color: 'red', padding: 40 }}>{error}</div>;
   if (loading) return <div className="p-4">Loading...</div>;
   if (slides.length === 0) return <div style={{ color: 'red', padding: 40 }}>No slides found for this quiz.</div>;
-  if (quizWindowStatus === "not_started") {
-    return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#b91c1c', fontWeight: 600, textAlign: 'center' }}>
-      This quiz is not currently active.<br />
-      Please return during the scheduled time:<br />
-      {quizStart && quizEnd && `${quizStart.toLocaleString()} – ${quizEnd.toLocaleString()}`}
-    </div>;
-  }
-  if (quizWindowStatus === "ended") {
-    return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#b91c1c', fontWeight: 600, textAlign: 'center' }}>
-      This quiz is no longer active.<br />
-      The scheduled window was:<br />
-      {quizStart && quizEnd && `${quizStart.toLocaleString()} – ${quizEnd.toLocaleString()}`}
-    </div>;
-  }
-
-  if (showUserPrompt && !submitted) {
-    // Only show if user explicitly logs out or clears username
+  // 1. Always show nickname prompt before quiz starts for both anonymous and logged-in users
+  if (!hasEnteredName && quizWindowStatus === 'open' && !submitted && showQuizUI) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: customization.background, fontFamily: customization.fontFamily }}>
         <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md">
@@ -591,17 +707,16 @@ export default function LiveQuizUser() {
           <input
             className="border border-gray-300 rounded px-4 py-2 w-full mb-4"
             type="text"
-            placeholder="Your name (or leave blank for Anonymous)"
+            placeholder="Your name (required)"
             value={username}
             onChange={e => setUsername(e.target.value)}
           />
           <button
             className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full"
             onClick={() => {
-              setHasEnteredName(true);
-              setShowUserPrompt(false);
-              if (!username.trim()) setUsername('Anonymous');
+              if (username.trim()) setHasEnteredName(true);
             }}
+            disabled={!username.trim()}
           >
             Continue
           </button>
@@ -609,38 +724,62 @@ export default function LiveQuizUser() {
       </div>
     );
   }
-
-  if (!hasEnteredName && !submitted) {
+  // 1. Restore strict time window logic for all users
+  if (quizWindowStatus === "not_started") {
+    return <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, color: '#b91c1c', fontWeight: 600, textAlign: 'center' }}>
+      This quiz is not currently active.<br />
+      Please return during the scheduled time:<br />
+      {quizStart && quizEnd && `${quizStart.toLocaleString()} – ${quizEnd.toLocaleString()}`}
+    </div>;
+  }
+  // 2. After timer ends, always show result code entry (never blank)
+  if (quizWindowStatus === "ended" && !codeVerified && !resultViewData) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: customization.background, fontFamily: customization.fontFamily, color: customization.textColor }}>
-        <div className="bg-white shadow-2xl rounded-3xl p-8 max-w-md w-full text-center" style={{ fontFamily: customization.fontFamily, color: customization.textColor }}>
-          <h2 className="text-2xl font-bold mb-6" style={{ color: customization.textColor }}>Enter Your Name to Start</h2>
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: customization.background, fontFamily: customization.fontFamily }}>
+        <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md text-center">
+          <h2 className="text-2xl font-bold mb-4">This quiz has ended.</h2>
+          <p className="mb-4">Enter your result code to view your answers and score.</p>
           <input
+            className="border border-gray-300 rounded px-4 py-2 w-full mb-4 text-lg"
             type="text"
-            value={username}
-            onChange={e => setUsername(e.target.value)}
-            placeholder="Enter your name"
-            className="w-full border-2 rounded-lg px-4 py-3 mb-4 text-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
-            style={{ fontFamily: customization.fontFamily, color: customization.textColor, background: customization.background, borderColor: customization.textColor, boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}
+            placeholder="Enter 6-digit code"
+            value={codeInput}
+            onChange={e => setCodeInput(e.target.value.toUpperCase())}
+            maxLength={6}
           />
-          <div className="flex flex-col gap-2">
-            <Button
-              className="bg-blue-600 text-white font-bold px-8 py-3 rounded-lg"
-              style={{ fontFamily: customization.fontFamily, background: customization.textColor, color: customization.background, borderColor: customization.textColor }}
-              onClick={() => {
-                if (username.trim() !== "") setHasEnteredName(true);
-              }}
-              disabled={username.trim() === ""}
-            >
-              Start Quiz
-            </Button>
-          </div>
+          <button
+            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full font-bold"
+            onClick={async () => {
+              // Look up quiz_responses by response_id and quiz_id
+              const { data: respData } = await supabase
+                .from('quiz_responses')
+                .select('*')
+                .eq('quiz_id', quizId)
+                .eq('response_id', codeInput)
+                .single();
+              if (respData && respData.response_id === codeInput) {
+                setResultViewData(respData);
+                setCodeVerified(true);
+                setShowCodePrompt(false);
+              } else {
+                toast.error('Invalid code. Please try again.');
+              }
+            }}
+            disabled={codeInput.length !== 6}
+          >
+            View Results
+          </button>
         </div>
       </div>
     );
   }
 
-  if (submitted)
+  // 3. After entering a valid result code, always show the result/score view
+  if (codeVerified && resultViewData) {
+    // Use resultViewData for answers and score
+    const userAnswers = resultViewData.answers;
+    const score = resultViewData.score;
+    const usernameToShow = resultViewData.username;
     return (
       <div className="min-h-screen w-full flex items-center justify-center" style={{
         backgroundColor: customization.backgroundImage ? 'transparent' : (customization.background || customization.backgroundColor || '#fff'),
@@ -653,112 +792,100 @@ export default function LiveQuizUser() {
       }}>
         <div className="bg-white shadow-2xl rounded-3xl p-8 max-w-2xl w-full text-center">
           <h2 className="text-4xl font-extrabold mb-6" style={{ color: customization.textColor }}>🎉 Quiz Submitted!</h2>
-          <p className="text-xl mb-8" style={{ color: customization.textColor }}>Thank you for submitting your answers!</p>
-          {/* Show only the current user's score, fallback to latest response for this username if anonymous */}
-          {allResponses.length > 0 ? (
-            (() => {
-              let userAnswers = [];
-              if (user && user.id) {
-                // Find the latest response for this user_id
-                const found = allResponses
-                  .filter(u => u.user_id === user.id)
-                  .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at))[0];
-                if (found) userAnswers = found.answers;
-              } else if (username) {
-                // Find the latest response for this username
-                const foundResp = allResponses
-                  .filter(r => r.username === username)
-                  .sort((a, b) => new Date(b.submitted_at) - new Date(a.submitted_at))[0];
-                if (foundResp) userAnswers = foundResp.answers;
-              } else {
-                // fallback: show the last submitted answers
-                const lastResp = allResponses[allResponses.length - 1];
-                userAnswers = lastResp?.answers ?? [];
-              }
-              const score = calculateScore(slides, userAnswers);
-              return (
-                <>
-                  <h3 className="text-2xl font-bold mb-4">Your Score</h3>
-                  <div className="text-3xl font-extrabold mb-6" style={{ color: customization.textColor }}>
-                    {score} / {slides.length}
-                  </div>
-                  <div className="text-left max-w-xl mx-auto mt-8">
-                    <h4 className="text-xl font-bold mb-4" style={{ color: customization.textColor }}>Your Responses</h4>
-                    <ol className="results-list">
-                      {slides.map((slide, idx) => {
-                        const userAnswer = userAnswers[idx];
-                        let answerDisplay = '';
-                        let isCorrect = false;
-                        let correctDisplay = '';
-                        const correct = Array.isArray(slide.correct_answers) ? slide.correct_answers : [];
-                        if (slide.type === 'multiple' || slide.type === 'true_false') {
-                          if (typeof userAnswer?.selectedIndex === 'number' && slide.options && slide.options[userAnswer.selectedIndex] !== undefined) {
-                            answerDisplay = slide.options[userAnswer.selectedIndex];
-                          } else {
-                            answerDisplay = 'No answer';
-                          }
-                          isCorrect = userAnswer && typeof userAnswer.selectedIndex === 'number' && correct.includes(userAnswer.selectedIndex);
-                          if (!isCorrect && correct.length > 0 && slide.options) {
-                            correctDisplay = correct.map(i => slide.options[i]).join(', ');
-                          }
-                        } else if (slide.type === 'one_word') {
-                          answerDisplay = userAnswer?.text ? userAnswer.text : 'No answer';
-                          isCorrect = userAnswer && typeof userAnswer.text === 'string' && userAnswer.text.trim() !== '' && correct.some(ans => typeof ans === 'string' && ans.trim().replace(/\s+/g, ' ').toLowerCase() === userAnswer.text.trim().replace(/\s+/g, ' ').toLowerCase());
-                          if (!isCorrect && correct.length > 0) {
-                            correctDisplay = correct.join(', ');
-                          }
-                        } else {
-                          answerDisplay = 'No answer';
-                        }
-                        return (
-                          <li key={slide.id || idx} className="result-card">
-                            <div className="question-text"><span className="q-number">Q{idx + 1}:</span> {slide.question}</div>
-                            {slide.options && (slide.type === 'multiple' || slide.type === 'true_false') && (
-                              <div className="options-list">
-                                {slide.options.map((opt, i) => (
-                                  <div
-                                    key={i}
-                                    className={
-                                      'option' +
-                                      (userAnswer?.selectedIndex === i ? (isCorrect ? ' correct' : ' wrong') : '') +
-                                      (correct.includes(i) && !isCorrect ? ' correct-answer' : '')
-                                    }
-                                  >
-                                    {opt}
-                                    {userAnswer?.selectedIndex === i && (isCorrect ? ' ✔️' : ' ❌')}
-                                    {correct.includes(i) && !isCorrect && ' ✓'}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            {slide.type === 'one_word' && (
-                              <div>
-                                <span className="your-answer">
-                                  Your Answer: <span className={isCorrect ? 'correct' : 'wrong'}>{answerDisplay} {isCorrect ? '✔️' : '❌'}</span>
-                                </span>
-                                {!isCorrect && correctDisplay && (
-                                  <div className="correct-answer">
-                                    Correct Answer: <span>{correctDisplay}</span>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ol>
-                  </div>
-                </>
-              );
-            })()
-          ) : (
-            <div className="text-lg mb-6" style={{ color: customization.textColor }}>
-              Your score will appear here after submission.
-            </div>
-          )}
+          <p className="text-xl mb-8" style={{ color: customization.textColor }}>Thank you for submitting your answers{usernameToShow ? `, ${usernameToShow}` : ''}!</p>
+          <h3 className="text-2xl font-bold mb-4">Your Score</h3>
+          <div className="text-3xl font-extrabold mb-6" style={{ color: customization.textColor }}>
+            {score} / {slides.length}
+          </div>
+          <div className="text-left max-w-xl mx-auto mt-8">
+            <h4 className="text-xl font-bold mb-4" style={{ color: customization.textColor }}>Your Responses</h4>
+            <ol className="results-list">
+              {slides.map((slide, idx) => {
+                const userAnswer = userAnswers[idx];
+                let answerDisplay = '';
+                let isCorrect = false;
+                let correctDisplay = '';
+                const correct = Array.isArray(slide.correct_answers) ? slide.correct_answers : [];
+                if (slide.type === 'multiple' || slide.type === 'true_false') {
+                  if (typeof userAnswer?.selectedIndex === 'number' && slide.options && slide.options[userAnswer.selectedIndex] !== undefined) {
+                    answerDisplay = slide.options[userAnswer.selectedIndex];
+                  } else {
+                    answerDisplay = 'No answer';
+                  }
+                  isCorrect = userAnswer && typeof userAnswer.selectedIndex === 'number' && correct.includes(userAnswer.selectedIndex);
+                  if (!isCorrect && correct.length > 0 && slide.options) {
+                    correctDisplay = correct.map(i => slide.options[i]).join(', ');
+                  }
+                } else if (slide.type === 'one_word') {
+                  answerDisplay = userAnswer?.text ? userAnswer.text : 'No answer';
+                  isCorrect = userAnswer && typeof userAnswer.text === 'string' && userAnswer.text.trim() !== '' && correct.some(ans => typeof ans === 'string' && ans.trim().replace(/\s+/g, ' ').toLowerCase() === userAnswer.text.trim().replace(/\s+/g, ' ').toLowerCase());
+                  if (!isCorrect && correct.length > 0) {
+                    correctDisplay = correct.join(', ');
+                  }
+                } else {
+                  answerDisplay = 'No answer';
+                }
+                return (
+                  <li key={slide.id || idx} className="result-card">
+                    <div className="question-text"><span className="q-number">Q{idx + 1}:</span> {slide.question}</div>
+                    {slide.options && (slide.type === 'multiple' || slide.type === 'true_false') && (
+                      <div className="options-list">
+                        {slide.options.map((opt, i) => (
+                          <div
+                            key={i}
+                            className={
+                              'option' +
+                              (userAnswer?.selectedIndex === i ? (isCorrect ? ' correct' : ' wrong') : '') +
+                              (correct.includes(i) && !isCorrect ? ' correct-answer' : '')
+                            }
+                          >
+                            {opt}
+                            {userAnswer?.selectedIndex === i && (isCorrect ? ' ✔️' : ' ❌')}
+                            {correct.includes(i) && !isCorrect && ' ✓'}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {slide.type === 'one_word' && (
+                      <div>
+                        <span className="your-answer">
+                          Your Answer: <span className={isCorrect ? 'correct' : 'wrong'}>{answerDisplay} {isCorrect ? '✔️' : '❌'}</span>
+                        </span>
+                        {!isCorrect && correctDisplay && (
+                          <div className="correct-answer">
+                            Correct Answer: <span>{correctDisplay}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
         </div>
       </div>
     );
+  }
+
+  // 4. After submission, before end_time, always show confirmation/result code screen for both anonymous and logged-in users
+  if (submitted && (!quizEnd || new Date() <= quizEnd)) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: customization.background, fontFamily: customization.fontFamily }}>
+        <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md text-center">
+          <h2 className="text-2xl font-bold mb-4 text-green-700">✅ Your responses have been submitted.</h2>
+          <p className="mb-4 text-lg">Save this code to view your score after the quiz ends:</p>
+          <div className="text-3xl font-mono font-extrabold bg-yellow-100 text-yellow-800 rounded-lg px-6 py-4 mb-4 tracking-widest border-2 border-yellow-400 shadow-lg select-all">
+            {resultCode}
+          </div>
+          <p className="text-gray-600">You will be able to view your score and answers after the quiz ends.<br/>Please save this code to access your result.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // In the main quiz UI, show countdown timer and disable inputs if needed
+  if (!showQuizUI) return null;
 
   return (
     <div className="min-h-screen w-full flex flex-col" style={{
@@ -778,7 +905,12 @@ export default function LiveQuizUser() {
           <button onClick={handleLoginLogout} className="text-blue-600 font-bold text-lg hover:underline">{user ? 'Logout' : 'Login'}</button>
         </div>
       </div>
-
+      {/* Countdown Timer */}
+      {quizEnd && countdown !== null && !submitted && (
+        <div className="w-full flex justify-center items-center py-2 bg-yellow-50 text-yellow-800 font-bold text-lg tracking-wide shadow-sm border-b border-yellow-200">
+          Time Remaining: {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}
+        </div>
+      )}
       {/* Main Split Layout */}
       <div className="flex flex-1 w-full h-full min-h-0">
         {/* Left: Question Area */}
@@ -794,11 +926,11 @@ export default function LiveQuizUser() {
             {renderInput()}
             {error && <div className="text-red-600 font-semibold mt-4">{error}</div>}
             <div className="flex justify-between mt-10 gap-4">
-              <Button onClick={() => setQuestionIndex(q => Math.max(0, q - 1))} disabled={isFirst} className="px-6 py-2 rounded-lg font-bold text-base bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 transition-all" style={{ opacity: isFirst ? 0.5 : 1 }}>Back</Button>
+              <Button onClick={() => setQuestionIndex(q => Math.max(0, q - 1))} disabled={isFirst || inputsDisabled} className="px-6 py-2 rounded-lg font-bold text-base bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 transition-all" style={{ opacity: isFirst || inputsDisabled ? 0.5 : 1 }}>Back</Button>
               {isLast ? (
-                <Button onClick={() => setShowConfirm(true)} className="px-6 py-2 rounded-lg font-bold text-base bg-blue-600 text-white hover:bg-blue-700 transition-all">Submit</Button>
+                <Button onClick={() => setShowConfirm(true)} disabled={inputsDisabled} className="px-6 py-2 rounded-lg font-bold text-base bg-blue-600 text-white hover:bg-blue-700 transition-all" style={{ opacity: inputsDisabled ? 0.5 : 1 }}>Submit</Button>
               ) : (
-                <Button onClick={() => setQuestionIndex(q => Math.min(totalQuestions - 1, q + 1))} className="px-6 py-2 rounded-lg font-bold text-base bg-blue-600 text-white hover:bg-blue-700 transition-all" style={{ opacity: isLast ? 0.5 : 1 }}>Next</Button>
+                <Button onClick={() => setQuestionIndex(q => Math.min(totalQuestions - 1, q + 1))} disabled={inputsDisabled} className="px-6 py-2 rounded-lg font-bold text-base bg-blue-600 text-white hover:bg-blue-700 transition-all" style={{ opacity: isLast || inputsDisabled ? 0.5 : 1 }}>Next</Button>
               )}
             </div>
           </div>
