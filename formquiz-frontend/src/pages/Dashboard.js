@@ -11,6 +11,7 @@ import { useToast } from '../components/Toast';
 import './Dashboard.css';
 import { FiSun, FiMoon } from 'react-icons/fi';
 import DeleteQuizButton from '../components/quiz/DeleteQuizButton';
+import { FaHistory, FaEye } from 'react-icons/fa';
 
 // Debounce hook
 function useDebounce(value, delay) {
@@ -667,6 +668,13 @@ const Dashboard = () => {
                         <button title="View" style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); navigate(`/livequiz/details/${item.id}`); }}><i className="fa fa-eye" /></button>
                         <button title="Results" style={{ background: 'none', border: 'none', color: '#22c55e', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); navigate(`/livequiz/details/${item.id}`); }}><i className="fa fa-bar-chart" /></button>
                         <button title="Link" style={{ background: 'none', border: 'none', color: '#0ea5e9', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(window.location.origin + `/livequiz/details/${item.id}`); toast('Link copied!', 'success'); }}><i className="fa fa-link" /></button>
+                        <button 
+                          title="Past Sessions" 
+                          style={{ background: 'none', border: 'none', color: '#a78bfa', fontSize: 18, cursor: 'pointer' }} 
+                          onClick={e => { e.stopPropagation(); navigate(`/admin/${item.id}/sessions`); }}
+                        >
+                          <FaHistory size={18} />
+                        </button>
                       </div>
                     </motion.div>
                   ) : (
