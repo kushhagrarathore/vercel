@@ -60,6 +60,7 @@ const FormBuilder = () => {
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState('build');
   const [isAddQuestionModalOpen, setIsAddQuestionModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   const PencilIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>;
   const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
@@ -639,6 +640,12 @@ const FormBuilder = () => {
                   Preview
                 </button>
                 <button
+                  onClick={() => setIsShareModalOpen(true)}
+                  className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
+                >
+                  Share
+                </button>
+                <button
                   onClick={handleDeleteForm}
                   className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
                 >
@@ -851,6 +858,12 @@ const FormBuilder = () => {
                 Preview
               </button>
               <button
+                onClick={() => setIsShareModalOpen(true)}
+                className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
+              >
+                Share
+              </button>
+              <button
                 onClick={handleDeleteForm}
                 className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
               >
@@ -1017,6 +1030,70 @@ const FormBuilder = () => {
             </div>
           )}
         </>
+      )}
+      {/* Share Modal */}
+      {isShareModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm">
+          <div className="relative w-full max-w-md mx-4 sm:mx-auto rounded-2xl shadow-xl bg-white/90 backdrop-blur-lg border border-white/30 p-8 animate-pop-in">
+            <button onClick={() => setIsShareModalOpen(false)} className="absolute top-4 right-4 p-2 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-800 transition-colors">
+              <CloseIcon />
+            </button>
+            <h3 className="text-2xl font-bold text-center mb-6 text-gray-900">Share Your Form</h3>
+            <div className="mb-4">
+              <label className="block text-gray-700 font-medium mb-1">Public Link:</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={formUrl}
+                  readOnly
+                  className="flex-1 px-3 py-2 border rounded-lg bg-gray-100 text-gray-700"
+                  onClick={e => { e.target.select(); }}
+                />
+                <button
+                  className="px-3 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600"
+                  onClick={() => { navigator.clipboard.writeText(formUrl); toast('Link copied!', 'success'); }}
+                >
+                  Copy Link
+                </button>
+              </div>
+            </div>
+            <div className="mb-4 flex flex-col items-center">
+              <label className="block text-gray-700 font-medium mb-1">QR Code:</label>
+              {formUrl ? (
+                <QRCodeSVG id="form-qr-code" value={formUrl} size={128} level="H" />
+              ) : (
+                <p>Save your form to generate a QR code.</p>
+              )}
+              <button
+                className="mt-3 px-3 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600"
+                onClick={() => {
+                  const svg = document.getElementById('form-qr-code');
+                  if (!svg) return;
+                  const serializer = new window.XMLSerializer();
+                  const svgString = serializer.serializeToString(svg);
+                  const canvas = document.createElement('canvas');
+                  const img = new window.Image();
+                  img.onload = function () {
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    const pngFile = canvas.toDataURL('image/png');
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = pngFile;
+                    downloadLink.download = 'form-qr-code.png';
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                  };
+                  img.src = 'data:image/svg+xml;base64,' + window.btoa(unescape(encodeURIComponent(svgString)));
+                }}
+              >
+                Download QR Code
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
