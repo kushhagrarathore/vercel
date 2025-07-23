@@ -633,26 +633,26 @@ const FormBuilder = () => {
             <div className="flex flex-1 overflow-hidden">
               <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-72'}`}>
                 <div className="p-4 flex-1 overflow-y-auto">
-                  <button
-                    onClick={() => setIsAddQuestionModalOpen(true)}
+                <button
+                  onClick={() => setIsAddQuestionModalOpen(true)}
                     className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-sm hover:bg-indigo-700 transition-all duration-200 ease-in-out mb-4"
-                  >
+                >
                     <PlusIcon className="w-5 h-5" />
                     {!isLeftSidebarCollapsed && <span>Add Question</span>}
-                  </button>
-                  <div className="space-y-2">
-                    {questions.map((q, index) => (
+                </button>
+                <div className="space-y-2">
+                  {questions.map((q, index) => (
                       <div key={q.id} className="p-3 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center cursor-pointer overflow-hidden">
                         <span className="text-gray-500 font-bold">{String(index + 1).padStart(2, '0')}</span>
                         {!isLeftSidebarCollapsed && (
                           <span className="font-semibold text-gray-800 truncate ml-3" title={q.question_text || 'Untitled Question'}>
-                            {q.question_text || 'Untitled Question'}
-                          </span>
+                          {q.question_text || 'Untitled Question'}
+                        </span>
                         )}
-                      </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
+              </div>
                 <div className="p-2 border-t">
                   <button
                     onClick={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
@@ -702,7 +702,7 @@ const FormBuilder = () => {
               </main>
 
               <aside className={`bg-white border-l transition-all duration-300 ease-in-out overflow-y-auto ${isCustomizePanelOpen ? 'w-80 p-4' : 'w-0 p-0 overflow-hidden'}`}>
-                {isCustomizePanelOpen && (
+              {isCustomizePanelOpen && (
                   <>
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-lg font-semibold">Customize</h3>
@@ -719,7 +719,7 @@ const FormBuilder = () => {
                       ChromePicker={ChromePicker}
                     />
                   </>
-                )}
+              )}
               </aside>
             </div>
             {isAddQuestionModalOpen && (
@@ -795,35 +795,35 @@ const FormBuilder = () => {
               <div className="flex items-center gap-4">
                 <button className="bg-transparent border-none cursor-pointer text-sm text-gray-500 hover:text-indigo-600 transition flex items-center gap-2" onClick={handleBackToDashboard}>
                   <ChevronLeft className="w-4 h-4" /> Back
-                </button>
-                <input
-                  type="text"
-                  placeholder="Untitled Form"
-                  value={title}
-                  onChange={(e) => {
-                    setTitle(e.target.value);
-                    setHasUnsavedChanges(true);
-                  }}
+              </button>
+              <input
+                type="text"
+                placeholder="Untitled Form"
+                value={title}
+                onChange={(e) => {
+                  setTitle(e.target.value);
+                  setHasUnsavedChanges(true);
+                }}
                   className="text-xl font-bold border-none outline-none bg-transparent text-gray-800 w-72"
-                />
-              </div>
+              />
+            </div>
               <div className="flex items-center gap-2">
                 <button onClick={saveForm} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm">
                   <SaveIcon className="w-4 h-4" /> Save
-                </button>
+              </button>
                 <button onClick={handlePreviewClick} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm">
                   <EyeIcon className="w-4 h-4" /> Preview
-                </button>
+              </button>
                 <button onClick={() => setIsShareModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-sm hover:bg-indigo-700 transition-colors text-sm">
-                  Share
-                </button>
+                Share
+              </button>
                 <button onClick={handleDeleteForm} className="flex items-center justify-center w-9 h-9 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-red-50 text-gray-600 hover:text-red-600 transition-colors" title="Delete Form">
                   <TrashIcon className="w-4 h-4" />
-                </button>
+              </button>
                 <button onClick={() => setIsCustomizePanelOpen(!isCustomizePanelOpen)} className="flex items-center justify-center w-9 h-9 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 text-gray-600 transition-colors" title="Customize">
                   <Settings className="w-4 h-4" />
-                </button>
-              </div>
+              </button>
+            </div>
           </header>
 
           <div className="flex flex-1 overflow-hidden">
@@ -831,26 +831,26 @@ const FormBuilder = () => {
               <>
                 <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-72'}`}>
                   <div className="p-4 flex-1 overflow-y-auto">
-                    <button
-                      onClick={() => setIsAddQuestionModalOpen(true)}
+                  <button
+                    onClick={() => setIsAddQuestionModalOpen(true)}
                       className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-sm hover:bg-indigo-700 transition-all duration-200 ease-in-out mb-4"
-                    >
+                  >
                       <PlusIcon className="w-5 h-5" />
                       {!isLeftSidebarCollapsed && <span>Add Question</span>}
-                    </button>
-                    <div className="space-y-2">
-                      {questions.map((q, index) => (
+                  </button>
+                  <div className="space-y-2">
+                    {questions.map((q, index) => (
                         <div key={q.id} className="p-3 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center cursor-pointer overflow-hidden">
-                           <span className="text-gray-500 font-bold">{String(index + 1).padStart(2, '0')}</span>
+                          <span className="text-gray-500 font-bold">{String(index + 1).padStart(2, '0')}</span>
                           {!isLeftSidebarCollapsed && (
                             <span className="font-semibold text-gray-800 truncate ml-3" title={q.question_text || 'Untitled Question'}>
-                              {q.question_text || 'Untitled Question'}
-                            </span>
+                            {q.question_text || 'Untitled Question'}
+                          </span>
                           )}
-                        </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
+                </div>
                   <div className="p-2 border-t">
                     <button
                       onClick={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
@@ -864,7 +864,7 @@ const FormBuilder = () => {
 
                 <main className="flex-1 p-8 bg-slate-100 overflow-y-auto">
                    <div className="form-title-block max-w-4xl mx-auto">
-                     <textarea
+                    <textarea
                        className="form-description-textarea w-full text-4xl font-bold border-none outline-none bg-transparent text-gray-800 resize-none mb-2"
                        placeholder="Form Title"
                        value={title}
@@ -873,12 +873,12 @@ const FormBuilder = () => {
                      />
                      <textarea
                        className="form-description-textarea w-full text-base border-none outline-none bg-transparent text-gray-500 resize-none"
-                       placeholder="Add a short description about this form..."
-                       value={description}
+                      placeholder="Add a short description about this form..."
+                      value={description}
                        onChange={(e) => { setDescription(e.target.value); setHasUnsavedChanges(true); }}
                        rows="2"
-                     />
-                   </div>
+                    />
+                  </div>
 
                   {questions.length > 0 ? (
                     <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
@@ -900,7 +900,7 @@ const FormBuilder = () => {
                   )}
                 </main>
                 <aside className={`bg-white border-l transition-all duration-300 ease-in-out overflow-y-auto ${isCustomizePanelOpen ? 'w-80 p-4' : 'w-0 p-0 overflow-hidden'}`}>
-                  {isCustomizePanelOpen && (
+                {isCustomizePanelOpen && (
                     <>
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold">Customize</h3>
@@ -917,7 +917,7 @@ const FormBuilder = () => {
                         ChromePicker={ChromePicker}
                       />
                     </>
-                  )}
+                )}
                 </aside>
               </>
             )}

@@ -9,7 +9,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { QRCodeCanvas } from "qrcode.react";
-import { FiArrowLeft, FiEye, FiUpload, FiSun, FiMoon, FiSave, FiEdit2, FiTrash2, FiBarChart2 } from "react-icons/fi";
+import { FiArrowLeft, FiEye, FiUpload, FiSun, FiMoon, FiSave, FiEdit2, FiTrash2, FiBarChart2, FiSettings } from "react-icons/fi";
 
 import { Button } from '../../components/buttonquiz';
 import { Input } from '../../components/input';
@@ -187,6 +187,68 @@ function toLocalDateTimeInputValue(utcISOString) {
   const pad = n => n.toString().padStart(2, '0');
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
+
+// Minimalistic background customization for Quiz Builder
+const MinimalBackgroundCustomization = ({ customization, setCustomization }) => {
+  const [bgImageInput, setBgImageInput] = useState(customization.backgroundImage || "");
+  const [bgImageError, setBgImageError] = useState("");
+
+  // Validate image URL
+  const validateImageUrl = (url, cb) => {
+    if (!url) { cb(false); return; }
+    const img = new window.Image();
+    img.onload = () => cb(true);
+    img.onerror = () => cb(false);
+    img.src = url;
+  };
+
+  const handleBgImageChange = (value) => {
+    setBgImageInput(value);
+    if (!value) {
+      setBgImageError("");
+      setCustomization(prev => ({ ...prev, backgroundImage: "" }));
+      return;
+    }
+    validateImageUrl(value, (isValid) => {
+      if (isValid) {
+        setBgImageError("");
+        setCustomization(prev => ({ ...prev, backgroundImage: value }));
+      } else {
+        setBgImageError("Invalid image URL. Please use a direct/public image link.");
+      }
+    });
+  };
+
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 10 }}>Background</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+        <label style={{ fontWeight: 500, fontSize: 15 }}>Color:</label>
+        <input
+          type="color"
+          value={customization.backgroundColor || '#ffffff'}
+          onChange={e => setCustomization(prev => ({ ...prev, backgroundColor: e.target.value }))}
+          style={{ width: 38, height: 38, border: 'none', borderRadius: 8, background: '#f7fafc', boxShadow: '0 1px 4px rgba(44,62,80,0.07)' }}
+        />
+        <div style={{ width: 38, height: 38, borderRadius: 8, background: customization.backgroundColor || '#fff', border: '1.5px solid #e5e7eb' }} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <label style={{ fontWeight: 500, fontSize: 15 }}>Image URL:</label>
+        <input
+          type="text"
+          placeholder="Paste image URL (optional)"
+          value={bgImageInput}
+          onChange={e => handleBgImageChange(e.target.value)}
+          style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', fontSize: 15, background: '#f7fafc', color: '#2d314d' }}
+        />
+        {bgImageError && <div style={{ color: 'red', fontSize: 13 }}>{bgImageError}</div>}
+        {customization.backgroundImage && !bgImageError && (
+          <div style={{ width: '100%', height: 60, background: `url(${customization.backgroundImage}) center/cover no-repeat`, border: '1px dashed #ccc', borderRadius: 4, marginTop: 6 }} />
+        )}
+      </div>
+    </div>
+  );
+};
 
 // 🔲 Main Quiz Builder
 export default function Quiz() {
@@ -668,16 +730,29 @@ export default function Quiz() {
     setInitialStateNow(slides, title);
   };
 
+  // Quiz-wide customization state
+  const [customization, setCustomization] = useState({
+    backgroundColor: '#ffffff',
+    backgroundImage: '',
+  });
+
   const gradientBg = {
-    background: 'linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%)',
+    backgroundColor: customization.backgroundColor || '#f8fafc',
+    backgroundImage: customization.backgroundImage ? `url(${customization.backgroundImage})` : undefined,
+    backgroundSize: customization.backgroundImage ? 'cover' : undefined,
+    backgroundPosition: customization.backgroundImage ? 'center' : undefined,
+    backgroundRepeat: customization.backgroundImage ? 'no-repeat' : undefined,
     minHeight: '100vh',
     width: '100%',
+    transition: 'background 0.3s',
   };
 
   // Add state for customization tab
   const [customTab, setCustomTab] = useState('templates');
   const [startDateTime, setStartDateTime] = useState("");
   const [endDateTime, setEndDateTime] = useState("");
+  // Collapsible customize panel state
+  const [isCustomizeOpen, setIsCustomizeOpen] = useState(true);
 
   return (
     <div style={gradientBg}>
@@ -705,7 +780,7 @@ export default function Quiz() {
       )}
 
       {/* Top Bar */}
-      <div className="flex justify-between items-center px-10 py-5 rounded-b-2xl shadow-md sticky top-0 z-30 border-b" style={{minHeight:'4.5rem', background: 'var(--card)', borderColor: 'var(--border)', color: 'var(--text)', boxShadow: '0 2px 12px 0 var(--border)'}}>
+      <header className="sticky top-0 z-30 bg-white border-b border-gray-200 p-4 flex justify-between items-center shrink-0">
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
@@ -717,11 +792,11 @@ export default function Quiz() {
             <FiArrowLeft /> Back
           </Button>
           <input
-            className="quizbuilder-title font-bold px-4 py-2 rounded-lg border-none outline-none bg-transparent"
-            style={{ color: '#6b7280', background: 'transparent', minWidth: 140, maxWidth: 260, fontSize: 22, fontWeight: 600, letterSpacing: '-0.5px' }}
+            type="text"
+            placeholder="Untitled Quiz"
             value={title}
             onChange={e => setTitle(e.target.value)}
-            placeholder="Untitled Quiz"
+            className="text-xl font-bold border-none outline-none bg-transparent text-gray-800 w-72"
           />
           <div className="flex gap-2 ml-6">
             <Button
@@ -757,8 +832,8 @@ export default function Quiz() {
             {isDarkMode ? <FiSun /> : <FiMoon />}
           </Button>
           <Button
-            className="rounded-full px-4 py-2 font-semibold flex items-center gap-2 shadow-md"
-            style={{ background: 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)', color: '#fff' }}
+            className="rounded-full px-4 py-2 font-semibold flex items-center gap-2 shadow-none bg-transparent hover:bg-gray-100 text-blue-700 border-none"
+            style={{ background: 'transparent', color: '#2563eb', boxShadow: 'none', border: 'none' }}
             onClick={() => {
               if (!quizId) {
                 localStorage.setItem('quizDraft', JSON.stringify({
@@ -787,8 +862,17 @@ export default function Quiz() {
           >
             {publishedQuizId ? <FiSave /> : <FiUpload />} {publishedQuizId ? "Save" : "Publish"}
           </Button>
+          {/* Customize toggle button */}
+          <Button
+            className={`rounded-full px-3 py-2 shadow-sm border ml-2 ${isCustomizeOpen ? 'bg-blue-100 text-blue-700' : 'bg-white text-gray-600'}`}
+            style={{ borderColor: 'var(--border)' }}
+            onClick={() => setIsCustomizeOpen(v => !v)}
+            title={isCustomizeOpen ? 'Hide Customize Panel' : 'Show Customize Panel'}
+          >
+            <FiSettings />
+          </Button>
         </div>
-      </div>
+      </header>
       {/* Main Layout */}
       <div className="flex flex-row w-full" style={{ background: 'var(--bg)', minHeight: '100vh' }}>
         {/* Sidebar */}
@@ -851,8 +935,8 @@ export default function Quiz() {
         </aside>
         {/* Main Content */}
         <main
-          className="flex-1 p-8 transition-all duration-300 flex flex-col items-center justify-start ml-60 mr-80"
-          style={{ maxWidth: 'calc(100vw - 15rem - 20rem)', width: '100%', overflowY: 'auto', background: 'var(--bg)', color: 'var(--text)' }}
+          className={`flex-1 p-8 transition-all duration-300 flex flex-col items-center justify-start ml-60 ${isCustomizeOpen ? 'mr-80' : 'mr-0'}`}
+          style={{ maxWidth: isCustomizeOpen ? 'calc(100vw - 15rem - 20rem)' : 'calc(100vw - 15rem)', width: '100%', overflowY: 'auto', background: 'var(--bg)', color: 'var(--text)' }}
         >
           <div className="shadow-2xl max-w-2xl w-full mx-auto flex flex-col gap-10 justify-center items-center" style={{
             background: currentSlide?.background || defaultSlideStyle.background,
@@ -998,241 +1082,246 @@ export default function Quiz() {
           </div>
         </main>
         {/* Right Panel: Customization */}
-        <aside className="fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-80 min-w-[16rem] shadow-lg z-20 transition-transform duration-300 flex flex-col" style={{ borderRadius: 20, margin: '1.5rem 1.5rem 1.5rem 0', padding: '2rem 1.5rem', overflowY: 'auto', background: 'var(--card)', color: 'var(--text)', boxShadow: '0 4px 24px 0 var(--border)' }}>
-          <div className="flex mb-6 border-b" style={{ borderColor: 'var(--border)' }}>
-            <button
-              className={`flex-1 py-2 text-center font-semibold ${customTab === 'templates' ? 'border-b-2 border-blue-500 text-blue-700' : 'text-gray-500'}`}
-              onClick={() => setCustomTab('templates')}
-              type="button"
-              style={{ background: 'none', borderColor: customTab === 'templates' ? '#3b82f6' : 'transparent', color: customTab === 'templates' ? 'var(--accent)' : 'var(--text-secondary)' }}
-            >
-              Templates
-            </button>
-            <button
-              className={`flex-1 py-2 text-center font-semibold ${customTab === 'advanced' ? 'border-b-2 border-blue-500 text-blue-700' : 'text-gray-500'}`}
-              onClick={() => setCustomTab('advanced')}
-              type="button"
-              style={{ background: 'none', borderColor: customTab === 'advanced' ? '#3b82f6' : 'transparent', color: customTab === 'advanced' ? 'var(--accent)' : 'var(--text-secondary)' }}
-            >
-              Advanced
-            </button>
-          </div>
-          {/* Templates Tab */}
-          {customTab === 'templates' && (
-            <div className="flex flex-col gap-6 mb-4">
-              {/* Dark Mode Template */}
-              <button
-                type="button"
-                className={`flex items-center gap-4 rounded-2xl border-2 p-5 transition group ${currentSlide?.background === '#222' && currentSlide?.textColor === '#fff' ? 'border-black shadow-lg' : 'border-gray-300'} bg-[#222] hover:shadow-2xl hover:-translate-y-1`}
-                style={{ color: '#fff' }}
-                onClick={() => updateSlide('background', '#222') || updateSlide('textColor', '#fff')}
-              >
-                <div className="w-2 h-14 rounded-l-xl" style={{ background: '#222' }}></div>
-                <div className="flex flex-col items-start">
-                  <span className="font-bold text-lg group-hover:underline" style={{ color: '#fff' }}>Dark Mode</span>
-                  <span className="text-xs" style={{ color: '#e5e7eb' }}>bg-gray-900 text-white</span>
-                </div>
-              </button>
-              {/* Light Mode Template */}
-              <button
-                type="button"
-                className={`flex items-center gap-4 rounded-2xl border-2 p-5 transition group ${currentSlide?.background === '#fff' && currentSlide?.textColor === '#111' ? 'border-black shadow-lg' : 'border-gray-200'} bg-white hover:shadow-2xl hover:-translate-y-1`}
-                style={{ color: '#111' }}
-                onClick={() => updateSlide('background', '#fff') || updateSlide('textColor', '#111')}
-              >
-                <div className="w-2 h-14 rounded-l-xl" style={{ background: '#fff', border: '1px solid #e5e7eb' }}></div>
-                <div className="flex flex-col items-start">
-                  <span className="font-bold text-lg group-hover:underline" style={{ color: '#111' }}>Light Mode</span>
-                  <span className="text-xs" style={{ color: '#6b7280' }}>bg-white text-black</span>
-                </div>
-              </button>
-              {/* Ocean Blue Template */}
-              <button
-                type="button"
-                className={`flex items-center gap-4 rounded-2xl border-2 p-5 transition group ${currentSlide?.background === '#dbeafe' && currentSlide?.textColor === '#1e3a8a' ? 'border-blue-500 shadow-lg' : 'border-blue-300'} bg-[#dbeafe] hover:shadow-2xl hover:-translate-y-1`}
-                style={{ color: '#1e3a8a' }}
-                onClick={() => updateSlide('background', '#dbeafe') || updateSlide('textColor', '#1e3a8a')}
-              >
-                <div className="w-2 h-14 rounded-l-xl" style={{ background: '#60a5fa' }}></div>
-                <div className="flex flex-col items-start">
-                  <span className="font-bold text-lg group-hover:underline" style={{ color: '#1e3a8a' }}>Ocean Blue</span>
-                  <span className="text-xs" style={{ color: '#1e3a8a' }}>bg-blue-100 text-blue-900</span>
-                </div>
-              </button>
-              {/* Sunshine Yellow Template */}
-              <button
-                type="button"
-                className={`flex items-center gap-4 rounded-2xl border-2 p-5 transition group ${currentSlide?.background === '#fef9c3' && currentSlide?.textColor === '#a16207' ? 'border-yellow-400 shadow-lg' : 'border-yellow-200'} bg-[#fef9c3] hover:shadow-2xl hover:-translate-y-1`}
-                style={{ color: '#a16207' }}
-                onClick={() => updateSlide('background', '#fef9c3') || updateSlide('textColor', '#a16207')}
-              >
-                <div className="w-2 h-14 rounded-l-xl" style={{ background: '#fde68a' }}></div>
-                <div className="flex flex-col items-start">
-                  <span className="font-bold text-lg group-hover:underline" style={{ color: '#a16207' }}>Sunshine Yellow</span>
-                  <span className="text-xs" style={{ color: '#a16207' }}>bg-yellow-100 text-yellow-900</span>
-                </div>
-              </button>
-              {/* Apply to All Button */}
-              <button
-                type="button"
-                className="flex items-center gap-3 rounded-2xl border-2 p-5 transition font-bold bg-blue-50 border-blue-500 text-blue-700 hover:bg-blue-100 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
-                style={{ boxShadow: '0 2px 12px #3b82f633', marginTop: 8 }}
-                onClick={() => {
-                  const {
-                    background = '#ffffff',
-                    textColor = '#000000',
-                    fontFamily = textStyles[0].value,
-                    fontSize = 20,
-                    alignment = 'center',
-                    bold = false,
-                    italic = false,
-                    shadow = false,
-                    borderRadius = 20,
-                  } = currentSlide || {};
-                  setSlides(prev => prev.map(slide => ({
-                    ...slide,
-                    background,
-                    textColor,
-                    fontFamily,
-                    fontSize,
-                    alignment,
-                    bold,
-                    italic,
-                    shadow,
-                    borderRadius,
-                  })));
-                  setDefaultSlideStyle(style => ({
-                    ...style,
-                    background,
-                    textColor,
-                    fontFamily,
-                    fontSize,
-                    alignment,
-                    bold,
-                    italic,
-                    shadow,
-                    borderRadius,
-                  }));
-                  setNotification('Applied customization to all slides!');
-                  setTimeout(() => setNotification(null), 2000);
-                }}
-              >
-                <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2M7 12l5 5 5-5M12 17V3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                Apply to All
-              </button>
-              <div className="text-xs text-gray-500 text-center mt-2">Click a template to apply its style instantly.</div>
-            </div>
-          )}
-          {/* Advanced Tab */}
-          {customTab === 'advanced' && (
-            <div className="space-y-6">
-              <div>
-                <div className="font-semibold mb-2 text-blue-700">Text Style</div>
-                <select
-                  className="w-full border rounded-lg p-3 mb-4 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                  style={{ background: '#f9fafb', color: '#222', borderColor: '#e0e7ff' }}
-                  value={currentSlide?.fontFamily || textStyles[0].value}
-                  onChange={e => updateSlide('fontFamily', e.target.value)}
+        <aside className={`fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-80 min-w-[16rem] p-[2rem_1.5rem] shadow-lg z-20 transition-transform duration-300 flex flex-col bg-white overflow-y-auto ${isCustomizeOpen ? 'translate-x-0' : 'translate-x-full'}`} style={{ borderRadius: 20, margin: '1.5rem 1.5rem 1.5rem 0', background: 'var(--card)', color: 'var(--text)', boxShadow: '0 4px 24px 0 var(--border)' }}>
+          {isCustomizeOpen && (
+            <>
+              <div className="flex mb-6 border-b" style={{ borderColor: 'var(--border)' }}>
+                <button
+                  className={`flex-1 py-2 text-center font-semibold ${customTab === 'templates' ? 'border-b-2 border-blue-500 text-blue-700' : 'text-gray-500'}`}
+                  onClick={() => setCustomTab('templates')}
+                  type="button"
+                  style={{ background: 'none', borderColor: customTab === 'templates' ? '#3b82f6' : 'transparent', color: customTab === 'templates' ? 'var(--accent)' : 'var(--text-secondary)' }}
                 >
-                  {textStyles.map(style => (
-                    <option key={style.value} value={style.value} style={{ fontFamily: style.value }}>{style.label}</option>
-                  ))}
-                </select>
+                  Templates
+                </button>
+                <button
+                  className={`flex-1 py-2 text-center font-semibold ${customTab === 'advanced' ? 'border-b-2 border-blue-500 text-blue-700' : 'text-gray-500'}`}
+                  onClick={() => setCustomTab('advanced')}
+                  type="button"
+                  style={{ background: 'none', borderColor: customTab === 'advanced' ? '#3b82f6' : 'transparent', color: customTab === 'advanced' ? 'var(--accent)' : 'var(--text-secondary)' }}
+                >
+                  Advanced
+                </button>
               </div>
-              <div>
-                <div className="font-semibold mb-2 text-blue-700">Colors</div>
-                <div className="flex items-end gap-6 mb-2">
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-xs text-gray-500">Text</span>
-                    <div
-                      className="w-8 h-8 rounded-full mb-1 border-2 shadow cursor-pointer"
-                      style={{ background: currentSlide?.textColor, borderColor: '#e0e7ff' }}
-                      onClick={() => setOpenColorPicker(openColorPicker === 'text' ? null : 'text')}
-                    />
-                    {openColorPicker === 'text' && (
-                      <input
-                        type="color"
-                        value={currentSlide?.textColor}
-                        onChange={e => { updateSlide('textColor', e.target.value); setOpenColorPicker(null); }}
-                        className="w-10 h-10 p-0 border-2 rounded-lg bg-transparent cursor-pointer shadow-sm mt-1"
-                        style={{ background: 'none', borderColor: '#e0e7ff' }}
-                        autoFocus
-                        onBlur={() => setOpenColorPicker(null)}
-                      />
-                    )}
+              {/* Templates Tab */}
+              {customTab === 'templates' && (
+                <div className="flex flex-col gap-6 mb-4">
+                  {/* Dark Mode Template */}
+                  <button
+                    type="button"
+                    className={`flex items-center gap-4 rounded-2xl border-2 p-5 transition group ${currentSlide?.background === '#222' && currentSlide?.textColor === '#fff' ? 'border-black shadow-lg' : 'border-gray-300'} bg-[#222] hover:shadow-2xl hover:-translate-y-1`}
+                    style={{ color: '#fff' }}
+                    onClick={() => updateSlide('background', '#222') || updateSlide('textColor', '#fff')}
+                  >
+                    <div className="w-2 h-14 rounded-l-xl" style={{ background: '#222' }}></div>
+                    <div className="flex flex-col items-start">
+                      <span className="font-bold text-lg group-hover:underline" style={{ color: '#fff' }}>Dark Mode</span>
+                      <span className="text-xs" style={{ color: '#e5e7eb' }}>bg-gray-900 text-white</span>
+                    </div>
+                  </button>
+                  {/* Light Mode Template */}
+                  <button
+                    type="button"
+                    className={`flex items-center gap-4 rounded-2xl border-2 p-5 transition group ${currentSlide?.background === '#fff' && currentSlide?.textColor === '#111' ? 'border-black shadow-lg' : 'border-gray-200'} bg-white hover:shadow-2xl hover:-translate-y-1`}
+                    style={{ color: '#111' }}
+                    onClick={() => updateSlide('background', '#fff') || updateSlide('textColor', '#111')}
+                  >
+                    <div className="w-2 h-14 rounded-l-xl" style={{ background: '#fff', border: '1px solid #e5e7eb' }}></div>
+                    <div className="flex flex-col items-start">
+                      <span className="font-bold text-lg group-hover:underline" style={{ color: '#111' }}>Light Mode</span>
+                      <span className="text-xs" style={{ color: '#6b7280' }}>bg-white text-black</span>
+                    </div>
+                  </button>
+                  {/* Ocean Blue Template */}
+                  <button
+                    type="button"
+                    className={`flex items-center gap-4 rounded-2xl border-2 p-5 transition group ${currentSlide?.background === '#dbeafe' && currentSlide?.textColor === '#1e3a8a' ? 'border-blue-500 shadow-lg' : 'border-blue-300'} bg-[#dbeafe] hover:shadow-2xl hover:-translate-y-1`}
+                    style={{ color: '#1e3a8a' }}
+                    onClick={() => updateSlide('background', '#dbeafe') || updateSlide('textColor', '#1e3a8a')}
+                  >
+                    <div className="w-2 h-14 rounded-l-xl" style={{ background: '#60a5fa' }}></div>
+                    <div className="flex flex-col items-start">
+                      <span className="font-bold text-lg group-hover:underline" style={{ color: '#1e3a8a' }}>Ocean Blue</span>
+                      <span className="text-xs" style={{ color: '#1e3a8a' }}>bg-blue-100 text-blue-900</span>
+                    </div>
+                  </button>
+                  {/* Sunshine Yellow Template */}
+                  <button
+                    type="button"
+                    className={`flex items-center gap-4 rounded-2xl border-2 p-5 transition group ${currentSlide?.background === '#fef9c3' && currentSlide?.textColor === '#a16207' ? 'border-yellow-400 shadow-lg' : 'border-yellow-200'} bg-[#fef9c3] hover:shadow-2xl hover:-translate-y-1`}
+                    style={{ color: '#a16207' }}
+                    onClick={() => updateSlide('background', '#fef9c3') || updateSlide('textColor', '#a16207')}
+                  >
+                    <div className="w-2 h-14 rounded-l-xl" style={{ background: '#fde68a' }}></div>
+                    <div className="flex flex-col items-start">
+                      <span className="font-bold text-lg group-hover:underline" style={{ color: '#a16207' }}>Sunshine Yellow</span>
+                      <span className="text-xs" style={{ color: '#a16207' }}>bg-yellow-100 text-yellow-900</span>
+                    </div>
+                  </button>
+                  {/* Apply to All Button */}
+                  <button
+                    type="button"
+                    className="flex items-center gap-3 rounded-2xl border-2 p-5 transition font-bold bg-blue-50 border-blue-500 text-blue-700 hover:bg-blue-100 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    style={{ boxShadow: '0 2px 12px #3b82f633', marginTop: 8 }}
+                    onClick={() => {
+                      const {
+                        background = '#ffffff',
+                        textColor = '#000000',
+                        fontFamily = textStyles[0].value,
+                        fontSize = 20,
+                        alignment = 'center',
+                        bold = false,
+                        italic = false,
+                        shadow = false,
+                        borderRadius = 20,
+                      } = currentSlide || {};
+                      setSlides(prev => prev.map(slide => ({
+                        ...slide,
+                        background,
+                        textColor,
+                        fontFamily,
+                        fontSize,
+                        alignment,
+                        bold,
+                        italic,
+                        shadow,
+                        borderRadius,
+                      })));
+                      setDefaultSlideStyle(style => ({
+                        ...style,
+                        background,
+                        textColor,
+                        fontFamily,
+                        fontSize,
+                        alignment,
+                        bold,
+                        italic,
+                        shadow,
+                        borderRadius,
+                      }));
+                      setNotification('Applied customization to all slides!');
+                      setTimeout(() => setNotification(null), 2000);
+                    }}
+                  >
+                    <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2M7 12l5 5 5-5M12 17V3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    Apply to All
+                  </button>
+                  <div className="text-xs text-gray-500 text-center mt-2">Click a template to apply its style instantly.</div>
+                </div>
+              )}
+              {/* Advanced Tab */}
+              {customTab === 'advanced' && (
+                <div className="space-y-6">
+                  <MinimalBackgroundCustomization customization={customization} setCustomization={setCustomization} />
+                  <div>
+                    <div className="font-semibold mb-2 text-blue-700">Text Style</div>
+                    <select
+                      className="w-full border rounded-lg p-3 mb-4 text-base font-medium focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
+                      style={{ background: '#f9fafb', color: '#222', borderColor: '#e0e7ff' }}
+                      value={currentSlide?.fontFamily || textStyles[0].value}
+                      onChange={e => updateSlide('fontFamily', e.target.value)}
+                    >
+                      {textStyles.map(style => (
+                        <option key={style.value} value={style.value} style={{ fontFamily: style.value }}>{style.label}</option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-xs text-gray-500">BG</span>
-                    <div
-                      className="w-8 h-8 rounded-full mb-1 border-2 shadow cursor-pointer"
-                      style={{ background: currentSlide?.background, borderColor: '#e0e7ff' }}
-                      onClick={() => setOpenColorPicker(openColorPicker === 'bg' ? null : 'bg')}
-                    />
-                    {openColorPicker === 'bg' && (
-                      <input
-                        type="color"
-                        value={currentSlide?.background}
-                        onChange={e => { updateSlide('background', e.target.value); setOpenColorPicker(null); }}
-                        className="w-10 h-10 p-0 border-2 rounded-lg bg-transparent cursor-pointer shadow-sm mt-1"
-                        style={{ background: 'none', borderColor: '#e0e7ff' }}
-                        autoFocus
-                        onBlur={() => setOpenColorPicker(null)}
-                      />
-                    )}
+                  <div>
+                    <div className="font-semibold mb-2 text-blue-700">Colors</div>
+                    <div className="flex items-end gap-6 mb-2">
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-xs text-gray-500">Text</span>
+                        <div
+                          className="w-8 h-8 rounded-full mb-1 border-2 shadow cursor-pointer"
+                          style={{ background: currentSlide?.textColor, borderColor: '#e0e7ff' }}
+                          onClick={() => setOpenColorPicker(openColorPicker === 'text' ? null : 'text')}
+                        />
+                        {openColorPicker === 'text' && (
+                          <input
+                            type="color"
+                            value={currentSlide?.textColor}
+                            onChange={e => { updateSlide('textColor', e.target.value); setOpenColorPicker(null); }}
+                            className="w-10 h-10 p-0 border-2 rounded-lg bg-transparent cursor-pointer shadow-sm mt-1"
+                            style={{ background: 'none', borderColor: '#e0e7ff' }}
+                            autoFocus
+                            onBlur={() => setOpenColorPicker(null)}
+                          />
+                        )}
+                      </div>
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-xs text-gray-500">BG</span>
+                        <div
+                          className="w-8 h-8 rounded-full mb-1 border-2 shadow cursor-pointer"
+                          style={{ background: currentSlide?.background, borderColor: '#e0e7ff' }}
+                          onClick={() => setOpenColorPicker(openColorPicker === 'bg' ? null : 'bg')}
+                        />
+                        {openColorPicker === 'bg' && (
+                          <input
+                            type="color"
+                            value={currentSlide?.background}
+                            onChange={e => { updateSlide('background', e.target.value); setOpenColorPicker(null); }}
+                            className="w-10 h-10 p-0 border-2 rounded-lg bg-transparent cursor-pointer shadow-sm mt-1"
+                            style={{ background: 'none', borderColor: '#e0e7ff' }}
+                            autoFocus
+                            onBlur={() => setOpenColorPicker(null)}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="font-semibold mb-2 text-blue-700">Font Size</div>
+                    <select value={currentSlide?.fontSize || 20} onChange={e => updateSlide('fontSize', parseInt(e.target.value))} className="w-full border rounded p-1">
+                      <option value={14}>sm</option>
+                      <option value={16}>base</option>
+                      <option value={18}>lg</option>
+                      <option value={20}>xl</option>
+                      <option value={24}>2xl</option>
+                      <option value={28}>3xl</option>
+                      <option value={32}>4xl</option>
+                    </select>
+                  </div>
+                  {/* --- Quiz Availability Section: removed current IST time display --- */}
+                  <hr className="my-4 border-blue-200" />
+                  <div style={{ background: '#f3f6fd', borderRadius: 12, padding: 16, marginBottom: 8 }}>
+                    <div className="font-semibold mb-2 text-blue-700" style={{ fontSize: 16 }}>Quiz Availability</div>
+                    <div className="flex flex-col gap-3">
+                      <label>
+                        <span className="text-sm">Start Date & Time</span>
+                        <input
+                          type="datetime-local"
+                          value={startDateTime}
+                          onChange={e => setStartDateTime(e.target.value)}
+                          className="w-full border rounded p-2 mt-1"
+                        />
+                      </label>
+                      <label>
+                        <span className="text-sm">End Date & Time</span>
+                        <input
+                          type="datetime-local"
+                          value={endDateTime}
+                          onChange={e => setEndDateTime(e.target.value)}
+                          className="w-full border rounded p-2 mt-1"
+                        />
+                      </label>
+                      <div className="text-xs text-gray-500 mt-1">Times are in your local timezone. Quiz will only be accessible between these times.</div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="font-semibold mb-2 text-blue-700">Text Alignment</div>
+                    <select value={currentSlide?.alignment || 'center'} onChange={e => updateSlide('alignment', e.target.value)} className="w-full border rounded p-1">
+                      <option value="left">Left</option>
+                      <option value="center">Center</option>
+                      <option value="right">Right</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center gap-4 mt-3">
+                    <label className="font-medium flex items-center gap-1"><input type="checkbox" checked={currentSlide?.bold ?? false} onChange={e => updateSlide('bold', e.target.checked)} /> Bold</label>
+                    <label className="font-medium flex items-center gap-1"><input type="checkbox" checked={currentSlide?.italic ?? false} onChange={e => updateSlide('italic', e.target.checked)} /> Italic</label>
                   </div>
                 </div>
-              </div>
-              <div>
-                <div className="font-semibold mb-2 text-blue-700">Font Size</div>
-                <select value={currentSlide?.fontSize || 20} onChange={e => updateSlide('fontSize', parseInt(e.target.value))} className="w-full border rounded p-1">
-                  <option value={14}>sm</option>
-                  <option value={16}>base</option>
-                  <option value={18}>lg</option>
-                  <option value={20}>xl</option>
-                  <option value={24}>2xl</option>
-                  <option value={28}>3xl</option>
-                  <option value={32}>4xl</option>
-                </select>
-              </div>
-              {/* --- Quiz Availability Section: removed current IST time display --- */}
-              <hr className="my-4 border-blue-200" />
-              <div style={{ background: '#f3f6fd', borderRadius: 12, padding: 16, marginBottom: 8 }}>
-                <div className="font-semibold mb-2 text-blue-700" style={{ fontSize: 16 }}>Quiz Availability</div>
-                <div className="flex flex-col gap-3">
-                  <label>
-                    <span className="text-sm">Start Date & Time</span>
-                    <input
-                      type="datetime-local"
-                      value={startDateTime}
-                      onChange={e => setStartDateTime(e.target.value)}
-                      className="w-full border rounded p-2 mt-1"
-                    />
-                  </label>
-                  <label>
-                    <span className="text-sm">End Date & Time</span>
-                    <input
-                      type="datetime-local"
-                      value={endDateTime}
-                      onChange={e => setEndDateTime(e.target.value)}
-                      className="w-full border rounded p-2 mt-1"
-                    />
-                  </label>
-                  <div className="text-xs text-gray-500 mt-1">Times are in your local timezone. Quiz will only be accessible between these times.</div>
-                </div>
-              </div>
-              <div>
-                <div className="font-semibold mb-2 text-blue-700">Text Alignment</div>
-                <select value={currentSlide?.alignment || 'center'} onChange={e => updateSlide('alignment', e.target.value)} className="w-full border rounded p-1">
-                  <option value="left">Left</option>
-                  <option value="center">Center</option>
-                  <option value="right">Right</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-4 mt-3">
-                <label className="font-medium flex items-center gap-1"><input type="checkbox" checked={currentSlide?.bold ?? false} onChange={e => updateSlide('bold', e.target.checked)} /> Bold</label>
-                <label className="font-medium flex items-center gap-1"><input type="checkbox" checked={currentSlide?.italic ?? false} onChange={e => updateSlide('italic', e.target.checked)} /> Italic</label>
-              </div>
-            </div>
+              )}
+            </>
           )}
         </aside>
       </div>

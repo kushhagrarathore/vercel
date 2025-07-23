@@ -72,8 +72,21 @@ const QuizFillPage = () => {
   if (error) return <div style={{ padding: 40, color: 'red', textAlign: 'center' }}>{error}</div>;
   if (!quiz || !slides.length) return <div style={{ padding: 40, color: 'red' }}>No quiz data found.</div>;
 
+  const bgImage = quiz?.customization?.backgroundImage;
+  const bgColor = quiz?.customization?.backgroundColor || quiz?.customization?.background || 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)';
   if (finished) return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: bgImage
+        ? `url('${bgImage}') center center / cover no-repeat`
+        : bgColor,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundSize: bgImage ? 'cover' : undefined,
+      backgroundPosition: bgImage ? 'center' : undefined,
+      backgroundRepeat: bgImage ? 'no-repeat' : undefined,
+    }}>
       <div style={{ background: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(60,60,100,0.10), 0 1.5px 6px rgba(0,0,0,0.03)', padding: 40, minWidth: 340, maxWidth: 420, width: '100%', textAlign: 'center' }}>
         <h2 style={{ fontWeight: 800, fontSize: 32, color: '#4a6bff', marginBottom: 12 }}>Quiz Complete!</h2>
         <div style={{ margin: '24px 0' }}>
@@ -90,7 +103,19 @@ const QuizFillPage = () => {
   const progress = ((current + 1) / slides.length) * 100;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f5f7fa 0%, #e0e7ff 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: bgImage
+        ? `url('${bgImage}') center center / cover no-repeat`
+        : bgColor,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundSize: bgImage ? 'cover' : undefined,
+      backgroundPosition: bgImage ? 'center' : undefined,
+      backgroundRepeat: bgImage ? 'no-repeat' : undefined,
+    }}>
       <div style={{ width: '100%', maxWidth: 480, margin: '0 auto', padding: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <div style={{ width: '100%', margin: '32px 0 18px 0', textAlign: 'center' }}>
           <h1 style={{ fontWeight: 800, fontSize: 32, color: '#4a6bff', marginBottom: 4, letterSpacing: '-1px' }}>{quiz.title}</h1>

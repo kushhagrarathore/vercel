@@ -17,8 +17,23 @@ const QuizPreviewPage = ({ quiz, slides }) => {
     }, 1200);
   };
 
+  const bgImage = customization.backgroundImage;
+  const bgColor = customization.backgroundColor || customization.background || '#f5f7fa';
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-color, #f5f7fa)', color: 'var(--text-color, #222)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{
+      minHeight: '100vh',
+      background: bgImage
+        ? `url('${bgImage}') center center / cover no-repeat`
+        : bgColor,
+      color: 'var(--text-color, #222)',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundSize: bgImage ? 'cover' : undefined,
+      backgroundPosition: bgImage ? 'center' : undefined,
+      backgroundRepeat: bgImage ? 'no-repeat' : undefined,
+    }}>
       <div style={{ width: '100%', maxWidth: 480, margin: '0 auto', padding: 24 }}>
         <div style={{ fontWeight: 700, fontSize: 22, marginBottom: 8 }}>{quiz.title}</div>
         <div style={{ fontWeight: 500, color: '#888', fontSize: 16, marginBottom: 18 }}>Question {current + 1} / {slides.length}</div>
@@ -28,7 +43,24 @@ const QuizPreviewPage = ({ quiz, slides }) => {
             initial={{ opacity: 0, y: 40, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.45 } }}
             exit={{ opacity: 0, y: -40, scale: 0.98, transition: { duration: 0.3 } }}
-            style={{ background: '#fff', borderRadius: 18, boxShadow: '0 8px 32px rgba(60,60,100,0.10)', padding: '38px 28px 32px 28px', minWidth: 320, maxWidth: 420, width: '100%', margin: '0 12px', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}
+            style={{
+              background: bgImage ? 'rgba(255,255,255,0.18)' : '#fff',
+              boxShadow: '0 8px 32px rgba(60,60,100,0.10)',
+              borderRadius: 18,
+              padding: '38px 28px 32px 28px',
+              minWidth: 320,
+              maxWidth: 420,
+              width: '100%',
+              margin: '0 12px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              position: 'relative',
+              backdropFilter: bgImage ? 'blur(18px) saturate(180%)' : undefined,
+              WebkitBackdropFilter: bgImage ? 'blur(18px) saturate(180%)' : undefined,
+              border: bgImage ? '1.5px solid rgba(255,255,255,0.35)' : '1.5px solid #e5eaf0',
+              transition: 'box-shadow 0.2s, background 0.2s',
+            }}
           >
             <div style={{ width: '100%', height: 6, background: '#e5eaf0', borderRadius: 4, marginBottom: 18 }}>
               <div style={{ width: `${((current + 1) / slides.length) * 100}%`, height: '100%', background: '#3b82f6', borderRadius: 4, transition: 'width 0.3s' }} />
