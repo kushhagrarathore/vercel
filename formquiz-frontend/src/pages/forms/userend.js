@@ -208,7 +208,9 @@ export default function LiveQuizUser() {
   const containerRef = useRef(null);
   const [allResponses, setAllResponses] = useState([]);
   const [username, setUsername] = useState("");
+  const [userEmail, setUserEmail] = useState(""); // NEW: email state
   const [hasEnteredName, setHasEnteredName] = useState(false);
+  const [emailSendStatus, setEmailSendStatus] = useState(null); // NEW: for feedback
   const [showUserPrompt, setShowUserPrompt] = useState(false);
   const [quizWindowStatus, setQuizWindowStatus] = useState("open"); // 'open', 'not_started', 'ended'
   const [quizStart, setQuizStart] = useState(null); // Store start_time
@@ -412,18 +414,22 @@ export default function LiveQuizUser() {
     setError(null);
     let user_id = null;
     let usernameToSave = '';
+    let emailToSend = userEmail;
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         user_id = user.id;
         usernameToSave = username;
+        emailToSend = user.email; // Use logged-in user's email
       } else {
         user_id = null;
-        usernameToSave = anonymousName || 'Anonymous';
+        usernameToSave = username && username.trim() ? username.trim() : 'Anonymous';
+        // emailToSend already set from input
       }
     } catch {
       user_id = null;
-      usernameToSave = anonymousName || 'Anonymous';
+      usernameToSave = username && username.trim() ? username.trim() : 'Anonymous';
+      // emailToSend already set from input
     }
     // Calculate score before submitting (robust, always correct)
     const score = calculateScore(slides, answers);
@@ -442,16 +448,63 @@ export default function LiveQuizUser() {
       submitted_at: new Date().toISOString(),
       response_id: code,
     };
+    let insertedResponseId = null;
+    let insertedQuizId = responseData.quiz_id;
     if (responseData.quiz_id) {
-      const { error: insertError } = await supabase
+      const { data: insertData, error: insertError } = await supabase
         .from('quiz_responses')
-        .insert([responseData]);
+        .insert([responseData])
+        .select();
       if (insertError) {
         setError('Failed to submit response: ' + insertError.message);
         setIsSubmitting(false);
         return;
       }
+      // Get the inserted response's response_id and quiz_id from the returned data
+      if (insertData && insertData.length > 0) {
+        insertedResponseId = insertData[0].response_id;
+        insertedQuizId = insertData[0].quiz_id;
+      } else {
+        insertedResponseId = code;
+        insertedQuizId = responseData.quiz_id;
+      }
     }
+    // --- Send magic link email after successful submission ---
+    setEmailSendStatus(null);
+    // Use the inserted values for the email
+    const quizIdForEmail = insertedQuizId;
+    const responseIdForEmail = insertedResponseId;
+    console.log('Sending magic link with quiz_id:', quizIdForEmail, 'responseId:', responseIdForEmail);
+    if (emailToSend && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailToSend)) {
+      if (quizIdForEmail && responseIdForEmail) {
+        try {
+          const { error: otpError } = await supabase.auth.signInWithOtp({
+            email: emailToSend,
+            options: {
+              emailRedirectTo: `${window.location.origin}/userend`,
+              data: {
+                quiz_id: quizIdForEmail,
+                responseId: responseIdForEmail,
+              },
+            },
+          });
+          if (otpError) {
+            setEmailSendStatus('Failed to send result email.');
+            toast.error('Failed to send result email.');
+          } else {
+            setEmailSendStatus('A magic link to view your result has been sent to your email.');
+            toast.success('A magic link to view your result has been sent to your email.');
+          }
+        } catch (err) {
+          setEmailSendStatus('Failed to send result email.');
+          toast.error('Failed to send result email.');
+        }
+      } else {
+        setEmailSendStatus('Could not send result email: missing quiz_id or responseId.');
+        toast.error('Could not send result email: missing quiz_id or responseId.');
+      }
+    }
+    // --- End magic link logic ---
     setSubmitted(true);
     setShowQuizUI(false);
     setIsSubmitting(false);
@@ -713,12 +766,19 @@ export default function LiveQuizUser() {
             value={username}
             onChange={e => setUsername(e.target.value)}
           />
+          <input
+            className="border border-gray-300 rounded px-4 py-2 w-full mb-4"
+            type="email"
+            placeholder="Your email (for result link, required)"
+            value={userEmail}
+            onChange={e => setUserEmail(e.target.value)}
+          />
           <button
             className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full"
             onClick={() => {
-              if (username.trim()) setHasEnteredName(true);
+              if (username.trim() && userEmail.trim()) setHasEnteredName(true);
             }}
-            disabled={!username.trim()}
+            disabled={!username.trim() || !userEmail.trim()}
           >
             Continue
           </button>
@@ -734,8 +794,8 @@ export default function LiveQuizUser() {
       {quizStart && quizEnd && `${quizStart.toLocaleString()} – ${quizEnd.toLocaleString()}`}
     </div>;
   }
-  // 2. After timer ends, always show result code entry (never blank)
-  if (quizWindowStatus === "ended" && !codeVerified && !resultViewData) {
+  // Always prioritize the code entry screen after end_time for ALL users, regardless of login or state
+  if (quizWindowStatus === 'ended' && !codeVerified && !resultViewData) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: customization.background, fontFamily: customization.fontFamily }}>
         <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md text-center">
@@ -870,8 +930,50 @@ export default function LiveQuizUser() {
     );
   }
 
-  // 4. After submission, before end_time OR after end_time (in the same session), always show confirmation/result code screen for both anonymous and logged-in users
-  if (submitted) {
+  // 4. After submission, before end_time, always show confirmation/result code screen for both anonymous and logged-in users
+  // But: If quiz has ended (quizWindowStatus === 'ended'), always show the code entry screen for all users, even if submitted is true (prevents thank-you page after refresh)
+  if (quizWindowStatus === 'ended' && !codeVerified && !resultViewData) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: customization.background, fontFamily: customization.fontFamily }}>
+        <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-md text-center">
+          <h2 className="text-2xl font-bold mb-4">This quiz has ended.</h2>
+          <p className="mb-4">Enter your result code to view your answers and score.</p>
+          <input
+            className="border border-gray-300 rounded px-4 py-2 w-full mb-4 text-lg"
+            type="text"
+            placeholder="Enter 6-digit code"
+            value={codeInput}
+            onChange={e => setCodeInput(e.target.value.toUpperCase())}
+            maxLength={6}
+          />
+          <button
+            className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full font-bold"
+            onClick={async () => {
+              // Look up quiz_responses by response_id and quiz_id
+              const { data: respData } = await supabase
+                .from('quiz_responses')
+                .select('*')
+                .eq('quiz_id', quizId)
+                .eq('response_id', codeInput)
+                .single();
+              if (respData && respData.response_id === codeInput) {
+                setResultViewData(respData);
+                setCodeVerified(true);
+                setShowCodePrompt(false);
+              } else {
+                toast.error('Invalid code. Please try again.');
+              }
+            }}
+            disabled={codeInput.length !== 6}
+          >
+            View Results
+          </button>
+        </div>
+      </div>
+    );
+  }
+  // Only show the thank-you/code screen if quizWindowStatus is not 'ended' and submitted is true (in-session only)
+  if (submitted && quizWindowStatus !== 'ended') {
     // UX: Thank you, code, copy feature
     return (
       <div className="min-h-screen flex flex-col items-center justify-center" style={{ background: customization.background, fontFamily: customization.fontFamily }}>
@@ -910,6 +1012,9 @@ export default function LiveQuizUser() {
               </button>
             </div>
             <div className="text-gray-600 text-sm mt-2">Save this code to view your responses later.</div>
+            {emailSendStatus && (
+              <div className="text-blue-700 text-sm mt-4 font-semibold">{emailSendStatus}</div>
+            )}
           </div>
         </div>
       </div>
