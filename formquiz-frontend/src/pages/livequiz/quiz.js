@@ -884,10 +884,18 @@ export default function Quiz() {
               style={{ background: 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)', color: '#fff' }}
               onClick={() => setAddSlidePopupOpen(true)}
             >
-              + Add Slide
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+              {isLeftSidebarCollapsed ? (
+                // Just the plus icon when collapsed
+                <span className="text-xl">+</span>
+              ) : (
+                // Full text with dropdown arrow when expanded
+                <>
+                  + Add Slide
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </>
+              )}
             </Button>
             {addSlidePopupOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30" onClick={() => setAddSlidePopupOpen(false)}>
