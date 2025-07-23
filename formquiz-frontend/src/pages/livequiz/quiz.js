@@ -753,6 +753,7 @@ export default function Quiz() {
   const [endDateTime, setEndDateTime] = useState("");
   // Collapsible customize panel state
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(true);
+  const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState(false);
 
   return (
     <div style={gradientBg}>
@@ -876,7 +877,7 @@ export default function Quiz() {
       {/* Main Layout */}
       <div className="flex flex-row w-full" style={{ background: 'var(--bg)', minHeight: '100vh' }}>
         {/* Sidebar */}
-        <aside className="fixed top-[4.5rem] left-0 h-[calc(100vh-4.5rem)] w-64 min-w-[13rem] rounded-2xl shadow-xl flex flex-col justify-between z-20 border" style={{margin:'1.5rem 0 1.5rem 1.5rem',padding:'0.5rem 0', background: 'var(--card)', color: 'var(--text)', borderColor: 'var(--border)', boxShadow: '0 8px 32px var(--border), 0 1.5px 6px rgba(0,0,0,0.03)'}}>
+        <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-64 min-w-[13rem]'} fixed top-[4.5rem] left-0 h-[calc(100vh-4.5rem)] rounded-2xl shadow-xl z-20`} style={{margin:'1.5rem 0 1.5rem 1.5rem',padding:'0.5rem 0', background: 'var(--card)', color: 'var(--text)', borderColor: 'var(--border)', boxShadow: '0 8px 32px var(--border), 0 1.5px 6px rgba(0,0,0,0.03)'}}>
           <div className="overflow-y-auto flex-1 p-4">
             <Button
               className="w-full mb-4 font-semibold rounded-lg py-2 border-none flex items-center justify-center gap-2"
@@ -912,30 +913,50 @@ export default function Quiz() {
               </div>
             )}
             <div className="flex-1">
-              <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd} modifiers={[]}> 
+              <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd} modifiers={[]}>
                 <SortableContext items={slides.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                  {slides.map((slide, i) => (
-                    <SortableSlideItem key={slide.id} id={slide.id}>
-                      <div
-                        className={`quizbuilder-slide-item${i === selectedSlide ? ' selected' : ''}`}
-                        style={{ background: i === selectedSlide ? '#e0e7ff' : '#fff', color: '#222', borderWidth: 2, borderColor: i === selectedSlide ? '#4f8cff' : '#e0e7ff', borderRadius: 16, marginBottom: 8, boxShadow: i === selectedSlide ? '0 4px 16px 0 rgba(80,80,180,0.10)' : 'none', padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
-                        onPointerDown={e => { e.stopPropagation(); setSelectedSlide(i); }}
-                      >
-                        <span className="text-xs font-bold w-8 text-center" style={{ color: i === selectedSlide ? 'var(--accent)' : 'var(--accent)', opacity: i === selectedSlide ? 1 : 0.5 }}>{(i+1).toString().padStart(2, '0')}</span>
-                        <span className="flex-1 text-sm font-medium" style={{ color: i === selectedSlide ? 'var(--text)' : 'var(--text-secondary)' }}>{slide.question && slide.question.trim() ? slide.question : slide.name}</span>
-                        <button className="p-1 hover:text-blue-600" style={{ color: '#6366f1' }} title="Edit slide name" onPointerDown={e => { e.stopPropagation(); setEditingName(slide.id); }}><FiEdit2 /></button>
-                        <button className="p-1 hover:text-red-600" style={{ color: '#f87171' }} onPointerDown={e => { e.stopPropagation(); deleteSlide(i); }} title="Delete slide"><FiTrash2 /></button>
-                      </div>
-                    </SortableSlideItem>
-                  ))}
+                  <div className="space-y-2">
+                    {slides.map((slide, i) => (
+                      <SortableSlideItem key={slide.id} id={slide.id}>
+                        <div
+                          className={`quizbuilder-slide-item${i === selectedSlide ? ' selected' : ''} p-3 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center cursor-pointer overflow-hidden`}
+                          style={{ background: i === selectedSlide ? '#e0e7ff' : '#fff', color: '#222', borderWidth: 2, borderColor: i === selectedSlide ? '#4f8cff' : '#e0e7ff', borderRadius: 16, marginBottom: 8, boxShadow: i === selectedSlide ? '0 4px 16px 0 rgba(80,80,180,0.10)' : 'none', padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+                          onPointerDown={e => { e.stopPropagation(); setSelectedSlide(i); }}
+                          title={slide.question && slide.question.trim() ? slide.question : slide.name}
+                        >
+                          <span className="text-xs font-bold w-8 text-center" style={{ color: i === selectedSlide ? 'var(--accent)' : 'var(--accent)', opacity: i === selectedSlide ? 1 : 0.5 }}>{(i+1).toString().padStart(2, '0')}</span>
+                          {!isLeftSidebarCollapsed && (
+                            <span className="flex-1 text-sm font-medium truncate" style={{ color: i === selectedSlide ? 'var(--text)' : 'var(--text-secondary)' }}>{slide.question && slide.question.trim() ? slide.question : slide.name}</span>
+                          )}
+                          <button className="p-1 hover:text-blue-600" style={{ color: '#6366f1' }} title="Edit slide name" onPointerDown={e => { e.stopPropagation(); setEditingName(slide.id); }}><FiEdit2 /></button>
+                          <button className="p-1 hover:text-red-600" style={{ color: '#f87171' }} onPointerDown={e => { e.stopPropagation(); deleteSlide(i); }} title="Delete slide"><FiTrash2 /></button>
+                        </div>
+                      </SortableSlideItem>
+                    ))}
+                  </div>
                 </SortableContext>
               </DndContext>
             </div>
           </div>
+          <div className="p-2 border-t">
+            <button
+              onClick={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
+              className="w-full flex items-center justify-center gap-2 p-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100"
+              title={isLeftSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+            >
+              {isLeftSidebarCollapsed ? (
+                // Expand icon (chevron right)
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              ) : (
+                // Collapse icon (chevron left)
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+              )}
+            </button>
+          </div>
         </aside>
         {/* Main Content */}
         <main
-          className={`flex-1 p-8 transition-all duration-300 flex flex-col items-center justify-start ml-60 ${isCustomizeOpen ? 'mr-80' : 'mr-0'}`}
+          className={`flex-1 p-8 transition-all duration-300 flex flex-col items-center justify-start ${isLeftSidebarCollapsed ? 'ml-20' : 'ml-64'} ${isCustomizeOpen ? 'mr-80' : 'mr-0'}`}
           style={{ maxWidth: isCustomizeOpen ? 'calc(100vw - 15rem - 20rem)' : 'calc(100vw - 15rem)', width: '100%', overflowY: 'auto', background: 'var(--bg)', color: 'var(--text)' }}
         >
           <div className="shadow-2xl max-w-2xl w-full mx-auto flex flex-col gap-10 justify-center items-center" style={{
