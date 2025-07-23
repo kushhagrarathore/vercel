@@ -17,7 +17,7 @@ import FormLayout from '../../components/forms/FormLayout';
 import { DndContext, closestCenter } from '@dnd-kit/core';
 import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { PlusIcon, EyeIcon, TrashIcon, SaveIcon } from 'lucide-react';
+import { PlusIcon, EyeIcon, TrashIcon, SaveIcon, ChevronLeft, ChevronRight, Settings, ChevronsLeft, ChevronsRight } from 'lucide-react';
 // Remove react-beautiful-dnd imports and onDragEnd
 
 // Add SortableQuestion component above FormBuilder
@@ -61,6 +61,7 @@ const FormBuilder = () => {
   const [activeSection, setActiveSection] = useState('build');
   const [isAddQuestionModalOpen, setIsAddQuestionModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState(false);
 
   const PencilIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>;
   const TrashIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
@@ -590,28 +591,14 @@ const FormBuilder = () => {
   // For new forms (no paramFormId), show the builder interface
   if (!paramFormId) {
     return (
-      <div
-        className="form-builder-page"
-        style={{
-          minHeight: '100vh',
-          width: '100vw',
-          backgroundColor: customization.backgroundColor,
-          backgroundImage: customization.backgroundImage ? `url(${customization.backgroundImage})` : undefined,
-          backgroundSize: customization.backgroundImage ? 'cover' : undefined,
-          backgroundPosition: customization.backgroundImage ? 'center' : undefined,
-          backgroundRepeat: customization.backgroundImage ? 'no-repeat' : undefined,
-          fontFamily: customization.fontFamily,
-          transition: 'background 0.3s',
-        }}
-      >
-        {loading && <div style={{ margin: '40px auto', textAlign: 'center' }}><Spinner size={40} /></div>}
+      <div className="form-builder-page flex flex-col h-screen w-screen bg-gray-50 overflow-hidden" style={{ fontFamily: customization.fontFamily }}>
+        {loading && <div className="absolute inset-0 flex items-center justify-center"><Spinner size={40} /></div>}
         {!loading && (
           <>
-            {/* 2. Update the header/top bar with sticky, card-like container and redesigned buttons */}
-            <header className="sticky top-0 z-30 bg-white border border-gray-200 shadow-md rounded-xl p-4 flex justify-between items-center mb-4">
-              <div className="flex items-center gap-6">
-                <button className="bg-transparent border-none cursor-pointer text-sm text-gray-500 hover:text-indigo-600 transition" onClick={handleBackToDashboard}>
-                  ← Back to Dashboard
+            <header className="sticky top-0 z-30 bg-white border-b border-gray-200 p-4 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-4">
+                <button className="bg-transparent border-none cursor-pointer text-sm text-gray-500 hover:text-indigo-600 transition flex items-center gap-2" onClick={handleBackToDashboard}>
+                  <ChevronLeft className="w-4 h-4" /> Back
                 </button>
                 <input
                   type="text"
@@ -621,95 +608,83 @@ const FormBuilder = () => {
                     setTitle(e.target.value);
                     setHasUnsavedChanges(true);
                   }}
-                  className="text-2xl font-bold border-none outline-none bg-transparent text-gray-900 w-72"
+                  className="text-xl font-bold border-none outline-none bg-transparent text-gray-800 w-72"
                 />
               </div>
-              <div className="flex gap-4">
-                <button
-                  onClick={saveForm}
-                  className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
-                >
-                  <SaveIcon className="w-4 h-4 text-gray-600" />
-                  Save Form
+              <div className="flex items-center gap-2">
+                <button onClick={saveForm} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm">
+                  <SaveIcon className="w-4 h-4" /> Save
                 </button>
-                <button
-                  onClick={handlePreviewClick}
-                  className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
-                >
-                  <EyeIcon className="w-4 h-4 text-gray-600" />
-                  Preview
+                <button onClick={handlePreviewClick} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm">
+                  <EyeIcon className="w-4 h-4" /> Preview
                 </button>
-                <button
-                  onClick={() => setIsShareModalOpen(true)}
-                  className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
-                >
+                <button onClick={() => setIsShareModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-sm hover:bg-indigo-700 transition-colors text-sm">
                   Share
                 </button>
-                <button
-                  onClick={handleDeleteForm}
-                  className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
-                >
-                  <TrashIcon className="w-4 h-4 text-gray-600" />
-                  Delete
+                <button onClick={handleDeleteForm} className="flex items-center justify-center w-9 h-9 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-red-50 text-gray-600 hover:text-red-600 transition-colors" title="Delete Form">
+                  <TrashIcon className="w-4 h-4" />
                 </button>
-                <button
-                  onClick={() => setIsCustomizePanelOpen(!isCustomizePanelOpen)}
-                  className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
-                >
-                  Customize
+                <button onClick={() => setIsCustomizePanelOpen(!isCustomizePanelOpen)} className="flex items-center justify-center w-9 h-9 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 text-gray-600 transition-colors" title="Customize">
+                  <Settings className="w-4 h-4" />
                 </button>
               </div>
             </header>
 
-            <div className="flex w-full">
-              {/* Left Sidebar: Slide Selector */}
-              <div className="w-[280px] p-4 bg-white border-r rounded-xl shadow-md">
-                {/* 3. Update the + Add Question button in the sidebar */}
-                <button
-                  onClick={() => setIsAddQuestionModalOpen(true)}
-                  className="flex items-center justify-center gap-2 w-full px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base mb-4"
-                >
-                  <PlusIcon className="w-4 h-4 text-gray-600" />
-                  + Add Question
-                </button>
-                <div className="space-y-2">
-                  {questions.map((q, index) => (
-                    <div key={q.id} className="p-3 rounded-lg bg-gray-100 hover:bg-gray-200 flex justify-between items-center cursor-pointer">
-                      <div className="flex items-center gap-3">
+            <div className="flex flex-1 overflow-hidden">
+              <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-72'}`}>
+                <div className="p-4 flex-1 overflow-y-auto">
+                  <button
+                    onClick={() => setIsAddQuestionModalOpen(true)}
+                    className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-sm hover:bg-indigo-700 transition-all duration-200 ease-in-out mb-4"
+                  >
+                    <PlusIcon className="w-5 h-5" />
+                    {!isLeftSidebarCollapsed && <span>Add Question</span>}
+                  </button>
+                  <div className="space-y-2">
+                    {questions.map((q, index) => (
+                      <div key={q.id} className="p-3 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center cursor-pointer overflow-hidden">
                         <span className="text-gray-500 font-bold">{String(index + 1).padStart(2, '0')}</span>
-                        <span
-                          className="font-semibold text-gray-800 truncate max-w-[140px] px-1"
-                          style={{ wordBreak: 'break-all' }}
-                          title={q.question_text || 'Untitled Question'}
-                        >
-                          {q.question_text || 'Untitled Question'}
-                        </span>
+                        {!isLeftSidebarCollapsed && (
+                          <span className="font-semibold text-gray-800 truncate ml-3" title={q.question_text || 'Untitled Question'}>
+                            {q.question_text || 'Untitled Question'}
+                          </span>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+                <div className="p-2 border-t">
+                  <button
+                    onClick={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
+                    className="w-full flex items-center justify-center gap-2 p-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100"
+                    title={isLeftSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+                  >
+                    {isLeftSidebarCollapsed ? <ChevronsRight className="w-5 h-5" /> : <ChevronsLeft className="w-5 h-5" />}
+                  </button>
+                </div>
+              </aside>
 
-              {/* Center: Form Editor */}
-              <main className="flex-1 p-8 bg-slate-100">
-                <div className="form-title-block">
-                  <p className="form-editor-area-title-placeholder">
-                    Form Title: <span className="current-title">{title}</span>
-                  </p>
+              <main className="flex-1 p-8 bg-slate-100 overflow-y-auto">
+                <div className="form-title-block max-w-4xl mx-auto">
                   <textarea
-                    className="form-description-textarea"
+                    className="form-description-textarea w-full text-4xl font-bold border-none outline-none bg-transparent text-gray-800 resize-none mb-2"
+                    placeholder="Form Title"
+                    value={title}
+                    onChange={(e) => { setTitle(e.target.value); setHasUnsavedChanges(true); }}
+                    rows="1"
+                  />
+                  <textarea
+                    className="form-description-textarea w-full text-base border-none outline-none bg-transparent text-gray-500 resize-none"
                     placeholder="Add a short description about this form..."
                     value={description}
-                    onChange={(e) => {
-                      setDescription(e.target.value);
-                      setHasUnsavedChanges(true);
-                    }}
+                    onChange={(e) => { setDescription(e.target.value); setHasUnsavedChanges(true); }}
+                    rows="2"
                   />
                 </div>
                 {questions.length > 0 ? (
                   <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                     <SortableContext items={questions.map(q => q.id)} strategy={verticalListSortingStrategy}>
-                      <div className="questions-container">
+                      <div className="questions-container max-w-4xl mx-auto mt-8">
                         {questions.map((q, i) => (
                           <SortableQuestion key={q.id} id={q.id}>
                             {renderQuestion(q, i)}
@@ -719,18 +694,22 @@ const FormBuilder = () => {
                     </SortableContext>
                   </DndContext>
                 ) : (
-                  <div className="text-center py-24 px-8 bg-white rounded-xl border-2 border-dashed border-gray-300">
+                  <div className="text-center py-24 px-8 mt-8 bg-white rounded-xl border-2 border-dashed border-gray-300 max-w-4xl mx-auto">
                     <h3 className="text-xl font-semibold text-gray-700">Your form is empty!</h3>
                     <p className="text-gray-500 mt-2">Click the "+ Add Question" button to start building your form.</p>
                   </div>
                 )}
               </main>
 
-              {/* Right Sidebar: Customization */}
-              {isCustomizePanelOpen && (
-                <aside className="w-[20%] p-4 bg-white border-l shadow-lg">
-                  <h3 className="text-lg font-semibold mb-4">Customize</h3>
-                  <div className="space-y-4">
+              <aside className={`bg-white border-l transition-all duration-300 ease-in-out overflow-y-auto ${isCustomizePanelOpen ? 'w-80 p-4' : 'w-0 p-0 overflow-hidden'}`}>
+                {isCustomizePanelOpen && (
+                  <>
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold">Customize</h3>
+                      <button onClick={() => setIsCustomizePanelOpen(false)} className="text-gray-500 hover:text-gray-800">
+                        <CloseIcon />
+                      </button>
+                    </div>
                     <CustomizationPanel
                       customization={customization}
                       setCustomization={(newCustomization) => {
@@ -739,9 +718,9 @@ const FormBuilder = () => {
                       }}
                       ChromePicker={ChromePicker}
                     />
-                  </div>
-                </aside>
-              )}
+                  </>
+                )}
+              </aside>
             </div>
             {isAddQuestionModalOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm">
@@ -808,131 +787,103 @@ const FormBuilder = () => {
 
   // Main form builder render
   return (
-    <div
-      className="form-builder-page"
-      style={{
-        minHeight: '100vh',
-        width: '100vw',
-        backgroundColor: customization.backgroundColor,
-        backgroundImage: customization.backgroundImage ? `url(${customization.backgroundImage})` : undefined,
-        backgroundSize: customization.backgroundImage ? 'cover' : undefined,
-        backgroundPosition: customization.backgroundImage ? 'center' : undefined,
-        backgroundRepeat: customization.backgroundImage ? 'no-repeat' : undefined,
-        fontFamily: customization.fontFamily,
-        transition: 'background 0.3s',
-      }}
-    >
-      {loading && <div style={{ margin: '40px auto', textAlign: 'center' }}><Spinner size={40} /></div>}
+    <div className="form-builder-page flex flex-col h-screen w-screen bg-gray-50 overflow-hidden" style={{ fontFamily: customization.fontFamily }}>
+      {loading && <div className="absolute inset-0 flex items-center justify-center"><Spinner size={40} /></div>}
       {!loading && (
         <>
-          {/* 2. Update the header/top bar with sticky, card-like container and redesigned buttons */}
-          <header className="sticky top-0 z-30 bg-white border border-gray-200 shadow-md rounded-xl p-4 flex justify-between items-center mb-4">
-            <div className="flex items-center gap-6">
-              <button className="bg-transparent border-none cursor-pointer text-sm text-gray-500 hover:text-indigo-600 transition" onClick={handleBackToDashboard}>
-                ← Back to Dashboard
-              </button>
-              <input
-                type="text"
-                placeholder="Untitled Form"
-                value={title}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                  setHasUnsavedChanges(true);
-                }}
-                className="text-2xl font-bold border-none outline-none bg-transparent text-gray-900 w-72"
-              />
-            </div>
-            <div className="flex gap-4">
-              <button
-                onClick={saveForm}
-                className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
-              >
-                <SaveIcon className="w-4 h-4 text-gray-600" />
-                Save Form
-              </button>
-              <button
-                onClick={handlePreviewClick}
-                className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
-              >
-                <EyeIcon className="w-4 h-4 text-gray-600" />
-                Preview
-              </button>
-              <button
-                onClick={() => setIsShareModalOpen(true)}
-                className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
-              >
-                Share
-              </button>
-              <button
-                onClick={handleDeleteForm}
-                className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
-              >
-                <TrashIcon className="w-4 h-4 text-gray-600" />
-                Delete
-              </button>
-              <button
-                onClick={() => setIsCustomizePanelOpen(!isCustomizePanelOpen)}
-                className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base"
-              >
-                Customize
-              </button>
-            </div>
+          <header className="sticky top-0 z-30 bg-white border-b border-gray-200 p-4 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-4">
+                <button className="bg-transparent border-none cursor-pointer text-sm text-gray-500 hover:text-indigo-600 transition flex items-center gap-2" onClick={handleBackToDashboard}>
+                  <ChevronLeft className="w-4 h-4" /> Back
+                </button>
+                <input
+                  type="text"
+                  placeholder="Untitled Form"
+                  value={title}
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    setHasUnsavedChanges(true);
+                  }}
+                  className="text-xl font-bold border-none outline-none bg-transparent text-gray-800 w-72"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={saveForm} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm">
+                  <SaveIcon className="w-4 h-4" /> Save
+                </button>
+                <button onClick={handlePreviewClick} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm">
+                  <EyeIcon className="w-4 h-4" /> Preview
+                </button>
+                <button onClick={() => setIsShareModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-sm hover:bg-indigo-700 transition-colors text-sm">
+                  Share
+                </button>
+                <button onClick={handleDeleteForm} className="flex items-center justify-center w-9 h-9 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-red-50 text-gray-600 hover:text-red-600 transition-colors" title="Delete Form">
+                  <TrashIcon className="w-4 h-4" />
+                </button>
+                <button onClick={() => setIsCustomizePanelOpen(!isCustomizePanelOpen)} className="flex items-center justify-center w-9 h-9 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 text-gray-600 transition-colors" title="Customize">
+                  <Settings className="w-4 h-4" />
+                </button>
+              </div>
           </header>
 
-          <div className="flex w-full">
+          <div className="flex flex-1 overflow-hidden">
             {activeSection === 'build' && (
               <>
-                {/* Left Sidebar: Slide Selector */}
-                <div className="w-[280px] p-4 bg-white border-r rounded-xl shadow-md">
-                  {/* 3. Update the + Add Question button in the sidebar */}
-                  <button
-                    onClick={() => setIsAddQuestionModalOpen(true)}
-                    className="flex items-center justify-center gap-2 w-full px-5 py-2 bg-white border border-gray-300 text-gray-800 font-medium rounded-lg shadow-sm hover:shadow-md hover:-translate-y-[1px] hover:border-gray-400 hover:scale-105 focus:ring-2 focus:ring-black/10 transition-all duration-200 ease-in-out text-sm md:text-base mb-4"
-                  >
-                    <PlusIcon className="w-4 h-4 text-gray-600" />
-                    + Add Question
-                  </button>
-                  <div className="space-y-2">
-                    {questions.map((q, index) => (
-                      <div key={q.id} className="p-3 rounded-lg bg-gray-100 hover:bg-gray-200 flex justify-between items-center cursor-pointer">
-                        <div className="flex items-center gap-3">
-                          <span className="text-gray-500 font-bold">{String(index + 1).padStart(2, '0')}</span>
-                          <span
-                            className="font-semibold text-gray-800 truncate max-w-[140px] px-1"
-                            style={{ wordBreak: 'break-all' }}
-                            title={q.question_text || 'Untitled Question'}
-                          >
-                            {q.question_text || 'Untitled Question'}
-                          </span>
+                <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-72'}`}>
+                  <div className="p-4 flex-1 overflow-y-auto">
+                    <button
+                      onClick={() => setIsAddQuestionModalOpen(true)}
+                      className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-sm hover:bg-indigo-700 transition-all duration-200 ease-in-out mb-4"
+                    >
+                      <PlusIcon className="w-5 h-5" />
+                      {!isLeftSidebarCollapsed && <span>Add Question</span>}
+                    </button>
+                    <div className="space-y-2">
+                      {questions.map((q, index) => (
+                        <div key={q.id} className="p-3 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center cursor-pointer overflow-hidden">
+                           <span className="text-gray-500 font-bold">{String(index + 1).padStart(2, '0')}</span>
+                          {!isLeftSidebarCollapsed && (
+                            <span className="font-semibold text-gray-800 truncate ml-3" title={q.question_text || 'Untitled Question'}>
+                              {q.question_text || 'Untitled Question'}
+                            </span>
+                          )}
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button className="p-1 rounded-full text-gray-500 hover:bg-gray-300 hover:text-red-600 transition-colors" onClick={() => removeQuestion(q.id)}><TrashIcon /></button>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
-                {/* Center: Form Editor */}
-                <main className="flex-1 p-8 bg-slate-100">
-                  <div className="form-title-block">
-                    <p className="form-editor-area-title-placeholder">
-                      Form Title: <span className="current-title">{title}</span>
-                    </p>
-                    <textarea
-                      className="form-description-textarea"
-                      placeholder="Add a short description about this form..."
-                      value={description}
-                      onChange={(e) => {
-                        setDescription(e.target.value);
-                        setHasUnsavedChanges(true);
-                      }}
-                    />
+                  <div className="p-2 border-t">
+                    <button
+                      onClick={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
+                      className="w-full flex items-center justify-center gap-2 p-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100"
+                      title={isLeftSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+                    >
+                      {isLeftSidebarCollapsed ? <ChevronsRight className="w-5 h-5" /> : <ChevronsLeft className="w-5 h-5" />}
+                    </button>
                   </div>
+                </aside>
+
+                <main className="flex-1 p-8 bg-slate-100 overflow-y-auto">
+                   <div className="form-title-block max-w-4xl mx-auto">
+                     <textarea
+                       className="form-description-textarea w-full text-4xl font-bold border-none outline-none bg-transparent text-gray-800 resize-none mb-2"
+                       placeholder="Form Title"
+                       value={title}
+                       onChange={(e) => { setTitle(e.target.value); setHasUnsavedChanges(true); }}
+                       rows="1"
+                     />
+                     <textarea
+                       className="form-description-textarea w-full text-base border-none outline-none bg-transparent text-gray-500 resize-none"
+                       placeholder="Add a short description about this form..."
+                       value={description}
+                       onChange={(e) => { setDescription(e.target.value); setHasUnsavedChanges(true); }}
+                       rows="2"
+                     />
+                   </div>
 
                   {questions.length > 0 ? (
                     <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                       <SortableContext items={questions.map(q => q.id)} strategy={verticalListSortingStrategy}>
-                        <div className="questions-container">
+                        <div className="questions-container max-w-4xl mx-auto mt-8">
                           {questions.map((q, i) => (
                             <SortableQuestion key={q.id} id={q.id}>
                               {renderQuestion(q, i)}
@@ -942,17 +893,21 @@ const FormBuilder = () => {
                       </SortableContext>
                     </DndContext>
                   ) : (
-                    <div className="text-center py-24 px-8 bg-white rounded-xl border-2 border-dashed border-gray-300">
+                    <div className="text-center py-24 px-8 mt-8 bg-white rounded-xl border-2 border-dashed border-gray-300 max-w-4xl mx-auto">
                       <h3 className="text-xl font-semibold text-gray-700">Your form is empty!</h3>
                       <p className="text-gray-500 mt-2">Click the "+ Add Question" button to start building your form.</p>
                     </div>
                   )}
                 </main>
-                {/* Right Sidebar: Customization */}
-                {isCustomizePanelOpen && (
-                  <aside className="w-[20%] p-4 bg-white border-l shadow-lg">
-                    <h3 className="text-lg font-semibold mb-4">Customize</h3>
-                    <div className="space-y-4">
+                <aside className={`bg-white border-l transition-all duration-300 ease-in-out overflow-y-auto ${isCustomizePanelOpen ? 'w-80 p-4' : 'w-0 p-0 overflow-hidden'}`}>
+                  {isCustomizePanelOpen && (
+                    <>
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">Customize</h3>
+                        <button onClick={() => setIsCustomizePanelOpen(false)} className="text-gray-500 hover:text-gray-800">
+                          <CloseIcon />
+                        </button>
+                      </div>
                       <CustomizationPanel
                         customization={customization}
                         setCustomization={(_newCustomization) => {
@@ -961,9 +916,9 @@ const FormBuilder = () => {
                         }}
                         ChromePicker={ChromePicker}
                       />
-                    </div>
-                  </aside>
-                )}
+                    </>
+                  )}
+                </aside>
               </>
             )}
             {activeSection === 'share' && (
