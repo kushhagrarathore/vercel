@@ -800,16 +800,7 @@ export default function Quiz() {
             className="text-xl font-bold border-none outline-none bg-transparent text-gray-800 w-72"
           />
           <div className="flex gap-2 ml-6">
-            <Button
-              onClick={() => setActiveTab('edit')}
-              className={activeTab === 'edit'
-                ? 'bg-blue-600 text-white font-bold border-b-4 border-blue-700 shadow-sm'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-b-4 border-transparent'}
-              style={{ minWidth: 56, padding: '4px 10px', fontSize: 14, borderRadius: 6, boxShadow: 'none', transition: 'all 0.18s', borderBottomWidth: 4 }}
-            >
-              <FiEdit2 style={{ marginRight: 4, color: activeTab === 'edit' ? '#2563eb' : '#6b7280', fontSize: 16 }} />
-              Edit
-            </Button>
+            
             <Button
               onClick={() => {
                 // Redirect to the dedicated results page
@@ -946,7 +937,6 @@ export default function Quiz() {
                           {!isLeftSidebarCollapsed && (
                             <span className="flex-1 text-sm font-medium truncate" style={{ color: i === selectedSlide ? 'var(--text)' : 'var(--text-secondary)' }}>{slide.question && slide.question.trim() ? slide.question : slide.name}</span>
                           )}
-                          <button className="p-1 hover:text-blue-600" style={{ color: '#6366f1' }} title="Edit slide name" onPointerDown={e => { e.stopPropagation(); setEditingName(slide.id); }}><FiEdit2 /></button>
                           <button className="p-1 hover:text-red-600" style={{ color: '#f87171' }} onPointerDown={e => { e.stopPropagation(); deleteSlide(i); }} title="Delete slide"><FiTrash2 /></button>
                         </div>
                       </SortableSlideItem>
