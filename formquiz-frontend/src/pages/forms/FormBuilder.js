@@ -814,13 +814,9 @@ const FormBuilder = () => {
                 <button onClick={handlePreviewClick} className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm">
                   <EyeIcon className="w-4 h-4" /> Preview
               </button>
-                <button
-                  onClick={() => setIsShareModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-sm hover:bg-indigo-700 transition-colors text-sm"
-                  type="button"
-                >
-                  Share
-                </button>
+                <button onClick={() => setIsShareModalOpen(true)} className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-sm hover:bg-indigo-700 transition-colors text-sm">
+                Share
+              </button>
                 <button onClick={handleDeleteForm} className="flex items-center justify-center w-9 h-9 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-red-50 text-gray-600 hover:text-red-600 transition-colors" title="Delete Form">
                   <TrashIcon className="w-4 h-4" />
               </button>
@@ -994,11 +990,7 @@ const FormBuilder = () => {
       {isShareModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm">
           <div className="relative w-full max-w-md mx-4 sm:mx-auto rounded-2xl shadow-xl bg-white/90 backdrop-blur-lg border border-white/30 p-8 animate-pop-in">
-            <button
-              onClick={() => setIsShareModalOpen(false)}
-              className="absolute top-4 right-4 p-2 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-800 transition-colors"
-              type="button"
-            >
+            <button onClick={() => setIsShareModalOpen(false)} className="absolute top-4 right-4 p-2 rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-800 transition-colors">
               <CloseIcon />
             </button>
             <h3 className="text-2xl font-bold text-center mb-6 text-gray-900">Share Your Form</h3>
@@ -1010,21 +1002,11 @@ const FormBuilder = () => {
                   value={formUrl}
                   readOnly
                   className="flex-1 px-3 py-2 border rounded-lg bg-gray-100 text-gray-700"
-                  onClick={e => {
-                    e.target.select();
-                    navigator.clipboard.writeText(formUrl).then(() => {
-                      toast('Link copied!', 'success');
-                    });
-                  }}
+                  onClick={e => { e.target.select(); }}
                 />
                 <button
                   className="px-3 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600"
-                  type="button"
-                  onClick={() => {
-                    navigator.clipboard.writeText(formUrl).then(() => {
-                      toast('Link copied!', 'success');
-                    });
-                  }}
+                  onClick={() => { navigator.clipboard.writeText(formUrl); toast('Link copied!', 'success'); }}
                 >
                   Copy Link
                 </button>
@@ -1039,7 +1021,6 @@ const FormBuilder = () => {
               )}
               <button
                 className="mt-3 px-3 py-2 bg-indigo-500 text-white rounded-lg font-medium hover:bg-indigo-600"
-                type="button"
                 onClick={() => {
                   const svg = document.getElementById('form-qr-code');
                   if (!svg) return;
