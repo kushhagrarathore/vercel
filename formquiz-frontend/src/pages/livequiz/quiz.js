@@ -263,7 +263,7 @@ export default function Quiz() {
   }]);
   const [selectedSlide, setSelectedSlide] = useState(0);
   const [showModal, setShowModal] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  // Removed dark mode state
   const [editingName, setEditingName] = useState(null);
   const [openColorPicker, setOpenColorPicker] = useState(null);
   const [publishedQuizId, setPublishedQuizId] = useState(null);
@@ -308,19 +308,7 @@ export default function Quiz() {
     else setActiveTab('edit');
   }, [location.search]);
 
-  // On mount, sync dark mode with localStorage and set data-theme
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const isDark = savedTheme === 'dark';
-    setIsDarkMode(isDark);
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
-  }, []);
-
-  // When isDarkMode changes, update data-theme and localStorage
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', isDarkMode ? 'dark' : 'light');
-    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
-  }, [isDarkMode]);
+  // Removed dark mode effects
 
   // Fetch responses when Results tab is selected and quiz is published
   useEffect(() => {
@@ -805,43 +793,13 @@ export default function Quiz() {
             onChange={e => setTitle(e.target.value)}
             className="text-xl font-bold border-none outline-none bg-transparent text-gray-800 w-72"
           />
-          <div className="flex gap-2 ml-6">
-            
-            <Button
-              onClick={() => {
-                // Redirect to the dedicated results page
-                const quizIdToUse = publishedQuizId || quizId;
-                if (quizIdToUse) {
-                  navigate(`/quiz/${quizIdToUse}/results`); // Corrected path
-                } else {
-                  // If no quiz ID, show a message or handle accordingly
-                  setNotification('Please save/publish the quiz first to view results.');
-                  setTimeout(() => setNotification(null), 3000);
-                }
-              }}
-              className={activeTab === 'results'
-                ? 'bg-blue-600 text-white font-bold border-b-4 border-blue-700 shadow-sm'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-b-4 border-transparent'}
-              style={{ minWidth: 56, padding: '4px 10px', fontSize: 14, borderRadius: 6, boxShadow: 'none', transition: 'all 0.18s', borderBottomWidth: 4 }}
-            >
-              <FiBarChart2 style={{ marginRight: 4, color: activeTab === 'results' ? '#2563eb' : '#6b7280', fontSize: 16 }} />
-              Results
-            </Button> 
-          </div>
+          {/* Removed Results button from here, will move next to Preview */}
         </div>
         <div className="flex gap-2 items-center">
+          {/* Dark mode toggle removed */}
           <Button
-            variant="outline"
-            className="rounded-full px-3 py-2 shadow-sm border hover:bg-gray-100"
-            style={{ background: 'var(--card)', color: 'var(--text)', borderColor: 'var(--border)' }}
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            title={isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
-          >
-            {isDarkMode ? <FiSun /> : <FiMoon />}
-          </Button>
-          <Button
-            className="rounded-full px-4 py-2 font-semibold flex items-center gap-2 shadow-none bg-transparent hover:bg-gray-100 text-blue-700 border-none"
-            style={{ background: 'transparent', color: '#2563eb', boxShadow: 'none', border: 'none' }}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm"
+            style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db', fontWeight: 500, borderRadius: 8, boxShadow: '0 1px 2px 0 rgba(0,0,0,0.04)', fontSize: 14 }}
             onClick={() => {
               if (!quizId) {
                 localStorage.setItem('quizDraft', JSON.stringify({
@@ -863,8 +821,26 @@ export default function Quiz() {
             <FiEye /> Preview
           </Button>
           <Button
-            className="rounded-full px-4 py-2 font-semibold flex items-center gap-2 shadow-md"
-            style={{ background: 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)', color: '#fff' }}
+            onClick={() => {
+              // Redirect to the dedicated results page
+              const quizIdToUse = publishedQuizId || quizId;
+              if (quizIdToUse) {
+                navigate(`/quiz/${quizIdToUse}/results`); // Corrected path
+              } else {
+                // If no quiz ID, show a message or handle accordingly
+                setNotification('Please save/publish the quiz first to view results.');
+                setTimeout(() => setNotification(null), 3000);
+              }
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm"
+            style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db', fontWeight: 500, borderRadius: 8, boxShadow: '0 1px 2px 0 rgba(0,0,0,0.04)', fontSize: 14 }}
+          >
+            <FiBarChart2 style={{ marginRight: 4, color: '#6b7280', fontSize: 16 }} />
+            Results
+          </Button>
+          <Button
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm"
+            style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db', fontWeight: 500, borderRadius: 8, boxShadow: '0 1px 2px 0 rgba(0,0,0,0.04)', fontSize: 14 }}
             onClick={handlePublishOrSave}
             title={publishedQuizId ? "Save" : "Publish"}
           >
@@ -884,8 +860,8 @@ export default function Quiz() {
       {/* Main Layout */}
       <div className="flex flex-row w-full" style={{ background: 'var(--bg)', minHeight: '100vh' }}>
         {/* Sidebar */}
-        <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-64'} fixed left-0 h-[calc(100vh-4.5rem)] z-30`} style={{margin:'0',padding:'0', borderRadius:0, minWidth: isLeftSidebarCollapsed ? '5rem' : '16rem', maxWidth: isLeftSidebarCollapsed ? '5rem' : '18rem', background: '#f8fafc', color: 'var(--text)', borderColor: '#e5e7eb', boxShadow: '0 2px 8px 0 rgba(44,62,80,0.07)', top: '5.5rem'}}>
-          <div className="overflow-y-auto flex-1 p-0 m-0" style={{maxHeight:'100%', minHeight:'0'}}> 
+        <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-64'} fixed left-0 h-[calc(100vh-4.5rem)] z-30`} style={{margin:0, padding:0, borderRadius:0, minWidth: isLeftSidebarCollapsed ? '5rem' : '16rem', maxWidth: isLeftSidebarCollapsed ? '5rem' : '18rem', background: '#f8fafc', color: 'var(--text)', borderColor: '#e5e7eb', boxShadow: '0 2px 8px 0 rgba(44,62,80,0.07)', top: '4.5rem'}}>
+          <div className="overflow-y-auto flex-1 p-0 m-0" style={{maxHeight:'100%', minHeight:'0', marginTop:0, paddingTop:0}}> 
             <Button
               className="w-full mb-2 font-semibold rounded-none py-2 border-none flex items-center justify-center gap-2"
               style={{ background: 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)', color: '#fff', borderRadius:0, margin:0, paddingLeft:0, paddingRight:0 }}
