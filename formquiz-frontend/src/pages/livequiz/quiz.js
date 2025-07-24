@@ -442,7 +442,7 @@ export default function Quiz() {
           type: s.type || 'multiple',
           question: s.question || '',
           options: s.options || ["", ""],
-          correctAnswers: s.correct_answers || [],
+          correctAnswers: s.correctAnswers || [],
           background: s.background || '#ffffff',
           textColor: s.text_color || '#000000',
           fontFamily: s.font_family || textStyles[0].value,
@@ -705,7 +705,7 @@ export default function Quiz() {
       .eq('quiz_id', quizIdToUse)
       .order('slide_index');
     if (fetchError) {
-      setNotification('Failed to fetch slides after save: ' + fetchError.message);
+      setNotification('Failed to fetch slides after save: '      + fetchError.message);
       return;
     }
     console.log('Slides after save:', allSlides);
@@ -717,7 +717,7 @@ export default function Quiz() {
       type: s.type || 'multiple',
       question: s.question || '',
       options: s.options || ["", ""],
-      correctAnswers: s.correct_answers || [],
+      correctAnswers: s.correctAnswers || [],
       background: s.background || '#ffffff',
       textColor: s.text_color || '#000000',
       fontFamily: s.font_family || textStyles[0].value,
@@ -811,7 +811,17 @@ export default function Quiz() {
               Edit
             </Button>
             <Button
-              onClick={() => setActiveTab('results')}
+              onClick={() => {
+                // Redirect to the dedicated results page
+                const quizIdToUse = publishedQuizId || quizId;
+                if (quizIdToUse) {
+                  navigate(`/quiz/${quizIdToUse}/results`); // Corrected path
+                } else {
+                  // If no quiz ID, show a message or handle accordingly
+                  setNotification('Please save/publish the quiz first to view results.');
+                  setTimeout(() => setNotification(null), 3000);
+                }
+              }}
               className={activeTab === 'results'
                 ? 'bg-blue-600 text-white font-bold border-b-4 border-blue-700 shadow-sm'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-b-4 border-transparent'}
@@ -819,7 +829,7 @@ export default function Quiz() {
             >
               <FiBarChart2 style={{ marginRight: 4, color: activeTab === 'results' ? '#2563eb' : '#6b7280', fontSize: 16 }} />
               Results
-            </Button>
+            </Button> 
           </div>
         </div>
         <div className="flex gap-2 items-center">
