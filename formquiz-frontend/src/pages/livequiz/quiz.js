@@ -780,12 +780,23 @@ export default function Quiz() {
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
-            className="rounded-full px-3 py-2 shadow-sm border hover:bg-gray-100"
-            style={{ background: 'var(--card)', color: 'var(--text)', borderColor: 'var(--border)' }}
+            className="rounded-full px-4 py-2 shadow-md border-2 flex items-center gap-2 hover:bg-blue-50 hover:border-blue-500 transition-all duration-150"
+            style={{
+              background: 'linear-gradient(90deg, #e0e7ff 0%, #f8fafc 100%)',
+              color: '#2563eb',
+              borderColor: '#2563eb',
+              fontWeight: 700,
+              fontSize: 17,
+              boxShadow: '0 2px 8px 0 rgba(44,62,80,0.07)',
+              letterSpacing: '0.01em',
+              minWidth: 110,
+              outline: 'none',
+            }}
             onClick={() => navigate('/dashboard')}
             title="Back to Dashboard"
           >
-            <FiArrowLeft /> Back
+            <span style={{ display: 'flex', alignItems: 'center', marginRight: 6 }}><FiArrowLeft style={{ fontSize: 20, marginRight: 2 }} /></span>
+            <span style={{ marginLeft: 0 }}>Back</span>
           </Button>
           <input
             type="text"
