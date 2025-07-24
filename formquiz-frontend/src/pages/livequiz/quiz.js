@@ -1107,7 +1107,7 @@ export default function Quiz() {
           </div>
         </main>
         {/* Right Panel: Customization */}
-        <aside className={`fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-80 min-w-[16rem] p-[2rem_1.5rem] shadow-lg z-20 transition-transform duration-300 flex flex-col bg-white overflow-y-auto ${isCustomizeOpen ? 'translate-x-0' : 'translate-x-[100vw]'}`} style={{ borderRadius: 20, margin: isCustomizeOpen ? '1.5rem 1.5rem 1.5rem 0' : '0', background: 'var(--card)', color: 'var(--text)', boxShadow: '0 4px 24px 0 var(--border)' }}>
+        <aside className={`fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-80 min-w-[16rem] p-[2rem_1.5rem] shadow-lg z-20 transition-transform duration-300 flex flex-col bg-white overflow-y-auto ${isCustomizeOpen ? 'translate-x-0' : 'translate-x-[100vw]'}`} style={{ borderRadius: 0, margin: 0, background: 'var(--card)', color: 'var(--text)', boxShadow: '0 4px 24px 0 var(--border)' }}>
           {isCustomizeOpen && (
             <>
               <div className="flex mb-6 border-b" style={{ borderColor: 'var(--border)' }}>
