@@ -1054,4 +1054,22 @@ const FormBuilder = () => {
   );
 };
 
+export default FormBuilder;nk.download = 'form-qr-code.png';
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                  };
+                  img.src = 'data:image/svg+xml;base64,' + window.btoa(unescape(encodeURIComponent(svgString)));
+                }}
+              >
+                Download QR Code
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default FormBuilder;

@@ -66,20 +66,15 @@ const Modal = ({ show, onClose, url }) => {
         <div className="flex justify-center items-center h-full w-full mb-4">
           <QRCodeCanvas value={url} />
         </div>
-        <div className="flex justify-center gap-4 mb-4">
-          <Button 
-            onClick={handleCopy} 
-            className="copy-button px-4 py-2 rounded bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-colors"
-          >
-            Copy Link
-          </Button>
-          <Button 
-            onClick={handleOpen} 
-            className="px-4 py-2 rounded bg-green-500 text-white font-semibold hover:bg-green-600 transition-colors"
-          >
-            Open Link
-          </Button>
-        </div>
+        <Button className="copy-button px-4 py-2 rounded bg-blue-500 text-white font-semibold hover:bg-blue-600 transition-colors mb-2 w-full" onClick={handleCopy}>
+          Copy Link
+        </Button>
+        <Button 
+          onClick={handleOpen} 
+          className="px-4 py-2 rounded bg-green-500 text-white font-semibold hover:bg-green-600 transition-colors mb-2 w-full"
+        >
+          Open Link
+        </Button>
         <p className="text-sm break-all text-center mb-2 bg-gray-50 p-2 rounded border">{url}</p>
         <Button className="mt-2 w-full" onClick={onClose}>Close</Button>
       </div>
@@ -878,11 +873,11 @@ export default function Quiz() {
       {/* Main Layout */}
       <div className="flex flex-row w-full" style={{ background: 'var(--bg)', minHeight: '100vh' }}>
         {/* Sidebar */}
-        <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-64 min-w-[13rem]'} fixed top-[4.5rem] left-0 h-[calc(100vh-4.5rem)] rounded-2xl shadow-xl z-20`} style={{margin:'1.5rem 0 1.5rem 1.5rem',padding:'0.5rem 0', background: 'var(--card)', color: 'var(--text)', borderColor: 'var(--border)', boxShadow: '0 8px 32px var(--border), 0 1.5px 6px rgba(0,0,0,0.03)'}}>
-          <div className="overflow-y-auto flex-1 p-4">
+        <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-64'} fixed left-0 h-[calc(100vh-4.5rem)] z-30`} style={{margin:'0',padding:'0', borderRadius:0, minWidth: isLeftSidebarCollapsed ? '5rem' : '16rem', maxWidth: isLeftSidebarCollapsed ? '5rem' : '18rem', background: '#f8fafc', color: 'var(--text)', borderColor: '#e5e7eb', boxShadow: '0 2px 8px 0 rgba(44,62,80,0.07)', top: '5.5rem'}}>
+          <div className="overflow-y-auto flex-1 p-0 m-0" style={{maxHeight:'100%', minHeight:'0'}}> 
             <Button
-              className="w-full mb-4 font-semibold rounded-lg py-2 border-none flex items-center justify-center gap-2"
-              style={{ background: 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)', color: '#fff' }}
+              className="w-full mb-2 font-semibold rounded-none py-2 border-none flex items-center justify-center gap-2"
+              style={{ background: 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)', color: '#fff', borderRadius:0, margin:0, paddingLeft:0, paddingRight:0 }}
               onClick={() => setAddSlidePopupOpen(true)}
             >
               {isLeftSidebarCollapsed ? (
@@ -924,16 +919,16 @@ export default function Quiz() {
             <div className="flex-1">
               <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd} modifiers={[]}>
                 <SortableContext items={slides.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-2">
+                  <div className="space-y-1 m-0 p-0">
                     {slides.map((slide, i) => (
                       <SortableSlideItem key={slide.id} id={slide.id}>
                         <div
-                          className={`quizbuilder-slide-item${i === selectedSlide ? ' selected' : ''} p-3 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center cursor-pointer overflow-hidden`}
-                          style={{ background: i === selectedSlide ? '#e0e7ff' : '#fff', color: '#222', borderWidth: 2, borderColor: i === selectedSlide ? '#4f8cff' : '#e0e7ff', borderRadius: 16, marginBottom: 8, boxShadow: i === selectedSlide ? '0 4px 16px 0 rgba(80,80,180,0.10)' : 'none', padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+                          className={`quizbuilder-slide-item${i === selectedSlide ? ' selected' : ''} flex items-center cursor-pointer overflow-hidden`}
+                          style={{ background: 'transparent', color: '#222', borderWidth: 0, borderColor: 'transparent', borderRadius: 0, marginBottom: 2, boxShadow: 'none', padding: '8px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
                           onPointerDown={e => { e.stopPropagation(); setSelectedSlide(i); }}
                           title={slide.question && slide.question.trim() ? slide.question : slide.name}
                         >
-                          <span className="text-xs font-bold w-8 text-center" style={{ color: i === selectedSlide ? 'var(--accent)' : 'var(--accent)', opacity: i === selectedSlide ? 1 : 0.5 }}>{(i+1).toString().padStart(2, '0')}</span>
+                          <span className="text-xs font-bold w-8 text-center" style={{ background: 'none', color: '#222', opacity: i === selectedSlide ? 1 : 0.5 }}>{(i+1).toString().padStart(2, '0')}</span>
                           {!isLeftSidebarCollapsed && (
                             <span className="flex-1 text-sm font-medium truncate" style={{ color: i === selectedSlide ? 'var(--text)' : 'var(--text-secondary)' }}>{slide.question && slide.question.trim() ? slide.question : slide.name}</span>
                           )}
@@ -946,10 +941,11 @@ export default function Quiz() {
               </DndContext>
             </div>
           </div>
-          <div className="p-2 border-t">
+          <div className="p-0 border-t flex flex-col items-center" style={{ marginBottom: '1.5rem' }}>
             <button
               onClick={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
-              className="w-full flex items-center justify-center gap-2 p-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100"
+              className="w-11/12 flex items-center justify-center gap-2 p-0 rounded-none text-sm text-gray-600 hover:bg-gray-100 mt-4"
+              style={{borderRadius:0, margin:0, padding:0}}
               title={isLeftSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
             >
               {isLeftSidebarCollapsed ? (
@@ -1111,7 +1107,7 @@ export default function Quiz() {
           </div>
         </main>
         {/* Right Panel: Customization */}
-        <aside className={`fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-80 min-w-[16rem] p-[2rem_1.5rem] shadow-lg z-20 transition-transform duration-300 flex flex-col bg-white overflow-y-auto ${isCustomizeOpen ? 'translate-x-0' : 'translate-x-full'}`} style={{ borderRadius: 20, margin: '1.5rem 1.5rem 1.5rem 0', background: 'var(--card)', color: 'var(--text)', boxShadow: '0 4px 24px 0 var(--border)' }}>
+        <aside className={`fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-80 min-w-[16rem] p-[2rem_1.5rem] shadow-lg z-20 transition-transform duration-300 flex flex-col bg-white overflow-y-auto ${isCustomizeOpen ? 'translate-x-0' : 'translate-x-[100vw]'}`} style={{ borderRadius: 20, margin: isCustomizeOpen ? '1.5rem 1.5rem 1.5rem 0' : '0', background: 'var(--card)', color: 'var(--text)', boxShadow: '0 4px 24px 0 var(--border)' }}>
           {isCustomizeOpen && (
             <>
               <div className="flex mb-6 border-b" style={{ borderColor: 'var(--border)' }}>
