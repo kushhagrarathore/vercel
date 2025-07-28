@@ -5,6 +5,73 @@ import { useQuiz } from '../../pages/livequiz/QuizContext';
 
 export default function QuizPage() {
   const { session, setSession } = useQuiz();
+
+  // Add global test functions for debugging
+  React.useEffect(() => {
+    window.testQuizTimer = () => {
+      if (session?.timer_end) {
+        const now = Date.now();
+        const timerEnd = new Date(session.timer_end).getTime();
+        const remaining = Math.max(0, Math.floor((timerEnd - now) / 1000));
+        console.log('[QuizPage] Manual timer test:', {
+          now: new Date(now).toISOString(),
+          timerEnd: new Date(timerEnd).toISOString(),
+          remaining,
+          difference: timerEnd - now,
+          session: session
+        });
+        return remaining;
+      } else {
+        console.log('[QuizPage] No timer_end in session');
+        return null;
+      }
+    };
+    
+    window.checkQuizDatabaseTimer = async () => {
+      if (session?.id) {
+        try {
+          const { data, error } = await supabase
+            .from('lq_sessions')
+            .select('timer_end, phase, current_question_id')
+            .eq('id', session.id)
+            .single();
+          
+          if (error) {
+            console.error('[QuizPage] Error checking database timer:', error);
+            return null;
+          }
+          
+          console.log('[QuizPage] Database timer check:', data);
+          
+          // Calculate remaining time if timer_end exists
+          if (data.timer_end) {
+            const now = Date.now();
+            const timerEnd = new Date(data.timer_end).getTime();
+            const remaining = Math.max(0, Math.floor((timerEnd - now) / 1000));
+            console.log('[QuizPage] Timer calculation:', {
+              now: new Date(now).toISOString(),
+              timerEnd: new Date(timerEnd).toISOString(),
+              remaining,
+              difference: timerEnd - now
+            });
+          }
+          
+          return data;
+        } catch (err) {
+          console.error('[QuizPage] Error in checkQuizDatabaseTimer:', err);
+          return null;
+        }
+      } else {
+        console.error('[QuizPage] No session ID for database check');
+        return null;
+      }
+    };
+    
+    window.forceQuizTimerUpdate = () => {
+      console.log('[QuizPage] Manually forcing timer update');
+      setTimerTrigger(prev => prev + 1);
+    };
+  }, [session]);
   const [username, setUsername] = useState('');
   const [sessionCode, setSessionCode] = useState('');
   const [searchParams] = useSearchParams();
@@ -21,6 +88,7 @@ export default function QuizPage() {
   const [liveScore, setLiveScore] = useState(null);
   const [cumulativeScore, setCumulativeScore] = useState(0);
   const [isRemoved, setIsRemoved] = useState(false);
+  const [timerTrigger, setTimerTrigger] = useState(0);
 
   // Auto-fill session code from URL query param 'code' on mount
   useEffect(() => {
@@ -37,7 +105,6 @@ export default function QuizPage() {
     return cleanup;
   }, [participant?.id]);
 
-<<<<<<< HEAD
   // Listen for removal event from admin
   useEffect(() => {
     if (!participant?.id) return;
@@ -54,23 +121,95 @@ export default function QuizPage() {
     };
   }, [participant?.id]);
 
-  // --- Timer logic: requestAnimationFrame-based, server-synced (robust) ---
-  const timerAnimationRef = React.useRef();
-=======
->>>>>>> parent of 1f831bb (Fixed lq desync)
-  useEffect(() => {
-    if (timeLeft > 0) {
-      const timer = setInterval(() => {
-        setTimeLeft((prev) => Math.max(0, prev - 1));
-      }, 1000);
 
-      return () => clearInterval(timer);
-    } else if (timeLeft === 0 && quizPhase === 'question') {
-      setShowCorrect(true);
-    } else {
+
+  // Timer logic using Supabase timer_end as single source of truth
+  useEffect(() => {
+    console.log('[QuizPage] Timer useEffect triggered:', {
+      hasTimerEnd: !!session?.timer_end,
+      timerEnd: session?.timer_end,
+      quizPhase,
+      sessionId: session?.id,
+      timerTrigger
+    });
+
+    if (!session?.timer_end || quizPhase !== 'question') {
+      console.log('[QuizPage] Timer stopped - no timer_end or not in question phase', {
+        hasTimerEnd: !!session?.timer_end,
+        timerEnd: session?.timer_end,
+        quizPhase,
+        sessionId: session?.id
+      });
+      setTimeLeft(0);
       setShowCorrect(false);
+      return;
     }
-  }, [timeLeft, quizPhase]);
+
+    // Validate timer_end is a valid date
+    const timerEndDate = new Date(session.timer_end);
+    if (isNaN(timerEndDate.getTime())) {
+      console.error('[QuizPage] Invalid timer_end date:', session.timer_end);
+      setTimeLeft(0);
+      setShowCorrect(false);
+      return;
+    }
+
+    console.log('[QuizPage] Timer validation passed, starting timer with:', {
+      timerEnd: session.timer_end,
+      timerEndDate: timerEndDate.toISOString(),
+      quizPhase
+    });
+
+    let animationFrameId;
+    
+    function updateTimer() {
+      try {
+        const now = Date.now();
+        const timerEnd = new Date(session.timer_end).getTime();
+        
+        // Validate timer end date
+        if (isNaN(timerEnd)) {
+          console.error('[QuizPage] Invalid timer_end in updateTimer:', session.timer_end);
+          setTimeLeft(0);
+          setShowCorrect(false);
+          return;
+        }
+        
+        const remaining = Math.max(0, Math.floor((timerEnd - now) / 1000));
+        
+        console.log('[QuizPage] Timer update:', {
+          now: new Date(now).toISOString(),
+          timerEnd: new Date(timerEnd).toISOString(),
+          remaining,
+          timeLeft: timeLeft,
+          difference: timerEnd - now
+        });
+        
+        setTimeLeft(remaining);
+        
+        if (remaining <= 0) {
+          console.log('[QuizPage] Timer expired');
+          setShowCorrect(true);
+          return;
+        }
+        
+        // Use setTimeout instead of requestAnimationFrame for more consistent timing
+        animationFrameId = setTimeout(updateTimer, 100);
+      } catch (error) {
+        console.error('[QuizPage] Error in updateTimer:', error);
+        setTimeLeft(0);
+        setShowCorrect(false);
+      }
+    }
+    
+    updateTimer();
+    
+    return () => {
+      if (animationFrameId) {
+        clearTimeout(animationFrameId);
+      }
+    };
+  }, [session?.timer_end, quizPhase, timerTrigger]);
 
   // Show feedback/results screen for 2.5s after answering, before moving to next question or waiting
   useEffect(() => {
@@ -161,36 +300,63 @@ export default function QuizPage() {
   }
 
   async function handleSessionUpdate(payload) {
-    console.log('handleSessionUpdate payload:', payload);
+    console.log('[QuizPage] handleSessionUpdate payload:', payload);
     const sessionData = payload.new;
-    if (!sessionData) return;
-    // If phase changes to 'question', transition to quiz view
+    if (!sessionData) {
+      console.log('[QuizPage] No session data in payload');
+      return;
+    }
+    
+    console.log('[QuizPage] Session update received:', {
+      phase: sessionData.phase,
+      timerEnd: sessionData.timer_end,
+      currentQuestionId: sessionData.current_question_id,
+      sessionId: sessionData.id
+    });
+    
+    // Update session state
+    setSession(sessionData);
     setQuizPhase(sessionData.phase);
     setTimerWarning(false);
+    
+    // Log session update details
+    console.log('[QuizPage] Local state updated:', {
+      phase: sessionData.phase,
+      timerEnd: sessionData.timer_end,
+      hasTimerEnd: !!sessionData.timer_end,
+      currentPhase: sessionData.phase
+    });
+    
+    // Trigger timer re-evaluation when session changes
+    setTimeout(() => {
+      console.log('[QuizPage] Triggering timer re-evaluation after session update');
+      setTimerTrigger(prev => prev + 1);
+    }, 100);
+    
     if (sessionData.phase === 'question' && sessionData.current_question_id) {
       const { data: questionData } = await supabase
         .from('lq_questions')
         .select('*')
         .eq('id', sessionData.current_question_id)
         .single();
+      
       if (questionData) {
         setCurrentQuestion(questionData);
-        if (sessionData.timer_end) {
-          const end = new Date(sessionData.timer_end);
-          const now = new Date();
-          let seconds = Math.max(0, Math.floor((end - now) / 1000));
-          if (seconds === 0) {
-            seconds = questionData.timer || 20;
-          }
-          setTimeLeft(seconds);
-          setShowCorrect(false);
-        } else {
-          setTimeLeft(questionData.timer || 20);
-          setShowCorrect(false);
-          setTimerWarning(true);
-        }
         setSelectedAnswer(null); // Reset selected answer for new question
+        setShowCorrect(false);
+        
+        // Timer will be handled by the useEffect that watches session.timer_end
+        if (!sessionData.timer_end) {
+          console.log('[QuizPage] Warning: No timer_end in session data');
+          setTimerWarning(true);
+        } else {
+          console.log('[QuizPage] Timer end set:', sessionData.timer_end);
+        }
       }
+    } else if (sessionData.phase === 'times_up') {
+      // Timer has expired, show correct answers
+      console.log('[QuizPage] Phase changed to times_up');
+      setShowCorrect(true);
     } else if (sessionData.phase !== 'question') {
       setCurrentQuestion(null);
       setTimeLeft(0);
@@ -262,11 +428,7 @@ export default function QuizPage() {
         }
         if (questionData) {
           setCurrentQuestion(questionData);
-          if (sessionData.timer_end) {
-            const end = new Date(sessionData.timer_end);
-            const now = new Date();
-            setTimeLeft(Math.max(0, Math.floor((end - now) / 1000)));
-          }
+          // Timer will be handled by the useEffect that watches session.timer_end
           console.log('[joinQuiz] Current question loaded:', questionData);
         }
       }
@@ -288,6 +450,13 @@ export default function QuizPage() {
       return;
     }
     if (!participant?.id || !currentQuestion?.id || selectedAnswer !== null) return;
+
+    // Enforce timer restriction - block submission if time is up
+    if (session?.timer_end && Date.now() >= new Date(session.timer_end).getTime()) {
+      console.log('[QuizPage] Blocked submitAnswer because time is up.');
+      setError('Time is up! You cannot submit answers after the timer expires.');
+      return;
+    }
 
     try {
       setSelectedAnswer(selectedIndex);
@@ -439,7 +608,7 @@ export default function QuizPage() {
       )}
 
       {/* Question and options */}
-      {quizPhase === 'question' && currentQuestion && timeLeft > 0 && selectedAnswer === null && (
+      {quizPhase === 'question' && currentQuestion && selectedAnswer === null && (
         <div className="space-y-6
           w-full
           max-w-[95vw] sm:max-w-xl md:max-w-2xl
@@ -454,11 +623,11 @@ export default function QuizPage() {
               <button
                 key={index}
                 onClick={() => submitAnswer(index)}
-                disabled={selectedAnswer !== null}
+                disabled={selectedAnswer !== null || timeLeft <= 0}
                 className={
                   `p-3 sm:p-4 w-full text-left rounded-xl border border-gray-200 bg-white shadow-sm text-base sm:text-lg font-medium transition-all duration-200
-                  hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-300
-                  active:scale-95`}
+                  ${timeLeft > 0 ? 'hover:bg-blue-100 focus:ring-2 focus:ring-blue-300 active:scale-95' : 'opacity-50 cursor-not-allowed'}
+                  focus:outline-none`}
                 style={{ transition: 'background 0.2s, transform 0.2s' }}
               >
                 {option}
@@ -466,9 +635,11 @@ export default function QuizPage() {
             ))}
           </div>
           <div className="mt-6 flex justify-center">
-            <div className="flex items-center gap-2 text-xl font-bold text-purple-700 bg-white/80 px-4 py-1 rounded-full shadow">
+            <div className={`flex items-center gap-2 text-xl font-bold px-4 py-1 rounded-full shadow ${
+              timeLeft > 0 ? 'text-purple-700 bg-white/80' : 'text-red-700 bg-red-100'
+            }`}>
               <svg className="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" /><path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              {timeLeft}s
+              {timeLeft > 0 ? `${timeLeft}s` : 'Time\'s up!'}
             </div>
           </div>
         </div>

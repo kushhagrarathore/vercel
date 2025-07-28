@@ -26,7 +26,7 @@ import Leaderboard from './pages/livequiz/Leaderboard';
 import LiveQuiz from './pages/livequiz/LiveQuiz';
 import AdminPage from './pages/livequiz/AdminPage';
 import QuizResultsPage from './pages/livequiz/ResultsPage';
-import { supabase } from './supabase/client';
+import { supabase } from './supabase.js';
 import QuestionsPage from './pages/livequiz/QuestionsPage';
 import Plan from './pages/Plan';
 import UpdatePassword from './pages/UpdatePassword';
@@ -84,6 +84,7 @@ function App() {
             <Route path="/view-responses" element={<RequireAuth><ViewResponses /></RequireAuth>} />
             {/* Quizzes */}
             <Route path="/quiz" element={<RequireAuth><Quiz /></RequireAuth>} />
+            <Route path="/quiz/user" element={<QuizProvider><QuizPage /></QuizProvider>} />
             <Route path="/quiz/:quizId" element={<QuizProvider><QuizPage /></QuizProvider>} />
             <Route path="/quiz/create" element={<RequireAuth><QuizProvider><CreateQuizPage /></QuizProvider></RequireAuth>} />
             <Route path="/quiz/create/:quizId" element={<RequireAuth><QuizProvider><CreateQuizPage /></QuizProvider></RequireAuth>} />
