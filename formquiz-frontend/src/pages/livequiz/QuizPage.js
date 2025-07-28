@@ -37,6 +37,7 @@ export default function QuizPage() {
     return cleanup;
   }, [participant?.id]);
 
+<<<<<<< HEAD
   // Listen for removal event from admin
   useEffect(() => {
     if (!participant?.id) return;
@@ -55,37 +56,21 @@ export default function QuizPage() {
 
   // --- Timer logic: requestAnimationFrame-based, server-synced (robust) ---
   const timerAnimationRef = React.useRef();
+=======
+>>>>>>> parent of 1f831bb (Fixed lq desync)
   useEffect(() => {
-    // Only run timer in question phase
-    if (quizPhase !== 'question') {
-      setTimeLeft(0);
-      setShowCorrect(false);
-      return;
-    }
-    // Use session.timer_end if available, else fallback to currentQuestion.timer or 20s
-    let end = null;
-    if (session && session.timer_end) {
-      end = new Date(session.timer_end);
-    } else if (currentQuestion && currentQuestion.timer) {
-      end = new Date(Date.now() + currentQuestion.timer * 1000);
+    if (timeLeft > 0) {
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => Math.max(0, prev - 1));
+      }, 1000);
+
+      return () => clearInterval(timer);
+    } else if (timeLeft === 0 && quizPhase === 'question') {
+      setShowCorrect(true);
     } else {
-      end = new Date(Date.now() + 20 * 1000);
+      setShowCorrect(false);
     }
-    function updateTime() {
-      const now = Date.now();
-      const secondsLeft = Math.max(0, Math.floor((end.getTime() - now) / 1000));
-      setTimeLeft(secondsLeft);
-      if (secondsLeft === 0) {
-        setShowCorrect(true);
-        return; // Stop animating
-      }
-      timerAnimationRef.current = requestAnimationFrame(updateTime);
-    }
-    timerAnimationRef.current = requestAnimationFrame(updateTime);
-    return () => {
-      if (timerAnimationRef.current) cancelAnimationFrame(timerAnimationRef.current);
-    };
-  }, [session?.timer_end, quizPhase, currentQuestion?.timer]);
+  }, [timeLeft, quizPhase]);
 
   // Show feedback/results screen for 2.5s after answering, before moving to next question or waiting
   useEffect(() => {

@@ -119,14 +119,13 @@ export default function AdminPage() {
     // eslint-disable-next-line
   }, [quizId]);
 
-  // --- Timer logic: requestAnimationFrame-based, server-synced ---
-  const timerAnimationRef = useRef();
   useEffect(() => {
     if (!session || !currentQuestion || quizPhase !== 'question') {
       setTimeLeft(0);
       setShowCorrect(false); // Always reset when not in question phase
       return;
     }
+    let interval = null;
     let end;
     if (session.timer_end) {
       end = new Date(session.timer_end);
@@ -136,18 +135,18 @@ export default function AdminPage() {
     }
     setShowCorrect(false); // Reset at the start of each question
     function updateTime() {
-      const now = Date.now();
-      const secondsLeft = Math.max(0, Math.floor((end.getTime() - now) / 1000));
+      const now = new Date();
+      const secondsLeft = Math.max(0, Math.floor((end - now) / 1000));
       setTimeLeft(secondsLeft);
       if (secondsLeft === 0) {
         setShowCorrect(true);
-        return; // Stop animating
+        if (interval) clearInterval(interval);
       }
-      timerAnimationRef.current = requestAnimationFrame(updateTime);
     }
-    timerAnimationRef.current = requestAnimationFrame(updateTime);
+    updateTime(); // Set initial value
+    interval = setInterval(updateTime, 1000);
     return () => {
-      if (timerAnimationRef.current) cancelAnimationFrame(timerAnimationRef.current);
+      if (interval) clearInterval(interval);
     };
   }, [session, currentQuestion, quizPhase]);
 
