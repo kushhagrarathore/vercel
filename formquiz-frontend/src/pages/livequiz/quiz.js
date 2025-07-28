@@ -14,6 +14,8 @@ import { FiArrowLeft, FiEye, FiUpload, FiSun, FiMoon, FiSave, FiEdit2, FiTrash2,
 import { Button } from '../../components/buttonquiz';
 import { Input } from '../../components/input';
 
+import { PlusIcon, ChevronsRight, ChevronsLeft } from 'lucide-react';
+
 
 import { supabase } from "../../supabase";
 import "./quiz.css";
@@ -859,91 +861,68 @@ export default function Quiz() {
       </header>
       {/* Main Layout */}
       <div className="flex flex-row w-full" style={{ background: 'var(--bg)', minHeight: '100vh' }}>
-        {/* Sidebar */}
-        <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-64'} fixed left-0 h-[calc(100vh-4.5rem)] z-30`} style={{margin:0, padding:0, borderRadius:0, minWidth: isLeftSidebarCollapsed ? '5rem' : '16rem', maxWidth: isLeftSidebarCollapsed ? '5rem' : '18rem', background: '#f8fafc', color: 'var(--text)', borderColor: '#e5e7eb', boxShadow: '0 2px 8px 0 rgba(44,62,80,0.07)', top: '4.5rem'}}>
-          <div className="overflow-y-auto flex-1 p-0 m-0" style={{maxHeight:'100%', minHeight:'0', marginTop:0, paddingTop:0}}> 
-            <Button
-              className="w-full mb-2 font-semibold rounded-none py-2 border-none flex items-center justify-center gap-2"
-              style={{ background: 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)', color: '#fff', borderRadius:0, margin:0, paddingLeft:0, paddingRight:0 }}
+        {/* Left Sidebar: Add Slide & Slide List */}
+        <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-72'}`}>
+          <div className="p-4 flex-1 overflow-y-auto">
+            <button
               onClick={() => setAddSlidePopupOpen(true)}
+              className="w-full px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-sm hover:bg-indigo-700 transition mb-4 flex items-center justify-center gap-2"
             >
-              {isLeftSidebarCollapsed ? (
-                // Just the plus icon when collapsed
-                <span className="text-xl">+</span>
-              ) : (
-                // Full text with dropdown arrow when expanded
-                <>
-                  + Add Slide
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </>
-              )}
-            </Button>
-            {addSlidePopupOpen && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30" onClick={() => setAddSlidePopupOpen(false)}>
-                <div className="bg-white rounded-xl shadow-2xl p-6 min-w-[260px] max-w-[90vw] relative" style={{ background: '#fff', borderColor: '#e0e7ff' }} onClick={e => e.stopPropagation()}>
-                  <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-xl font-bold" onClick={() => setAddSlidePopupOpen(false)} title="Close">×</button>
-                  <div className="font-semibold text-lg mb-4 text-center">Select Question Type</div>
-                  <div className="flex flex-col gap-2">
-                    {questionTypes.map(qt => (
-                      <button
-                        key={qt.value}
-                        className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium"
-                        style={{ color: '#222', background: '#fff' }}
-                        onClick={() => {
-                          addSlide(qt.value);
-                          setAddSlidePopupOpen(false);
-                        }}
-                      >
-                        {qt.label}
-                      </button>
-                    ))}
-                  </div>
+              <PlusIcon className="w-5 h-5" />
+              {!isLeftSidebarCollapsed && <span>Add Slide</span>}
+            </button>
+            <div className="space-y-2">
+              {slides.map((slide, index) => (
+                <div key={slide.id} className={`p-3 rounded-lg flex items-center cursor-pointer overflow-hidden ${selectedSlide === index ? 'bg-blue-100' : 'bg-gray-100 hover:bg-gray-200'}`}
+                  onClick={() => setSelectedSlide(index)}
+                  title={slide.question || 'Untitled Slide'}
+                >
+                  <span className="text-gray-500 font-bold">{String(index + 1).padStart(2, '0')}</span>
+                  {!isLeftSidebarCollapsed && (
+                    <span className="font-semibold text-gray-800 truncate ml-3">
+                      {slide.question || 'Untitled Slide'}
+                    </span>
+                  )}
                 </div>
-              </div>
-            )}
-            <div className="flex-1">
-              <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd} modifiers={[]}>
-                <SortableContext items={slides.map(s => s.id)} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-1 m-0 p-0">
-                    {slides.map((slide, i) => (
-                      <SortableSlideItem key={slide.id} id={slide.id}>
-                        <div
-                          className={`quizbuilder-slide-item${i === selectedSlide ? ' selected' : ''} flex items-center cursor-pointer overflow-hidden`}
-                          style={{ background: 'transparent', color: '#222', borderWidth: 0, borderColor: 'transparent', borderRadius: 0, marginBottom: 2, boxShadow: 'none', padding: '8px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
-                          onPointerDown={e => { e.stopPropagation(); setSelectedSlide(i); }}
-                          title={slide.question && slide.question.trim() ? slide.question : slide.name}
-                        >
-                          <span className="text-xs font-bold w-8 text-center" style={{ background: 'none', color: '#222', opacity: i === selectedSlide ? 1 : 0.5 }}>{(i+1).toString().padStart(2, '0')}</span>
-                          {!isLeftSidebarCollapsed && (
-                            <span className="flex-1 text-sm font-medium truncate" style={{ color: i === selectedSlide ? 'var(--text)' : 'var(--text-secondary)' }}>{slide.question && slide.question.trim() ? slide.question : slide.name}</span>
-                          )}
-                          <button className="p-1 hover:text-red-600" style={{ color: '#f87171' }} onPointerDown={e => { e.stopPropagation(); deleteSlide(i); }} title="Delete slide"><FiTrash2 /></button>
-                        </div>
-                      </SortableSlideItem>
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
+              ))}
             </div>
           </div>
-          <div className="p-0 border-t flex flex-col items-center" style={{ marginBottom: '1.5rem' }}>
+          <div className="p-2 border-t">
             <button
               onClick={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
-              className="w-11/12 flex items-center justify-center gap-2 p-0 rounded-none text-sm text-gray-600 hover:bg-gray-100 mt-4"
-              style={{borderRadius:0, margin:0, padding:0}}
+              className="w-full flex items-center justify-center gap-2 p-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100"
               title={isLeftSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
             >
-              {isLeftSidebarCollapsed ? (
-                // Expand icon (chevron right)
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
-              ) : (
-                // Collapse icon (chevron left)
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
-              )}
+              {isLeftSidebarCollapsed ? <ChevronsRight className="w-5 h-5" /> : <ChevronsLeft className="w-5 h-5" />}
             </button>
           </div>
+          {addSlidePopupOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm">
+              <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-lg flex flex-col items-center">
+                <h3 className="text-xl font-bold mb-6 text-blue-700">Add New Slide</h3>
+                <div className="flex gap-4 mb-6">
+                  {questionTypes.map(qt => (
+                    <button
+                      key={qt.value}
+                      className="px-6 py-3 rounded-lg bg-indigo-100 text-indigo-700 font-semibold shadow hover:bg-indigo-200 transition-all"
+                      onClick={() => {
+                        addSlide(qt.value);
+                        setAddSlidePopupOpen(false);
+                      }}
+                    >
+                      {qt.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  className="mt-2 px-4 py-2 rounded bg-gray-200 text-gray-700 font-semibold hover:bg-gray-300"
+                  onClick={() => setAddSlidePopupOpen(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </aside>
         {/* Main Content */}
         <main
