@@ -811,6 +811,7 @@ export default function Quiz() {
                     fontFamily: currentSlide?.fontFamily || textStyles[0].value,
                     textColor: currentSlide?.textColor || '#000000',
                     background: currentSlide?.background || '#ffffff',
+                    backgroundImage: customization.backgroundImage || '',
                   }
                 }));
                 window.open('/quiz/preview/preview', '_blank');
@@ -865,6 +866,14 @@ export default function Quiz() {
         <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-72'}`}>
           <div className="p-4 flex-1 overflow-y-auto">
             <button
+              onClick={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
+              className="w-full flex items-center justify-center gap-2 p-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 mb-4"
+              title={isLeftSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+              style={{ border: '1px solid #e5e7eb' }}
+            >
+              {isLeftSidebarCollapsed ? <ChevronsRight className="w-5 h-5" /> : <ChevronsLeft className="w-5 h-5" />}
+            </button>
+            <button
               onClick={() => setAddSlidePopupOpen(true)}
               className="w-full px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-sm hover:bg-indigo-700 transition mb-4 flex items-center justify-center gap-2"
             >
@@ -886,15 +895,6 @@ export default function Quiz() {
                 </div>
               ))}
             </div>
-          </div>
-          <div className="p-2 border-t">
-            <button
-              onClick={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
-              className="w-full flex items-center justify-center gap-2 p-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100"
-              title={isLeftSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-            >
-              {isLeftSidebarCollapsed ? <ChevronsRight className="w-5 h-5" /> : <ChevronsLeft className="w-5 h-5" />}
-            </button>
           </div>
           {addSlidePopupOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm">
@@ -926,29 +926,47 @@ export default function Quiz() {
         </aside>
         {/* Main Content */}
         <main
-          className={`flex-1 p-8 transition-all duration-300 flex flex-col items-center justify-start ${isLeftSidebarCollapsed ? 'ml-20' : 'ml-64'} ${isCustomizeOpen ? 'mr-80' : 'mr-0'}`}
-          style={{ maxWidth: isCustomizeOpen ? 'calc(100vw - 15rem - 20rem)' : 'calc(100vw - 15rem)', width: '100%', overflowY: 'auto', background: 'var(--bg)', color: 'var(--text)' }}
+          className={`flex-1 p-8 transition-all duration-300 flex flex-col ${isCustomizeOpen ? 'items-center justify-center' : 'items-center justify-start'} ${isLeftSidebarCollapsed ? 'ml-20' : 'ml-64'} ${isCustomizeOpen ? 'mr-80' : 'mr-0'}`}
+          style={{
+            maxWidth: isCustomizeOpen ? 'calc(100vw - 15rem - 20rem)' : 'calc(100vw - 15rem)',
+            width: '100%',
+            overflowY: 'auto',
+            background: 'var(--bg)',
+            color: 'var(--text)',
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: isCustomizeOpen ? 'center' : 'center',
+            justifyContent: isCustomizeOpen ? 'center' : 'flex-start',
+          }}
         >
-          <div className="shadow-2xl max-w-2xl w-full mx-auto flex flex-col gap-10 justify-center items-center" style={{
-            background: currentSlide?.background || defaultSlideStyle.background,
-            borderRadius: (currentSlide?.borderRadius || defaultSlideStyle.borderRadius) * 0.7,
-            color: currentSlide?.textColor || defaultSlideStyle.textColor,
-            fontFamily: currentSlide?.fontFamily || defaultSlideStyle.fontFamily,
-            fontSize: currentSlide?.fontSize || defaultSlideStyle.fontSize,
-            fontWeight: currentSlide?.bold ? 'bold' : 'normal',
-            fontStyle: currentSlide?.italic ? 'italic' : 'normal',
-            boxShadow: currentSlide?.shadow ? '0 4px 16px 0 rgba(0,0,0,0.08)' : 'none',
-            padding: '2.5rem 2.5rem 3.5rem 2.5rem',
-            margin: '2.5rem',
-            textAlign: currentSlide?.alignment || defaultSlideStyle.alignment,
-            transition: 'all 0.3s',
-            boxSizing: 'border-box',
-            overflow: 'visible',
-            minHeight: '520px',
-            maxHeight: '700px',
-          }}>
-            <div className="font-semibold mb-2 text-blue-700">Slide {selectedSlide + 1} of {slides.length}</div>
-            <div className="flex gap-3 mb-4">
+          <div className="max-w-2xl w-full mx-auto flex flex-col gap-10 justify-center items-center" style={{ margin: isCustomizeOpen ? '0 auto' : '2.5rem auto' }}>
+            <div className="border-2 rounded-2xl shadow-2xl bg-white" style={{
+              boxShadow: '0 8px 32px 0 rgba(44,62,80,0.12)',
+              borderColor: '#e0e7ff',
+              background: currentSlide?.background || defaultSlideStyle.background,
+              backgroundImage: currentSlide?.backgroundImage ? `url(${currentSlide.backgroundImage})` : undefined,
+              backgroundSize: currentSlide?.backgroundImage ? 'cover' : undefined,
+              backgroundPosition: currentSlide?.backgroundImage ? 'center' : undefined,
+              backgroundRepeat: currentSlide?.backgroundImage ? 'no-repeat' : undefined,
+              borderRadius: (currentSlide?.borderRadius || defaultSlideStyle.borderRadius),
+              color: currentSlide?.textColor || defaultSlideStyle.textColor,
+              fontFamily: currentSlide?.fontFamily || defaultSlideStyle.fontFamily,
+              fontSize: currentSlide?.fontSize || defaultSlideStyle.fontSize,
+              fontWeight: currentSlide?.bold ? 'bold' : 'normal',
+              fontStyle: currentSlide?.italic ? 'italic' : 'normal',
+              boxShadow: currentSlide?.shadow ? '0 4px 16px 0 rgba(0,0,0,0.08)' : '0 8px 32px 0 rgba(44,62,80,0.12)',
+              padding: '2.5rem 2.5rem 3.5rem 2.5rem',
+              margin: '0',
+              textAlign: currentSlide?.alignment || defaultSlideStyle.alignment,
+              transition: 'all 0.3s',
+              boxSizing: 'border-box',
+              overflow: 'visible',
+              minHeight: '520px',
+              maxHeight: '700px',
+            }}>
+              <div className="font-semibold mb-2 text-blue-700">Slide {selectedSlide + 1} of {slides.length}</div>
+              <div className="flex gap-3 mb-4">
               {questionTypes.map(qt => (
                 <button
                   key={qt.value}
@@ -1070,6 +1088,7 @@ export default function Quiz() {
                 </div>
               </div>
             )}
+            </div>
           </div>
         </main>
         {/* Right Panel: Customization */}

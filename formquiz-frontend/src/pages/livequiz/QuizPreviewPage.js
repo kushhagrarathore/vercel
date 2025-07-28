@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import QuizArenaLayout from '../../components/quiz/QuizArenaLayout';
 
-const QuizPreviewPage = ({ quiz, slides }) => {
+const QuizPreviewPage = ({ quiz, slides, customization = {} }) => {
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState(null);
   const [submitted, setSubmitted] = useState(false);
@@ -17,8 +17,8 @@ const QuizPreviewPage = ({ quiz, slides }) => {
     }, 1200);
   };
 
-  const bgImage = customization.backgroundImage;
-  const bgColor = customization.backgroundColor || customization.background || '#f5f7fa';
+  const bgImage = customization?.backgroundImage;
+  const bgColor = customization?.backgroundColor || customization?.background || '#f5f7fa';
   return (
     <div style={{
       minHeight: '100vh',
@@ -99,4 +99,4 @@ const QuizPreviewPage = ({ quiz, slides }) => {
   );
 };
 
-export default QuizPreviewPage; 
+export default QuizPreviewPage;
