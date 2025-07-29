@@ -626,7 +626,7 @@ export default function AdminPage() {
                   {(() => {
                     const maxSlots = 12; // 4x3 grid
                     // Newest participant first, old shift right/down
-                    const displayParticipants = [...participants];
+                    const displayParticipants = [...participants].slice().reverse();
                     while (displayParticipants.length < maxSlots) displayParticipants.push(null);
                     return displayParticipants.map((participant, idx) =>
                       participant ? (
