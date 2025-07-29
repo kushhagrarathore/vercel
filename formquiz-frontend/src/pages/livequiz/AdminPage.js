@@ -591,41 +591,55 @@ export default function AdminPage() {
           </div>
         </div>
         {/* Main Content */}
-        <div className="flex flex-col flex-1 justify-center items-center gap-8 mt-[4.5rem]">
-          {/* Quiz Title and Question Count */}
-          <div className="flex flex-col items-center mt-8">
-            <div className="text-4xl font-bold text-neutral-800 text-center">
-              {quiz?.title ? `Quiz: ${quiz.title}` : 'Quiz'}
-            </div>
-            <div className="text-lg text-neutral-600 mt-2">{questions.length} Question{questions.length === 1 ? '' : 's'}</div>
-          </div>
-          {/* QR Code and Join Link */}
-          <div className="flex flex-col items-center">
-            <div className="bg-white p-6 rounded-xl shadow-xl w-[320px] h-[320px] flex items-center justify-center">
-              <QRCodeSVG
-                value={`${window.location.origin}/quiz/user?code=${session?.code}`}
-                size={220}
-                level="H"
-                includeMargin={true}
-              />
-            </div>
-            <div className="max-w-xs w-full mt-4">
-              <div className="text-blue-600 underline text-sm text-center break-all cursor-pointer" onClick={() => handleCopyLink(`${window.location.origin}/quiz/user?code=${session?.code}`)}>
-                {`${window.location.origin}/quiz/user?code=${session?.code}`}
-                {copied && <span className="ml-2 text-green-600 font-semibold">Copied!</span>}
+        <div className="flex flex-col flex-1 items-center justify-start mt-[6.5rem] w-full pb-8">
+          {/* Quiz Title */}
+          <div className="text-4xl font-bold text-neutral-800 text-center mb-4" style={{ letterSpacing: 0.5 }}>{quiz?.title ? `Quiz: ${quiz.title}` : 'Quiz'}</div>
+          {/* Two-Column Layout - full height/width utilization */}
+          <div className="flex flex-row flex-1 w-full max-w-7xl gap-12 justify-center items-stretch px-8" style={{ minHeight: 0 }}>
+            {/* Left Column: QR Code & Link */}
+            <div className="flex flex-col items-center flex-1 justify-center h-full">
+              <div className="flex-1 flex flex-col justify-center items-center w-full">
+                <QRCodeSVG
+                  value={`${window.location.origin}/quiz/user?code=${session?.code}`}
+                  size={480}
+                  level="H"
+                  includeMargin={true}
+                  className="mb-6"
+                />
+              </div>
+              <div className="max-w-xs w-full">
+                <div
+                  className="text-blue-600 underline text-sm text-center break-all cursor-pointer select-all"
+                  onClick={() => handleCopyLink(`${window.location.origin}/quiz/user?code=${session?.code}`)}
+                >
+                  {`${window.location.origin}/quiz/user?code=${session?.code}`}
+                  {copied && <span className="ml-2 text-green-600 font-semibold">Copied!</span>}
+                </div>
               </div>
             </div>
-          </div>
-          {/* Participants Grid */}
-          <div className="w-full max-w-2xl flex flex-col items-center">
-            <div className="text-lg font-semibold mt-4">Participants ({participants.length})</div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 w-full mt-2">
-              {participants.length === 0 && <div className="col-span-full text-gray-400 text-center text-base">No participants yet.</div>}
-              {participants.map((participant) => (
-                <div key={participant.id} className="bg-white rounded-lg shadow p-2 text-center font-medium text-gray-700 truncate max-w-[8rem] mx-auto">
-                  {participant.username}
+            {/* Right Column: Participants */}
+            <div className="flex flex-col flex-1 justify-center">
+              <div className="text-lg font-semibold mb-2 text-center">Participants ({participants.length})</div>
+              <div className="bg-white rounded-xl shadow p-4 flex-1 overflow-y-auto min-h-0"
+                   style={{ height: '100%' }}>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {(() => {
+                    const maxSlots = 12; // 4x3 grid
+                    // Newest participant first, old shift right/down
+                    const displayParticipants = [...participants];
+                    while (displayParticipants.length < maxSlots) displayParticipants.push(null);
+                    return displayParticipants.map((participant, idx) =>
+                      participant ? (
+                        <div key={participant.id} className="bg-gray-50 rounded-lg shadow p-2 text-center font-medium text-gray-700 truncate">
+                          {participant.username}
+                        </div>
+                      ) : (
+                        <div key={"empty-"+idx} className="bg-gray-100 rounded-lg p-2 text-center text-gray-300">&nbsp;</div>
+                      )
+                    );
+                  })()}
                 </div>
-              ))}
+              </div>
             </div>
           </div>
         </div>
