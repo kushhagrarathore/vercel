@@ -527,6 +527,78 @@ export default function AdminPage() {
 
   // Define a constant for the top bar height
   const TOP_BAR_HEIGHT = '4.5rem';
+  function handlePresentationNext() {
+    if (quizPhase === 'question' || quizPhase === 'answer_poll') {
+      setQuizPhase('leaderboard');
+      setShowLeaderboard(true);
+      return;
+    }
+    if (quizPhase === 'leaderboard' || showLeaderboard) {
+      if (currentQuestionIndex >= questions.length - 1) {
+        setShowLeaderboard(false);
+        setShowPodium(true);
+        setQuizPhase('podium');
+        return;
+      }
+      // Advance to next question
+      const nextIndex = currentQuestionIndex + 1;
+      setCurrentQuestionIndex(nextIndex);
+      setCurrentQuestion(questions[nextIndex]);
+      if (session?.id && questions[nextIndex]?.id) {
+        const timerEnd = new Date();
+        timerEnd.setSeconds(timerEnd.getSeconds() + (questions[nextIndex].timer || 20));
+        supabase
+          .from('lq_sessions')
+          .update({
+            current_question_id: questions[nextIndex].id,
+            phase: 'question',
+            timer_end: timerEnd.toISOString(),
+          })
+          .eq('id', session.id);
+      }
+      setQuizPhase('question');
+      setShowLeaderboard(false);
+      return;
+    }
+  }
+
+  if (presentationMode && (quizPhase === 'lobby' || waitingToStart)) {
+    return (
+      <div className="w-screen h-screen overflow-hidden bg-gradient-to-br from-white via-blue-50 to-purple-100 flex flex-col justify-center items-center gap-8">
+        <div className="text-6xl font-bold text-neutral-800">{session?.code || '------'}</div>
+        <div className="bg-white p-6 rounded-xl shadow-xl w-[320px] h-[320px] flex items-center justify-center">
+          <QRCodeSVG
+            value={`${window.location.origin}/quiz/user?code=${session?.code}`}
+            size={220}
+            level="H"
+            includeMargin={true}
+          />
+        </div>
+        <div className="max-w-xs w-full">
+          <div className="text-blue-600 underline text-sm text-center break-all">{`${window.location.origin}/quiz/user?code=${session?.code}`}</div>
+        </div>
+        <div className="w-full max-w-2xl flex flex-col items-center">
+          <div className="text-lg font-semibold mt-4">Participants ({participants.length})</div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 w-full mt-2">
+            {participants.length === 0 && <div className="col-span-full text-gray-400 text-center text-base">No participants yet.</div>}
+            {participants.map((participant) => (
+              <div key={participant.id} className="bg-white rounded-lg shadow p-2 text-center font-medium text-gray-700 truncate max-w-[8rem] mx-auto">
+                {participant.username}
+              </div>
+            ))}
+          </div>
+        </div>
+        <button
+          onClick={handleStartQuiz}
+          className="bg-green-600 text-white px-8 py-4 rounded-full text-xl shadow-md hover:bg-green-700 transition mt-4"
+          style={{ minWidth: '220px' }}
+        >
+          Start Quiz
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={presentationRef}
@@ -573,18 +645,18 @@ export default function AdminPage() {
                 {timeLeft}s
               </div>
             )}
-            {quizPhase === 'question' && (
+            {quizPhase === 'leaderboard' || showLeaderboard || quizPhase === 'question' ? (
               <button
-                onClick={nextQuestion}
+                onClick={handlePresentationNext}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold shadow hover:bg-green-700 transition-all text-base"
-                title="Next Question"
+                title="Next"
               >
                 <span>Next</span>
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
               </button>
-            )}
+            ) : null}
             <button
               onClick={() => setPresentationMode(false)}
               className="p-2 bg-gray-700 text-white rounded-lg font-semibold shadow hover:bg-gray-900 transition-all border border-gray-900"
@@ -730,7 +802,7 @@ export default function AdminPage() {
               <div style={{ paddingTop: TOP_BAR_HEIGHT, minHeight: `calc(100vh - ${TOP_BAR_HEIGHT})`, boxSizing: 'border-box', width: '100vw', overflow: 'auto' }}>
                 {renderPodium()}
               </div>
-            ) : showLeaderboard ? (
+            ) : (quizPhase === 'leaderboard' || showLeaderboard) ? (
               <div
                 className="flex flex-col items-center justify-center w-full min-h-screen min-w-screen bg-white/90 p-0 m-0"
                 style={{
@@ -778,28 +850,6 @@ export default function AdminPage() {
                       ));
                     })()}
                   </ol>
-                </div>
-                {/* Next button pinned to bottom, always visible, responsive, never covers menu bar */}
-                <div
-                  style={{
-                    position: 'fixed',
-                    left: 0,
-                    bottom: 0,
-                    width: '100vw',
-                    display: 'flex',
-                    justifyContent: 'center',
-                    background: 'linear-gradient(to top, rgba(255,255,255,0.97) 80%, rgba(255,255,255,0.7) 100%)',
-                    padding: '1rem 0 1.2rem 0',
-                    zIndex: 20, // Above leaderboard, below menu
-                    pointerEvents: 'auto',
-                  }}
-                >
-                  <button
-                    onClick={handleLeaderboardNext}
-                    className="px-8 py-4 sm:px-12 sm:py-5 bg-gray-700 text-white rounded-xl font-bold text-lg sm:text-2xl shadow hover:bg-gray-800 transition-all"
-                    style={{minWidth:'160px', maxWidth:'90vw'}}>
-                    Next
-                  </button>
                 </div>
               </div>
             ) : (
