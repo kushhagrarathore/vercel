@@ -22,14 +22,6 @@ function useWindowSizeSimple() {
   return size;
 }
 
-// Helper to format IST
-function toISTString(date) {
-  if (!date) return 'N/A';
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return 'Invalid Date';
-  return new Date(d.getTime() + 19800000).toISOString().replace('T', ' ').replace('Z', ' IST');
-}
-
 export default function AdminPage() {
   const navigate = useNavigate();
   const { quizId } = useParams();
@@ -43,76 +35,6 @@ export default function AdminPage() {
     quizPhase,
     setQuizPhase,
   } = useQuiz();
-
-  // Add global test functions for debugging
-  React.useEffect(() => {
-    window.testTimer = () => {
-      if (session?.timer_end) {
-        const now = Date.now();
-        const timerEnd = new Date(session.timer_end).getTime();
-        const remaining = Math.max(0, Math.floor((timerEnd - now) / 1000));
-        console.log('[AdminPage] Manual timer test:', {
-          nowUTC: new Date(now).toISOString(),
-          nowIST: toISTString(now),
-          timerEndUTC: new Date(timerEnd).toISOString(),
-          timerEndIST: toISTString(timerEnd),
-          remaining,
-          difference: timerEnd - now
-        });
-        return remaining;
-      } else {
-        console.log('[AdminPage] No timer_end in session');
-        return null;
-      }
-    };
-    
-    window.checkDatabaseTimer = async () => {
-      if (session?.id) {
-        try {
-          const { data, error } = await supabase
-            .from('lq_sessions')
-            .select('timer_end, phase, current_question_id')
-            .eq('id', session.id)
-            .single();
-          
-          if (error) {
-            console.error('[AdminPage] Error checking database timer:', error);
-            return null;
-          }
-          
-          console.log('[AdminPage] Database timer check:', data);
-          
-          // Calculate remaining time if timer_end exists
-          if (data.timer_end) {
-            const now = Date.now();
-            const timerEnd = new Date(data.timer_end).getTime();
-            const remaining = Math.max(0, Math.floor((timerEnd - now) / 1000));
-            console.log('[AdminPage] Timer calculation:', {
-              nowUTC: new Date(now).toISOString(),
-              nowIST: toISTString(now),
-              timerEndUTC: new Date(timerEnd).toISOString(),
-              timerEndIST: toISTString(timerEnd),
-              remaining,
-              difference: timerEnd - now
-            });
-          }
-          
-          return data;
-        } catch (err) {
-          console.error('[AdminPage] Error in checkDatabaseTimer:', err);
-          return null;
-        }
-      } else {
-        console.error('[AdminPage] No session ID for database check');
-        return null;
-      }
-    };
-    
-    window.forceTimerUpdate = () => {
-      console.log('[AdminPage] Manually forcing timer update');
-      setTimerTrigger(prev => prev + 1);
-    };
-  }, [session]);
 
   const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -130,7 +52,6 @@ export default function AdminPage() {
   const [justStartedSession, setJustStartedSession] = useState(false);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [timerTrigger, setTimerTrigger] = useState(0);
   const handleCopyLink = (url) => {
     navigator.clipboard.writeText(url);
     setCopied(true);
@@ -198,110 +119,36 @@ export default function AdminPage() {
     // eslint-disable-next-line
   }, [quizId]);
 
-  // Timer logic using Supabase timer_end as single source of truth
   useEffect(() => {
-    console.log('[AdminPage] Timer useEffect triggered:', {
-      hasTimerEnd: !!session?.timer_end,
-      timerEnd: session?.timer_end,
-      timerEndIST: toISTString(session?.timer_end),
-      quizPhase,
-      sessionId: session?.id,
-      timerTrigger
-    });
-
-    if (!session?.timer_end || quizPhase !== 'question') {
-      console.log('[AdminPage] Timer stopped - no timer_end or not in question phase', {
-        hasTimerEnd: !!session?.timer_end,
-        timerEnd: session?.timer_end,
-        timerEndIST: toISTString(session?.timer_end),
-        quizPhase,
-        sessionId: session?.id
-      });
+    if (!session || !currentQuestion || quizPhase !== 'question') {
       setTimeLeft(0);
-      setShowCorrect(false);
+      setShowCorrect(false); // Always reset when not in question phase
       return;
     }
-
-    // Validate timer_end is a valid date
-    const timerEndDate = new Date(session.timer_end);
-    if (isNaN(timerEndDate.getTime())) {
-      console.error('[AdminPage] Invalid timer_end date:', session.timer_end, 'IST:', toISTString(session.timer_end));
-      setTimeLeft(0);
-      setShowCorrect(false);
-      return;
+    let interval = null;
+    let end;
+    if (session.timer_end) {
+      end = new Date(session.timer_end);
+    } else {
+      end = new Date();
+      end.setSeconds(end.getSeconds() + (currentQuestion.timer || 20));
     }
-
-    console.log('[AdminPage] Timer validation passed, starting timer with:', {
-      timerEnd: session.timer_end,
-      timerEndIST: toISTString(session.timer_end),
-      quizPhase
-    });
-
-    let animationFrameId;
-    
-    function updateTimer() {
-      try {
-        const now = Date.now();
-        const timerEnd = new Date(session.timer_end).getTime();
-        
-        // Validate timer end date
-        if (isNaN(timerEnd)) {
-          console.error('[AdminPage] Invalid timer_end in updateTimer:', session.timer_end, 'IST:', toISTString(session.timer_end));
-          setTimeLeft(0);
-          setShowCorrect(false);
-          return;
-        }
-        
-        const remaining = Math.max(0, Math.floor((timerEnd - now) / 1000));
-        
-        console.log('[AdminPage] Timer update:', {
-          nowUTC: new Date(now).toISOString(),
-          nowIST: toISTString(now),
-          timerEndUTC: new Date(timerEnd).toISOString(),
-          timerEndIST: toISTString(timerEnd),
-          remaining,
-          timeLeft: timeLeft,
-          difference: timerEnd - now
-        });
-        
-        setTimeLeft(remaining);
-        
-        if (remaining <= 0) {
-          console.log('[AdminPage] Timer expired');
-          setShowCorrect(true);
-          // Update phase to 'times_up' when timer expires
-          if (session?.id) {
-            supabase
-              .from('lq_sessions')
-              .update({ phase: 'times_up' })
-              .eq('id', session.id)
-              .then(() => {
-                console.log('[AdminPage] Timer expired, phase updated to times_up');
-              })
-              .catch(err => {
-                console.error('[AdminPage] Error updating phase:', err);
-              });
-          }
-          return;
-        }
-        
-        // Use setTimeout instead of requestAnimationFrame for more consistent timing
-        animationFrameId = setTimeout(updateTimer, 100);
-      } catch (error) {
-        console.error('[AdminPage] Error in updateTimer:', error);
-        setTimeLeft(0);
-        setShowCorrect(false);
+    setShowCorrect(false); // Reset at the start of each question
+    function updateTime() {
+      const now = new Date();
+      const secondsLeft = Math.max(0, Math.floor((end - now) / 1000));
+      setTimeLeft(secondsLeft);
+      if (secondsLeft === 0) {
+        setShowCorrect(true);
+        if (interval) clearInterval(interval);
       }
     }
-    
-    updateTimer();
-    
+    updateTime(); // Set initial value
+    interval = setInterval(updateTime, 1000);
     return () => {
-      if (animationFrameId) {
-        clearTimeout(animationFrameId);
-      }
+      if (interval) clearInterval(interval);
     };
-  }, [session?.timer_end, quizPhase, session?.id, timerTrigger]);
+  }, [session, currentQuestion, quizPhase]);
 
   useEffect(() => {
     if (quizId) {
@@ -317,14 +164,13 @@ export default function AdminPage() {
     // Fetch participants immediately when session.id is available
     fetchParticipants(session.id);
 
-    // Subscribe to real-time changes for participants only
+    // Subscribe to real-time changes for participants in this session
     const channel = supabase
       .channel('participants-' + session.id)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'lq_session_participants', filter: `session_id=eq.${session.id}` },
-        (payload) => {
-          console.log('[AdminPage] Real-time participant event:', payload);
+        () => {
           fetchParticipants(session.id);
         }
       )
@@ -442,7 +288,6 @@ export default function AdminPage() {
       console.error('Error fetching participants:', error);
       return;
     }
-    console.log('Fetched participants:', data);
     setParticipants(data || []);
   }
 
@@ -479,106 +324,29 @@ export default function AdminPage() {
 
   // Handler for 'Start Quiz' button (after session is created, before first question)
   async function handleStartQuiz() {
-    console.log('[AdminPage] handleStartQuiz called');
     setWaitingToStart(false);
     setPresentationMode(true);
     await startQuestion();
   }
 
   async function startQuestion() {
-    if (!session?.id || !currentQuestion?.id) {
-      console.error('[AdminPage] startQuestion: Missing session or currentQuestion', {
-        sessionId: session?.id,
-        questionId: currentQuestion?.id
-      });
-      return;
-    }
-
-    // Debug log currentQuestion and timer
-    console.log('[AdminPage] startQuestion: currentQuestion object:', currentQuestion);
-    console.log('[AdminPage] startQuestion: currentQuestion.timer:', currentQuestion.timer);
-
-    let timerValue = currentQuestion.timer;
-    if (timerValue === undefined || timerValue === null || isNaN(Number(timerValue))) {
-      console.warn('[AdminPage] startQuestion: timer is missing or invalid for currentQuestion:', currentQuestion);
-      // Hardcode fallback, but log it
-      timerValue = 30;
-      console.warn('[AdminPage] startQuestion: Using fallback timer value of 30 seconds. Please check your database.');
-      // If you want to abort instead, uncomment the next line:
-      // return;
-    }
-    timerValue = Number(timerValue);
-    if (!Number.isFinite(timerValue) || timerValue <= 0) {
-      console.error('[AdminPage] startQuestion: timer is not a valid positive number:', timerValue);
-      return;
-    }
+    if (!session?.id || !currentQuestion?.id) return;
 
     try {
-      const duration = timerValue * 1000; // Convert to milliseconds
-      const timerEnd = new Date(Date.now() + duration).toISOString();
+      const timerEnd = new Date();
+      timerEnd.setSeconds(timerEnd.getSeconds() + (currentQuestion.timer || 20));
 
-      console.log('[AdminPage] startQuestion: Starting timer setup:', {
-        sessionId: session.id,
-        questionId: currentQuestion.id,
-        duration,
-        timerEndUTC: timerEnd,
-        timerEndIST: toISTString(timerEnd),
-        timerValue,
-        currentTimeUTC: new Date().toISOString(),
-        currentTimeIST: toISTString(new Date()),
-        currentPhase: quizPhase
-      });
-
-      // First, update the database
-      const { data, error } = await supabase
+      await supabase
         .from('lq_sessions')
         .update({
           phase: 'question',
-          timer_end: timerEnd,
+          timer_end: timerEnd.toISOString(),
           current_question_id: currentQuestion.id,
         })
-        .eq('id', session.id)
-        .select()
-        .single();
+        .eq('id', session.id);
 
-      if (error) {
-        console.error('[AdminPage] Error updating session:', error);
-        throw error;
-      }
-
-      console.log('[AdminPage] Database update successful:', {
-        returnedData: data,
-        hasTimerEnd: !!data?.timer_end,
-        timerEndUTC: data?.timer_end,
-        timerEndIST: toISTString(data?.timer_end),
-        phase: data?.phase
-      });
-      
-      // Verify timer_end was set correctly
-      if (!data.timer_end) {
-        console.error('[AdminPage] timer_end was not set in database response');
-        throw new Error('Failed to set timer_end in database');
-      }
-      
-      // Update local state with the database response
-      setSession(data);
       setQuizPhase('question');
-      setShowCorrect(false); // Reset showCorrect when starting new question
-      
-      console.log('[AdminPage] Local state updated:', {
-        timerEndUTC: data.timer_end,
-        timerEndIST: toISTString(data.timer_end),
-        phase: 'question',
-        showCorrect: false
-      });
-      
-      // Force a re-render to ensure timer starts
-      setTimeout(() => {
-        console.log('[AdminPage] Forcing timer re-evaluation after state update');
-        setTimerTrigger(prev => prev + 1);
-      }, 100);
     } catch (err) {
-      console.error('[AdminPage] startQuestion error:', err);
       setError(err.message);
     }
   }
@@ -599,104 +367,18 @@ export default function AdminPage() {
     const nextIndex = currentQuestionIndex + 1;
     setCurrentQuestionIndex(nextIndex);
     setCurrentQuestion(questions[nextIndex]);
-    
-    const nextQuestion = questions[nextIndex];
-    // Debug log nextQuestion and timer
-    console.log('[AdminPage] handleLeaderboardNext: nextQuestion object:', nextQuestion);
-    console.log('[AdminPage] handleLeaderboardNext: nextQuestion.timer:', nextQuestion?.timer);
-
-    let timerValue = nextQuestion?.timer;
-    if (timerValue === undefined || timerValue === null || isNaN(Number(timerValue))) {
-      console.warn('[AdminPage] handleLeaderboardNext: timer is missing or invalid for nextQuestion:', nextQuestion);
-      // Hardcode fallback, but log it
-      timerValue = 30;
-      console.warn('[AdminPage] handleLeaderboardNext: Using fallback timer value of 30 seconds. Please check your database.');
-      // If you want to abort instead, uncomment the next line:
-      // return;
-    }
-    timerValue = Number(timerValue);
-    if (!Number.isFinite(timerValue) || timerValue <= 0) {
-      console.error('[AdminPage] handleLeaderboardNext: timer is not a valid positive number:', timerValue);
-      return;
-    }
-
-    console.log('[AdminPage] handleLeaderboardNext: Starting next question setup:', {
-      currentIndex: currentQuestionIndex,
-      nextIndex,
-      nextQuestion,
-      sessionId: session?.id
-    });
-    
-    // Update lq_sessions with new current_question_id, phase, and timer_end
-    if (session?.id && nextQuestion?.id) {
-      const duration = timerValue * 1000; // Convert to milliseconds
-      const timerEnd = new Date(Date.now() + duration).toISOString();
-      
-      console.log('[AdminPage] handleLeaderboardNext: Timer setup:', {
-        sessionId: session.id,
-        nextQuestionId: nextQuestion.id,
-        duration,
-        timerEndUTC: timerEnd,
-        timerEndIST: toISTString(timerEnd),
-        timerValue,
-        currentTimeUTC: new Date().toISOString(),
-        currentTimeIST: toISTString(new Date()),
-        currentPhase: quizPhase
-      });
-      
-      const { data, error } = await supabase
+    // Update lq_sessions with new current_question_id and phase
+    if (session?.id && questions[nextIndex]?.id) {
+      await supabase
         .from('lq_sessions')
         .update({
-          current_question_id: nextQuestion.id,
+          current_question_id: questions[nextIndex].id,
           phase: 'question',
-          timer_end: timerEnd,
         })
-        .eq('id', session.id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('[AdminPage] Error updating session in handleLeaderboardNext:', error);
-        throw error;
-      } else {
-        console.log('[AdminPage] Database update successful for next question:', {
-          returnedData: data,
-          hasTimerEnd: !!data?.timer_end,
-          timerEndUTC: data?.timer_end,
-          timerEndIST: toISTString(data?.timer_end),
-          phase: data?.phase
-        });
-        
-        // Verify timer_end was set correctly
-        if (!data.timer_end) {
-          console.error('[AdminPage] timer_end was not set in database response for next question');
-          throw new Error('Failed to set timer_end for next question');
-        }
-        
-        // Update local state with the database response
-        setSession(data);
-        console.log('[AdminPage] Local state updated for next question:', {
-          timerEndUTC: data.timer_end,
-          timerEndIST: toISTString(data.timer_end),
-          phase: 'question'
-        });
-      }
-    } else {
-      console.error('[AdminPage] handleLeaderboardNext: Missing session or question data', {
-        sessionId: session?.id,
-        questionId: nextQuestion?.id
-      });
+        .eq('id', session.id);
     }
-    
     setQuizPhase('question');
     setShowLeaderboard(false);
-    setShowCorrect(false); // Reset showCorrect when advancing to next question
-    
-    // Force a re-render to ensure timer starts
-    setTimeout(() => {
-      console.log('[AdminPage] Forcing timer re-evaluation in handleLeaderboardNext');
-      setTimerTrigger(prev => prev + 1);
-    }, 100);
   }
 
   async function endQuiz() {
@@ -728,7 +410,6 @@ export default function AdminPage() {
         event: 'you_were_removed',
         payload: { removed: true }
       });
-      console.log('[AdminPage] Sent removal event to', participantId);
       // 2. Remove participant from DB
       await supabase
         .from('lq_session_participants')
@@ -869,10 +550,12 @@ export default function AdminPage() {
         <div className="fixed top-4 right-4 z-40">
           <button
             onClick={() => setPresentationMode(true)}
-            className="px-6 py-2 bg-blue-700 text-white rounded-lg font-semibold shadow hover:bg-blue-900 transition-all text-base border border-blue-900"
+            className="p-3 bg-blue-700 text-white rounded-lg font-semibold shadow hover:bg-blue-900 transition-all border border-blue-900"
             title="Enter Presentation Mode (Fullscreen)"
           >
-            Enter Presentation Mode
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
           </button>
         </div>
       )}
@@ -890,12 +573,26 @@ export default function AdminPage() {
                 {timeLeft}s
               </div>
             )}
+            {quizPhase === 'question' && (
+              <button
+                onClick={nextQuestion}
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold shadow hover:bg-green-700 transition-all text-base"
+                title="Next Question"
+              >
+                <span>Next</span>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </button>
+            )}
             <button
               onClick={() => setPresentationMode(false)}
-              className="px-5 py-2 bg-gray-700 text-white rounded-lg font-semibold shadow hover:bg-gray-900 transition-all text-base border border-gray-900"
+              className="p-2 bg-gray-700 text-white rounded-lg font-semibold shadow hover:bg-gray-900 transition-all border border-gray-900"
               title="Exit Presentation Mode (ESC)"
             >
-              Exit Presentation Mode
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
           </div>
         </div>
@@ -905,49 +602,54 @@ export default function AdminPage() {
         style={presentationMode ? { maxWidth: '100vw', maxHeight: '100vh', padding: 0, marginTop: TOP_BAR_HEIGHT, minHeight: `calc(100vh - ${TOP_BAR_HEIGHT})`, boxSizing: 'border-box', overflow: 'auto' } : { marginTop: TOP_BAR_HEIGHT }}>
         {/* Quiz Start Flow: After creating session, show code, participant list, and Start Quiz button */}
         {waitingToStart && session && !presentationMode ? (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
-            <div className="w-full max-w-lg mx-auto bg-white/80 rounded-xl shadow-lg p-6 animate-fade-in relative">
-              <h2 className="text-2xl font-bold text-blue-700 mb-4 text-center">Quiz Lobby</h2>
-              <div className="mb-4 text-center">
-                <span className="text-lg font-semibold text-gray-800">Quiz Code: <span className="text-blue-700 text-2xl font-bold">{session.code}</span></span>
+          <div className="flex flex-col items-center justify-center min-h-screen w-full p-4">
+            <div className="w-full max-w-4xl mx-auto bg-white/90 rounded-2xl shadow-2xl p-8 animate-fade-in relative">
+              <h2 className="text-4xl font-bold text-blue-700 mb-8 text-center">Quiz Lobby</h2>
+              
+              {/* Quiz Code Section */}
+              <div className="mb-8 text-center">
+                <span className="text-2xl font-semibold text-gray-800">Quiz Code: <span className="text-blue-700 text-5xl font-bold tracking-wider">{session.code}</span></span>
               </div>
-              {/* QR Code for user response page, inside lobby details */}
-              <div className="flex flex-col items-center mb-4 group" title="Click to enlarge QR code">
-                <span className="font-semibold text-gray-700 mb-2">Join as Participant:</span>
+              
+              {/* QR Code Section - Much Larger */}
+              <div className="flex flex-col items-center mb-8 group" title="Click to enlarge QR code">
+                <span className="font-semibold text-gray-700 mb-4 text-xl">Join as Participant:</span>
                 <QRCodeSVG
                   value={`${window.location.origin}/quiz/user?code=${session.code}`}
-                  size={120}
+                  size={280}
                   level="H"
                   includeMargin={true}
-                  className="transition-transform group-hover:scale-105 cursor-pointer"
+                  className="transition-transform group-hover:scale-105 cursor-pointer shadow-lg"
                   onClick={() => setQrModalOpen(true)}
                 />
                 <button
                   type="button"
-                  className="mt-2 text-xs text-blue-600 underline break-all hover:text-blue-800 focus:outline-none"
+                  className="mt-4 text-sm text-blue-600 underline break-all hover:text-blue-800 focus:outline-none"
                   onClick={() => handleCopyLink(`${window.location.origin}/quiz/user?code=${session.code}`)}
                   style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
                 >
                   {`${window.location.origin}/quiz/user?code=${session.code}`}
                 </button>
                 {copied && (
-                  <span className="text-green-600 text-xs font-semibold mt-1 animate-fade-in">Copied!</span>
+                  <span className="text-green-600 text-sm font-semibold mt-2 animate-fade-in">Copied!</span>
                 )}
-                <span className="text-xs text-blue-500 mt-1">Click QR to enlarge, link to copy</span>
+                <span className="text-sm text-blue-500 mt-2">Click QR to enlarge, link to copy</span>
               </div>
-              <div className="mb-6">
-                <h3 className="font-bold mb-2 text-lg text-gray-800 text-center">Participants</h3>
-                <div className="space-y-2">
-                  {participants.length === 0 && <div className="text-gray-500 text-center">No participants yet.</div>}
+              
+              {/* Participants Section */}
+              <div className="mb-8">
+                <h3 className="font-bold mb-4 text-2xl text-gray-800 text-center">Participants ({participants.length})</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
+                  {participants.length === 0 && <div className="text-gray-500 text-center col-span-full py-8">No participants yet.</div>}
                   {participants.map((participant) => (
                     <div
                       key={participant.id}
-                      className="flex justify-between items-center p-2 bg-gray-50 rounded-lg shadow-sm"
+                      className="flex justify-between items-center p-3 bg-gray-50 rounded-lg shadow-sm border"
                     >
-                      <span className="truncate max-w-[10rem] font-medium text-gray-800">{participant.username}</span>
+                      <span className="truncate max-w-[12rem] font-medium text-gray-800">{participant.username}</span>
                       <button
                         onClick={() => removeParticipant(participant.id)}
-                        className="px-2 py-1 text-red-500 hover:bg-red-100 rounded transition-all"
+                        className="px-3 py-1 text-red-500 hover:bg-red-100 rounded transition-all text-sm"
                       >
                         Remove
                       </button>
@@ -955,109 +657,41 @@ export default function AdminPage() {
                   ))}
                 </div>
               </div>
-              <div className="flex justify-center gap-4">
+              
+              {/* Start Quiz Button */}
+              <div className="flex justify-center">
                 <button
                   onClick={handleStartQuiz}
-                  className="px-8 py-3 bg-green-600 text-white rounded-2xl font-bold text-xl shadow-lg hover:bg-green-700 transition-all"
-                  style={{ minWidth: '120px' }}
+                  className="px-12 py-4 bg-green-600 text-white rounded-2xl font-bold text-2xl shadow-lg hover:bg-green-700 transition-all"
+                  style={{ minWidth: '200px' }}
                 >
                   Start Quiz
                 </button>
-                <button
-                  onClick={async () => {
-                    if (session?.id) {
-                      const testTimerEnd = new Date(Date.now() + 10000).toISOString(); // 10 seconds
-                      console.log('[AdminPage] Test timer set to:', testTimerEnd);
-                      
-                      try {
-                        const { data, error } = await supabase
-                          .from('lq_sessions')
-                          .update({
-                            phase: 'question',
-                            timer_end: testTimerEnd,
-                          })
-                          .eq('id', session.id)
-                          .select()
-                          .single();
-                          
-                        if (error) {
-                          console.error('[AdminPage] Error setting test timer:', error);
-                          return;
-                        }
-                        
-                        if (!data.timer_end) {
-                          console.error('[AdminPage] Test timer was not set in database response');
-                          return;
-                        }
-                        
-                        setSession(data);
-                        setQuizPhase('question');
-                        console.log('[AdminPage] Test timer applied successfully:', data);
-                        
-                        // Test timer calculation
-                        const now = Date.now();
-                        const timerEnd = new Date(testTimerEnd).getTime();
-                        const remaining = Math.max(0, Math.floor((timerEnd - now) / 1000));
-                        console.log('[AdminPage] Test calculation:', {
-                          nowUTC: new Date(now).toISOString(),
-                          nowIST: toISTString(now),
-                          timerEndUTC: new Date(timerEnd).toISOString(),
-                          timerEndIST: toISTString(timerEnd),
-                          remaining,
-                          difference: timerEnd - now
-                        });
-                        
-                        // Trigger timer re-evaluation
-                        setTimeout(() => {
-                          console.log('[AdminPage] Triggering timer re-evaluation for test timer');
-                          setTimerTrigger(prev => prev + 1);
-                        }, 100);
-                      } catch (err) {
-                        console.error('[AdminPage] Error in test timer:', err);
-                      }
-                    } else {
-                      console.error('[AdminPage] No session ID available for test timer');
-                    }
-                  }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition-all"
-                >
-                  Test Timer (10s)
-                </button>
-                
-                {/* Debug Display */}
-                <div className="mt-4 p-4 bg-gray-100 rounded-lg text-sm">
-                  <h3 className="font-semibold mb-2">Debug Info:</h3>
-                  <div>Timer End (UTC): {session?.timer_end || 'NULL'}</div>
-                  <div>Timer End (IST): {toISTString(session?.timer_end)}</div>
-                  <div>Time Left: {timeLeft}s</div>
-                  <div>Phase: {quizPhase}</div>
-                  <div>Show Correct: {showCorrect ? 'Yes' : 'No'}</div>
-                  <div>Session ID: {session?.id || 'None'}</div>
-                  <div>Current Question: {currentQuestion?.id || 'None'}</div>
-                </div>
               </div>
               {/* QR Code Modal Overlay */}
               {qrModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setQrModalOpen(false)}>
-                  <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center relative" onClick={e => e.stopPropagation()}>
-                    <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl font-bold" onClick={() => setQrModalOpen(false)} aria-label="Close QR code modal">&times;</button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={() => setQrModalOpen(false)}>
+                  <div className="bg-white rounded-3xl shadow-2xl p-12 flex flex-col items-center relative max-w-md mx-4" onClick={e => e.stopPropagation()}>
+                    <button className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-3xl font-bold" onClick={() => setQrModalOpen(false)} aria-label="Close QR code modal">&times;</button>
+                    <h3 className="text-2xl font-bold text-blue-700 mb-6 text-center">Join Quiz</h3>
                     <QRCodeSVG
                       value={`${window.location.origin}/quiz/user?code=${session.code}`}
-                      size={320}
+                      size={400}
                       level="H"
                       includeMargin={true}
+                      className="shadow-lg"
                     />
-                    <span className="mt-4 text-base text-gray-700 font-semibold text-center">Scan to join as participant</span>
+                    <span className="mt-6 text-lg text-gray-700 font-semibold text-center">Scan to join as participant</span>
                     <button
                       type="button"
-                      className="mt-2 text-xs text-blue-600 underline break-all hover:text-blue-800 focus:outline-none"
+                      className="mt-4 text-sm text-blue-600 underline break-all hover:text-blue-800 focus:outline-none text-center"
                       onClick={() => handleCopyLink(`${window.location.origin}/quiz/user?code=${session.code}`)}
                       style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
                     >
                       {`${window.location.origin}/quiz/user?code=${session.code}`}
                     </button>
                     {copied && (
-                      <span className="text-green-600 text-xs font-semibold mt-1 animate-fade-in">Copied!</span>
+                      <span className="text-green-600 text-sm font-semibold mt-2 animate-fade-in">Copied!</span>
                     )}
                   </div>
                 </div>
@@ -1249,30 +883,17 @@ export default function AdminPage() {
                         onExit={() => setPresentationMode(false)}
                       />
                     ) : null}
-                    {/* Next Button - bottom right, floating */}
-                    {quizPhase === 'question' && (
-                      <div className="fixed bottom-10 right-16 z-50">
-                        <button
-                          onClick={nextQuestion}
-                          className="flex items-center gap-2 px-10 py-5 bg-green-600 text-white rounded-2xl font-bold text-2xl shadow-xl hover:bg-green-700 transition-all border-2 border-green-700"
-                          style={{ minWidth: '200px', fontWeight: 700 }}
-                        >
-                          Next <span className="ml-2 text-3xl">➡</span>
-                        </button>
-                      </div>
-                    )}
+
                   </div>
                 );
               })()
             ) : (
-                          <div className="bg-gray-100 p-4 rounded-xl shadow flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-bold text-gray-800">Session Code: <span className="text-blue-700">{session.code}</span></h2>
-                <p className="text-gray-600">Status: <span className="font-semibold">{quizPhase}</span></p>
-                <p className="text-gray-600">Question: <span className="font-semibold">{currentQuestionIndex + 1} / {questions.length}</span></p>
-                <p className="text-gray-600">Timer End: <span className="font-semibold">{session.timer_end ? new Date(session.timer_end).toLocaleTimeString() : 'Not set'}</span></p>
-                <p className="text-gray-600">Time Left: <span className="font-semibold">{timeLeft}s</span></p>
-              </div>
+              <div className="bg-gray-100 p-4 rounded-xl shadow flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h2 className="text-lg font-bold text-gray-800">Session Code: <span className="text-blue-700">{session.code}</span></h2>
+                  <p className="text-gray-600">Status: <span className="font-semibold">{quizPhase}</span></p>
+                  <p className="text-gray-600">Question: <span className="font-semibold">{currentQuestionIndex + 1} / {questions.length}</span></p>
+                </div>
                 <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={startQuestion}
@@ -1305,12 +926,12 @@ export default function AdminPage() {
                   <p className="font-bold text-lg text-gray-900 mb-2">{currentQuestion.question_text}</p>
                   <ul className="ml-4 mt-2 space-y-1">
                     {currentQuestion.options.map((option, index) => (
-                                              <li
-                          key={index}
-                          className={
-                            `${showCorrect && index === currentQuestion.correct_answer_index ? 'text-green-600 font-semibold' : 'text-gray-700'} flex items-center gap-2`
-                          }
-                        >
+                      <li
+                        key={index}
+                        className={
+                          `${showCorrect && timeLeft === 0 && index === currentQuestion.correct_answer_index ? 'text-green-600 font-semibold' : 'text-gray-700'} flex items-center gap-2`
+                        }
+                      >
                         <span
                           style={{
                             wordBreak: 'break-word',
@@ -1328,7 +949,7 @@ export default function AdminPage() {
                         >
                           {option}
                         </span>
-                        {showCorrect && index === currentQuestion.correct_answer_index && <span className="ml-2 text-green-600 font-bold">✓</span>}
+                        {showCorrect && timeLeft === 0 && index === currentQuestion.correct_answer_index && <span className="ml-2 text-green-600 font-bold">✓</span>}
                       </li>
                     ))}
                   </ul>
