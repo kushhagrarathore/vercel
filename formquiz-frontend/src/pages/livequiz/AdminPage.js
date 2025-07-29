@@ -317,6 +317,7 @@ export default function AdminPage() {
       setQuizPhase('waiting');
       setWaitingToStart(true);
       setJustStartedSession(true);
+      setPresentationMode(true); // Automatically enable presentation mode
     } catch (err) {
       setError(err.message);
     }
@@ -499,20 +500,7 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
-        <div className="flex flex-col items-center gap-4 mt-8">
-          <button
-            onClick={() => setShowPodium(false)}
-            className="px-12 py-5 bg-gray-700 text-white rounded-xl font-bold text-[2vw] shadow hover:bg-gray-800 transition-all"
-            style={{minWidth:'200px'}}>
-            Close
-          </button>
-          <button
-            onClick={() => navigate(`/admin/${quizId}/summary`)}
-            className="px-12 py-5 bg-blue-600 text-white rounded-xl font-bold text-[2vw] shadow hover:bg-blue-800 transition-all"
-            style={{minWidth:'200px'}}>
-            View Full Summary
-          </button>
-        </div>
+
       </div>
     );
   };
@@ -566,10 +554,15 @@ export default function AdminPage() {
     return (
       <div className="w-screen h-screen overflow-hidden bg-gradient-to-br from-white via-blue-50 to-purple-100 flex flex-col">
         {/* Top Bar: Quiz Code, Start Quiz, Presentation Mode toggle/cross */}
-        <div className="fixed top-0 left-0 w-full z-50 bg-white/90 shadow-md flex items-center justify-between px-8 py-3 gap-4"
+        <div className="fixed top-0 left-0 w-full z-50 bg-white/90 shadow-lg flex items-center justify-between px-8 py-3 gap-4"
           style={{ minHeight: TOP_BAR_HEIGHT, height: TOP_BAR_HEIGHT, backdropFilter: 'blur(8px)' }}
         >
-          <span className="text-lg md:text-2xl font-bold text-blue-700 tracking-wider">Quiz Code: <span className="text-gray-800">{session?.code}</span></span>
+          <span className="text-4xl font-bold text-blue-700 tracking-wider">Quiz Code: <span className="text-gray-800">{session?.code}</span></span>
+          <div className="absolute left-1/2 transform -translate-x-1/2">
+            <div className="text-4xl font-bold text-neutral-800 truncate" style={{ maxWidth: '35vw', letterSpacing: 0.5 }}>
+              {quiz?.title ? `Quiz: ${quiz.title}` : 'Quiz'}
+            </div>
+          </div>
           <div className="flex items-center gap-4">
             <button
               onClick={handleStartQuiz}
@@ -592,13 +585,12 @@ export default function AdminPage() {
         </div>
         {/* Main Content */}
         <div className="flex flex-col flex-1 items-center justify-start mt-[6.5rem] w-full pb-8">
-          {/* Quiz Title */}
-          <div className="text-4xl font-bold text-neutral-800 text-center mb-4" style={{ letterSpacing: 0.5 }}>{quiz?.title ? `Quiz: ${quiz.title}` : 'Quiz'}</div>
           {/* Two-Column Layout - full height/width utilization */}
           <div className="flex flex-row flex-1 w-full max-w-7xl gap-12 justify-center items-stretch px-8" style={{ minHeight: 0 }}>
             {/* Left Column: QR Code & Link */}
-            <div className="flex flex-col items-center flex-1 justify-center h-full">
-              <div className="flex-1 flex flex-col justify-center items-center w-full">
+            <div className="flex flex-col flex-1 justify-center">
+              <div className="bg-white rounded-xl shadow-lg p-4 flex-1 flex flex-col justify-center items-center min-h-0"
+                   style={{ height: '100%' }}>
                 <QRCodeSVG
                   value={`${window.location.origin}/quiz/user?code=${session?.code}`}
                   size={480}
@@ -606,22 +598,26 @@ export default function AdminPage() {
                   includeMargin={true}
                   className="mb-6"
                 />
-              </div>
-              <div className="max-w-xs w-full">
-                <div
-                  className="text-blue-600 underline text-sm text-center break-all cursor-pointer select-all"
-                  onClick={() => handleCopyLink(`${window.location.origin}/quiz/user?code=${session?.code}`)}
-                >
-                  {`${window.location.origin}/quiz/user?code=${session?.code}`}
-                  {copied && <span className="ml-2 text-green-600 font-semibold">Copied!</span>}
+                <div className="w-full flex flex-col justify-center items-center">
+                  <div className="bg-white/90 rounded-lg px-4 py-2 shadow-md border border-gray-200 mb-2" style={{ width: '480px' }}>
+                    <div
+                      className="text-blue-600 underline text-center break-all cursor-pointer select-all font-medium text-gray-700"
+                      onClick={() => handleCopyLink(`${window.location.origin}/quiz/user?code=${session?.code}`)}
+                    >
+                      {`${window.location.origin}/quiz/user?code=${session?.code}`}
+                    </div>
+                  </div>
+                  {copied && <div className="text-green-600 font-semibold text-center">Copied!</div>}
                 </div>
               </div>
             </div>
             {/* Right Column: Participants */}
             <div className="flex flex-col flex-1 justify-center">
-              <div className="text-lg font-semibold mb-2 text-center">Participants ({participants.length})</div>
-              <div className="bg-white rounded-xl shadow p-4 flex-1 overflow-y-auto min-h-0"
+              <div className="bg-white rounded-xl shadow-lg p-4 flex-1 overflow-y-auto min-h-0"
                    style={{ height: '100%' }}>
+                <div className="text-lg font-semibold mb-4 text-gray-700 border-b border-gray-200 pb-2">
+                  Participants: {participants.length}
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                   {(() => {
                     const maxSlots = 12; // 4x3 grid
@@ -665,27 +661,18 @@ export default function AdminPage() {
           </button>
         </div>
       )}
-      {/* Enter Presentation Mode Button */}
-      {!presentationMode && (
-        <div className="fixed top-4 right-4 z-40">
-          <button
-            onClick={() => setPresentationMode(true)}
-            className="p-3 bg-blue-700 text-white rounded-lg font-semibold shadow hover:bg-blue-900 transition-all border border-blue-900"
-            title="Enter Presentation Mode (Fullscreen)"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </button>
-        </div>
-      )}
+
       {/* Fixed Presentation Mode Top Bar */}
       {presentationMode && !(quizPhase === 'lobby' || waitingToStart) && (
-        <div className="fixed top-0 left-0 w-full z-50 bg-white/90 shadow-md flex items-center justify-between px-8 py-3 gap-4"
+        <div className="fixed top-0 left-0 w-full z-50 bg-white/90 shadow-lg flex items-center justify-between px-8 py-3 gap-4"
           style={{ minHeight: TOP_BAR_HEIGHT, height: TOP_BAR_HEIGHT, backdropFilter: 'blur(8px)' }}
         >
           <span className="text-lg md:text-2xl font-bold text-blue-700 tracking-wider">Quiz Code: <span className="text-gray-800">{session?.code}</span></span>
-          <span className="text-base md:text-xl font-semibold text-gray-700">Q{currentQuestionIndex + 1} of {questions.length}</span>
+          <div className="absolute left-1/2 transform -translate-x-1/2">
+            <div className="bg-white/90 rounded-lg px-4 py-2 shadow-md border border-gray-200">
+              <span className="text-xl font-bold text-gray-800">{currentQuestionIndex + 1}/{questions.length}</span>
+            </div>
+          </div>
           <div className="flex items-center gap-6">
             {quizPhase === 'question' && (
               <div className="flex items-center gap-2 text-purple-700 font-bold text-xl bg-white/80 px-4 py-1 rounded-full shadow">
@@ -700,6 +687,17 @@ export default function AdminPage() {
                 title="Next"
               >
                 <span>Next</span>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </button>
+            ) : showPodium ? (
+              <button
+                onClick={() => navigate(`/admin/${quizId}/summary`)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition-all text-base"
+                title="View Full Summary"
+              >
+                <span>View Full Summary</span>
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
