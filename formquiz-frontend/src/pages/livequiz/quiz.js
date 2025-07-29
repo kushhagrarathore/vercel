@@ -282,6 +282,10 @@ export default function Quiz() {
   const pendingNavigationRef = useRef(null);
   const navigate = useNavigate();
 
+  // Collapse left sidebar by default for blank quiz (only one default slide and blank question)
+  const isBlankQuiz = slides.length === 1 && !slides[0].question && (!slides[0].options || slides[0].options.every(opt => !opt));
+  const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState(isBlankQuiz);
+
   // --- Bulletproof Unsaved Changes Logic ---
   const [initialSlides, setInitialSlides] = useState('');
   const [initialTitle, setInitialTitle] = useState('');
@@ -738,7 +742,6 @@ export default function Quiz() {
   const [endDateTime, setEndDateTime] = useState("");
   // Collapsible customize panel state
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(true);
-  const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState(false);
 
   return (
     <div style={gradientBg}>
@@ -770,14 +773,14 @@ export default function Quiz() {
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
-            className="rounded-full px-4 py-2 shadow-md border-2 flex items-center gap-2 hover:bg-blue-50 hover:border-blue-500 transition-all duration-150"
+            className="rounded-full px-4 py-2 shadow-md border-2 flex items-center gap-2 hover:bg-gray-50 hover:border-blue-500 transition-all duration-150"
             style={{
-              background: 'linear-gradient(90deg, #e0e7ff 0%, #f8fafc 100%)',
-              color: '#2563eb',
-              borderColor: '#2563eb',
-              fontWeight: 700,
-              fontSize: 17,
-              boxShadow: '0 2px 8px 0 rgba(44,62,80,0.07)',
+              background: 'transparent',
+              color: '#374151',
+              borderColor: '#d1d5db',
+              fontWeight: 500,
+              fontSize: 14,
+              boxShadow: '0 1px 2px 0 rgba(0,0,0,0.04)',
               letterSpacing: '0.01em',
               minWidth: 110,
               outline: 'none',
@@ -1006,6 +1009,7 @@ export default function Quiz() {
               <div className="space-y-3 w-full">
                 {currentSlide?.options.map((opt, i) => {
                   const isCorrect = currentSlide?.correctAnswers.includes(i);
+           
                   return (
                     <div key={i} className="quizbuilder-option-row flex items-center px-4 py-2 rounded-full border transition-all duration-200 group mb-2" style={{ minHeight: '56px', position: 'relative', boxShadow: 'none', background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}>
                       <input
