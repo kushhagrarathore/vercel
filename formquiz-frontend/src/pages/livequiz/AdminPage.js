@@ -564,37 +564,71 @@ export default function AdminPage() {
 
   if (presentationMode && (quizPhase === 'lobby' || waitingToStart)) {
     return (
-      <div className="w-screen h-screen overflow-hidden bg-gradient-to-br from-white via-blue-50 to-purple-100 flex flex-col justify-center items-center gap-8">
-        <div className="text-6xl font-bold text-neutral-800">{session?.code || '------'}</div>
-        <div className="bg-white p-6 rounded-xl shadow-xl w-[320px] h-[320px] flex items-center justify-center">
-          <QRCodeSVG
-            value={`${window.location.origin}/quiz/user?code=${session?.code}`}
-            size={220}
-            level="H"
-            includeMargin={true}
-          />
-        </div>
-        <div className="max-w-xs w-full">
-          <div className="text-blue-600 underline text-sm text-center break-all">{`${window.location.origin}/quiz/user?code=${session?.code}`}</div>
-        </div>
-        <div className="w-full max-w-2xl flex flex-col items-center">
-          <div className="text-lg font-semibold mt-4">Participants ({participants.length})</div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 w-full mt-2">
-            {participants.length === 0 && <div className="col-span-full text-gray-400 text-center text-base">No participants yet.</div>}
-            {participants.map((participant) => (
-              <div key={participant.id} className="bg-white rounded-lg shadow p-2 text-center font-medium text-gray-700 truncate max-w-[8rem] mx-auto">
-                {participant.username}
-              </div>
-            ))}
+      <div className="w-screen h-screen overflow-hidden bg-gradient-to-br from-white via-blue-50 to-purple-100 flex flex-col">
+        {/* Top Bar: Quiz Code, Start Quiz, Presentation Mode toggle/cross */}
+        <div className="fixed top-0 left-0 w-full z-50 bg-white/90 shadow-md flex items-center justify-between px-8 py-3 gap-4"
+          style={{ minHeight: TOP_BAR_HEIGHT, height: TOP_BAR_HEIGHT, backdropFilter: 'blur(8px)' }}
+        >
+          <span className="text-lg md:text-2xl font-bold text-blue-700 tracking-wider">Quiz Code: <span className="text-gray-800">{session?.code}</span></span>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleStartQuiz}
+              className="bg-green-600 text-white px-6 py-2 rounded-full text-xl font-bold shadow hover:bg-green-700 transition-all"
+              style={{ minWidth: '180px' }}
+            >
+              Start Quiz
+            </button>
+            {/* Presentation Mode cross/exit */}
+            <button
+              onClick={() => setPresentationMode(false)}
+              className="p-2 bg-gray-700 text-white rounded-lg font-semibold shadow hover:bg-gray-900 transition-all border border-gray-900"
+              title="Exit Presentation Mode (ESC)"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </div>
-        <button
-          onClick={handleStartQuiz}
-          className="bg-green-600 text-white px-8 py-4 rounded-full text-xl shadow-md hover:bg-green-700 transition mt-4"
-          style={{ minWidth: '220px' }}
-        >
-          Start Quiz
-        </button>
+        {/* Main Content */}
+        <div className="flex flex-col flex-1 justify-center items-center gap-8 mt-[4.5rem]">
+          {/* Quiz Title and Question Count */}
+          <div className="flex flex-col items-center mt-8">
+            <div className="text-4xl font-bold text-neutral-800 text-center">
+              {quiz?.title ? `Quiz: ${quiz.title}` : 'Quiz'}
+            </div>
+            <div className="text-lg text-neutral-600 mt-2">{questions.length} Question{questions.length === 1 ? '' : 's'}</div>
+          </div>
+          {/* QR Code and Join Link */}
+          <div className="flex flex-col items-center">
+            <div className="bg-white p-6 rounded-xl shadow-xl w-[320px] h-[320px] flex items-center justify-center">
+              <QRCodeSVG
+                value={`${window.location.origin}/quiz/user?code=${session?.code}`}
+                size={220}
+                level="H"
+                includeMargin={true}
+              />
+            </div>
+            <div className="max-w-xs w-full mt-4">
+              <div className="text-blue-600 underline text-sm text-center break-all cursor-pointer" onClick={() => handleCopyLink(`${window.location.origin}/quiz/user?code=${session?.code}`)}>
+                {`${window.location.origin}/quiz/user?code=${session?.code}`}
+                {copied && <span className="ml-2 text-green-600 font-semibold">Copied!</span>}
+              </div>
+            </div>
+          </div>
+          {/* Participants Grid */}
+          <div className="w-full max-w-2xl flex flex-col items-center">
+            <div className="text-lg font-semibold mt-4">Participants ({participants.length})</div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 w-full mt-2">
+              {participants.length === 0 && <div className="col-span-full text-gray-400 text-center text-base">No participants yet.</div>}
+              {participants.map((participant) => (
+                <div key={participant.id} className="bg-white rounded-lg shadow p-2 text-center font-medium text-gray-700 truncate max-w-[8rem] mx-auto">
+                  {participant.username}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -632,7 +666,7 @@ export default function AdminPage() {
         </div>
       )}
       {/* Fixed Presentation Mode Top Bar */}
-      {presentationMode && (
+      {presentationMode && !(quizPhase === 'lobby' || waitingToStart) && (
         <div className="fixed top-0 left-0 w-full z-50 bg-white/90 shadow-md flex items-center justify-between px-8 py-3 gap-4"
           style={{ minHeight: TOP_BAR_HEIGHT, height: TOP_BAR_HEIGHT, backdropFilter: 'blur(8px)' }}
         >
@@ -645,7 +679,7 @@ export default function AdminPage() {
                 {timeLeft}s
               </div>
             )}
-            {quizPhase === 'leaderboard' || showLeaderboard || quizPhase === 'question' ? (
+            {(quizPhase === 'leaderboard' || showLeaderboard || quizPhase === 'question') ? (
               <button
                 onClick={handlePresentationNext}
                 className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold shadow hover:bg-green-700 transition-all text-base"
