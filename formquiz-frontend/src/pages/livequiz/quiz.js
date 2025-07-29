@@ -864,9 +864,9 @@ export default function Quiz() {
         </div>
       </header>
       {/* Main Layout */}
-      <div className="flex flex-row w-full" style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+      <div className="flex w-full" style={{ background: 'var(--bg)', minHeight: '100vh' }}>
         {/* Left Sidebar: Add Slide & Slide List */}
-        <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-72'}`}>
+        <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-64'}`} style={{ width: isLeftSidebarCollapsed ? '5rem' : '16rem', flexShrink: 0 }}>
           <div className="p-4 flex-1 overflow-y-auto">
             <button
               onClick={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
@@ -927,23 +927,15 @@ export default function Quiz() {
             </div>
           )}
         </aside>
-        {/* Main Content */}
-        <main
-          className={`flex-1 p-8 transition-all duration-300 flex flex-col ${isCustomizeOpen ? 'items-center justify-center' : 'items-center justify-start'} ${isLeftSidebarCollapsed ? 'ml-20' : 'ml-64'} ${isCustomizeOpen ? 'mr-80' : 'mr-0'}`}
-          style={{
-            maxWidth: isCustomizeOpen ? 'calc(100vw - 15rem - 20rem)' : 'calc(100vw - 15rem)',
-            width: '100%',
-            overflowY: 'auto',
-            background: 'var(--bg)',
-            color: 'var(--text)',
-            minHeight: '100vh',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: isCustomizeOpen ? 'center' : 'center',
-            justifyContent: isCustomizeOpen ? 'center' : 'flex-start',
-          }}
-        >
-          <div className="max-w-2xl w-full mx-auto flex flex-col gap-10 justify-center items-center" style={{ margin: isCustomizeOpen ? '0 auto' : '2.5rem auto' }}>
+
+        {/* Center Content Area */}
+        <div className="flex-1 flex justify-center items-start min-h-screen" style={{ 
+          paddingLeft: isCustomizeOpen ? '1rem' : '2rem',
+          paddingRight: isCustomizeOpen ? '1rem' : '2rem',
+          paddingTop: '2rem',
+          paddingBottom: '2rem'
+        }}>
+          <div className="max-w-2xl w-full flex flex-col gap-10 justify-center items-center">
             <div className="border-2 rounded-2xl shadow-2xl bg-white" style={{
               boxShadow: '0 8px 32px 0 rgba(44,62,80,0.12)',
               borderColor: '#e0e7ff',
@@ -1094,7 +1086,8 @@ export default function Quiz() {
             )}
             </div>
           </div>
-        </main>
+        </div>
+
         {/* Right Panel: Customization */}
         <aside className={`fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-80 min-w-[16rem] p-[2rem_1.5rem] shadow-lg z-20 transition-transform duration-300 flex flex-col bg-white overflow-y-auto ${isCustomizeOpen ? 'translate-x-0' : 'translate-x-[100vw]'}`} style={{ borderRadius: 0, margin: 0, background: 'var(--card)', color: 'var(--text)', boxShadow: '0 4px 24px 0 var(--border)' }}>
           {isCustomizeOpen && (
