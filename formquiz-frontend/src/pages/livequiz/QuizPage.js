@@ -71,7 +71,61 @@ export default function QuizPage() {
       console.log('[QuizPage] Manually forcing timer update');
       setTimerTrigger(prev => prev + 1);
     };
+    
+    window.debugQuizState = () => {
+      console.log('[QuizPage] Current state:', {
+        session,
+        participant,
+        currentQuestion,
+        quizPhase,
+        timeLeft,
+        selectedAnswer,
+        showCorrect,
+        lastQuestionId
+      });
+    };
+    
+    window.checkSessionInDatabase = async () => {
+      if (session?.id) {
+        try {
+          const { data, error } = await supabase
+            .from('lq_sessions')
+            .select('*')
+            .eq('id', session.id)
+            .single();
+          
+          console.log('[QuizPage] Database session state:', data);
+          return data;
+        } catch (err) {
+          console.error('[QuizPage] Error checking database:', err);
+          return null;
+        }
+      } else {
+        console.log('[QuizPage] No session ID available');
+        return null;
+      }
+    };
+    
+    window.forceSessionUpdate = async () => {
+      if (session?.id) {
+        try {
+          const { data, error } = await supabase
+            .from('lq_sessions')
+            .select('*')
+            .eq('id', session.id)
+            .single();
+          
+          if (data) {
+            console.log('[QuizPage] Manually triggering session update with:', data);
+            handleSessionUpdate({ new: data });
+          }
+        } catch (err) {
+          console.error('[QuizPage] Error in forceSessionUpdate:', err);
+        }
+      }
+    };
   }, [session]);
+  
   const [username, setUsername] = useState('');
   const [sessionCode, setSessionCode] = useState('');
   const [searchParams] = useSearchParams();
@@ -89,6 +143,7 @@ export default function QuizPage() {
   const [cumulativeScore, setCumulativeScore] = useState(0);
   const [isRemoved, setIsRemoved] = useState(false);
   const [timerTrigger, setTimerTrigger] = useState(0);
+  const [lastQuestionId, setLastQuestionId] = useState(null); // Track question changes
 
   // Auto-fill session code from URL query param 'code' on mount
   useEffect(() => {
@@ -100,10 +155,47 @@ export default function QuizPage() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (!participant?.id) return;
+    if (!session?.id) return;
+    console.log('[QuizPage] Setting up real-time subscription for session:', session.id);
     const cleanup = setupRealtimeSubscriptions();
     return cleanup;
-  }, [participant?.id]);
+  }, [session?.id]);
+
+  // Periodic session check as fallback
+  useEffect(() => {
+    if (!session?.id || quizPhase !== 'question') return;
+    
+    const interval = setInterval(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('lq_sessions')
+          .select('current_question_id, phase, timer_end')
+          .eq('id', session.id)
+          .single();
+        
+        if (data && !error) {
+          const questionChanged = currentQuestion?.id !== data.current_question_id;
+          const phaseChanged = quizPhase !== data.phase;
+          
+          if (questionChanged || phaseChanged) {
+            console.log('[QuizPage] Fallback: Session changed in database:', {
+              questionChanged,
+              phaseChanged,
+              oldQuestionId: currentQuestion?.id,
+              newQuestionId: data.current_question_id,
+              oldPhase: quizPhase,
+              newPhase: data.phase
+            });
+            handleSessionUpdate({ new: data });
+          }
+        }
+      } catch (err) {
+        console.error('[QuizPage] Error in periodic session check:', err);
+      }
+    }, 2000); // Check every 2 seconds
+    
+    return () => clearInterval(interval);
+  }, [session?.id, quizPhase, currentQuestion?.id]);
 
   // Listen for removal event from admin
   useEffect(() => {
@@ -120,8 +212,6 @@ export default function QuizPage() {
       supabase.removeChannel(channel);
     };
   }, [participant?.id]);
-
-
 
   // Timer logic using Supabase timer_end as single source of truth
   useEffect(() => {
@@ -154,147 +244,129 @@ export default function QuizPage() {
       return;
     }
 
-    console.log('[QuizPage] Timer validation passed, starting timer with:', {
-      timerEnd: session.timer_end,
-      timerEndDate: timerEndDate.toISOString(),
-      quizPhase
-    });
-
-    let animationFrameId;
+    let timer;
     
     function updateTimer() {
-      try {
-        const now = Date.now();
-        const timerEnd = new Date(session.timer_end).getTime();
-        
-        // Validate timer end date
-        if (isNaN(timerEnd)) {
-          console.error('[QuizPage] Invalid timer_end in updateTimer:', session.timer_end);
-          setTimeLeft(0);
-          setShowCorrect(false);
-          return;
-        }
-        
-        const remaining = Math.max(0, Math.floor((timerEnd - now) / 1000));
-        
-        console.log('[QuizPage] Timer update:', {
-          now: new Date(now).toISOString(),
-          timerEnd: new Date(timerEnd).toISOString(),
-          remaining,
-          timeLeft: timeLeft,
-          difference: timerEnd - now
-        });
-        
-        setTimeLeft(remaining);
-        
-        if (remaining <= 0) {
-          console.log('[QuizPage] Timer expired');
-          setShowCorrect(true);
-          return;
-        }
-        
-        // Use setTimeout instead of requestAnimationFrame for more consistent timing
-        animationFrameId = setTimeout(updateTimer, 100);
-      } catch (error) {
-        console.error('[QuizPage] Error in updateTimer:', error);
-        setTimeLeft(0);
-        setShowCorrect(false);
+      const now = Date.now();
+      const timerEnd = timerEndDate.getTime();
+      const remaining = Math.max(0, Math.floor((timerEnd - now) / 1000));
+      
+      console.log('[QuizPage] Timer update:', {
+        now: new Date(now).toISOString(),
+        timerEnd: new Date(timerEnd).toISOString(),
+        remaining,
+        difference: timerEnd - now
+      });
+      
+      setTimeLeft(remaining);
+      
+      if (remaining <= 0) {
+        console.log('[QuizPage] Timer expired');
+        setShowCorrect(true);
+        if (timer) clearInterval(timer);
       }
     }
-    
+
     updateTimer();
+    timer = setInterval(updateTimer, 1000);
     
     return () => {
-      if (animationFrameId) {
-        clearTimeout(animationFrameId);
-      }
+      if (timer) clearInterval(timer);
     };
   }, [session?.timer_end, quizPhase, timerTrigger]);
 
-  // Show feedback/results screen for 2.5s after answering, before moving to next question or waiting
+  // Reset state when question changes
   useEffect(() => {
-    if (!showCorrect) return;
-    if (selectedAnswer !== null) {
-      // Refetch participant score after timer ends
-      async function fetchScore() {
-        if (!participant?.id) return;
+    if (currentQuestion?.id && currentQuestion.id !== lastQuestionId) {
+      console.log('[QuizPage] Question changed, resetting state:', {
+        oldId: lastQuestionId,
+        newId: currentQuestion.id
+      });
+      setLastQuestionId(currentQuestion.id);
+      setSelectedAnswer(null);
+      setShowCorrect(false);
+      setPointsEarned(null);
+      setTimeLeft(0);
+    }
+  }, [currentQuestion?.id, lastQuestionId]);
+
+  // Fetch live score
+  useEffect(() => {
+    if (!participant?.id) return;
+    
+    async function fetchScore() {
+      try {
         const { data, error } = await supabase
           .from('lq_session_participants')
           .select('score')
           .eq('id', participant.id)
           .single();
-        if (!error && data) setLiveScore(data.score);
-      }
-      fetchScore();
-      const timeout = setTimeout(() => {
-        setPointsEarned(null);
-        setSelectedAnswer(null);
-        // Optionally, move to waiting or next question here if needed
-      }, 2500); // 2.5s delay before reset
-      return () => clearTimeout(timeout);
-    }
-  }, [showCorrect, selectedAnswer]);
-
-  useEffect(() => {
-    if (!participant?.id) return;
-    const channel = supabase
-      .channel('participant-score-' + participant.id)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'lq_session_participants', filter: `id=eq.${participant.id}` },
-        (payload) => {
-          if (payload.new && typeof payload.new.score === 'number') {
-            setLiveScore(payload.new.score);
-          }
+        
+        if (error) {
+          console.error('[QuizPage] Error fetching score:', error);
+          return;
         }
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
+        
+        setLiveScore(data.score);
+      } catch (err) {
+        console.error('[QuizPage] Error in fetchScore:', err);
+      }
+    }
+    
+    fetchScore();
   }, [participant?.id]);
 
+  // Fetch cumulative score
   useEffect(() => {
-    if (!showCorrect || !participant?.id) return;
-    async function fetchScore() {
-      const { data, error } = await supabase
-        .from('lq_session_participants')
-        .select('score')
-        .eq('id', participant.id)
-        .single();
-      if (!error && data) setLiveScore(data.score);
-    }
-    fetchScore();
-  }, [showCorrect, participant?.id]);
-
-  useEffect(() => {
+    if (!participant?.id) return;
+    
     async function fetchCumulativeScore() {
-      if (!participant?.id || !session?.id) return;
-      const { data, error } = await supabase
-        .from('lq_live_responses')
-        .select('points_awarded')
-        .eq('participant_id', participant.id)
-        .eq('session_id', session.id);
-      if (!error && data) {
-        const total = data.reduce((sum, r) => sum + (r.points_awarded || 0), 0);
-        setCumulativeScore(total);
+      try {
+        const { data, error } = await supabase
+          .from('lq_session_participants')
+          .select('score')
+          .eq('id', participant.id)
+          .single();
+        
+        if (error) {
+          console.error('[QuizPage] Error fetching cumulative score:', error);
+          return;
+        }
+        
+        setCumulativeScore(data.score || 0);
+      } catch (err) {
+        console.error('[QuizPage] Error in fetchCumulativeScore:', err);
       }
     }
+    
     fetchCumulativeScore();
-  }, [participant?.id, session?.id, showCorrect]);
+  }, [participant?.id, liveScore]);
 
   function setupRealtimeSubscriptions() {
     if (!session?.id) return () => {};
+    console.log('[QuizPage] Setting up real-time subscription for session:', session.id);
+    
     const sessionChannel = supabase
       .channel('session-updates-' + session.id)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'lq_sessions', filter: `id=eq.${session.id}` },
-        handleSessionUpdate
+        (payload) => {
+          console.log('[QuizPage] Raw subscription payload:', payload);
+          handleSessionUpdate(payload);
+        }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[QuizPage] Subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('[QuizPage] Successfully subscribed to session updates');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[QuizPage] Subscription error');
+        }
+      });
 
     return () => {
+      console.log('[QuizPage] Cleaning up real-time subscription');
       supabase.removeChannel(sessionChannel);
     };
   }
@@ -311,8 +383,12 @@ export default function QuizPage() {
       phase: sessionData.phase,
       timerEnd: sessionData.timer_end,
       currentQuestionId: sessionData.current_question_id,
-      sessionId: sessionData.id
+      sessionId: sessionData.id,
+      oldQuestionId: currentQuestion?.id
     });
+    
+    // Check if question has changed
+    const questionChanged = currentQuestion?.id !== sessionData.current_question_id;
     
     // Update session state
     setSession(sessionData);
@@ -324,7 +400,8 @@ export default function QuizPage() {
       phase: sessionData.phase,
       timerEnd: sessionData.timer_end,
       hasTimerEnd: !!sessionData.timer_end,
-      currentPhase: sessionData.phase
+      currentPhase: sessionData.phase,
+      questionChanged
     });
     
     // Trigger timer re-evaluation when session changes
@@ -341,9 +418,18 @@ export default function QuizPage() {
         .single();
       
       if (questionData) {
+        console.log('[QuizPage] New question loaded:', questionData);
+        
+        // If question changed, reset state
+        if (questionChanged) {
+          console.log('[QuizPage] Question changed, resetting state');
+          setSelectedAnswer(null);
+          setShowCorrect(false);
+          setPointsEarned(null);
+          setTimeLeft(0);
+        }
+        
         setCurrentQuestion(questionData);
-        setSelectedAnswer(null); // Reset selected answer for new question
-        setShowCorrect(false);
         
         // Timer will be handled by the useEffect that watches session.timer_end
         if (!sessionData.timer_end) {
@@ -357,6 +443,13 @@ export default function QuizPage() {
       // Timer has expired, show correct answers
       console.log('[QuizPage] Phase changed to times_up');
       setShowCorrect(true);
+    } else if (sessionData.phase === 'waiting') {
+      // Waiting for next question
+      console.log('[QuizPage] Phase changed to waiting');
+      setCurrentQuestion(null);
+      setTimeLeft(0);
+      setSelectedAnswer(null);
+      setShowCorrect(false);
     } else if (sessionData.phase !== 'question') {
       setCurrentQuestion(null);
       setTimeLeft(0);
@@ -551,8 +644,8 @@ export default function QuizPage() {
 
   if (participant && session && !['question', 'waiting', 'ended'].includes(quizPhase)) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-purple-100 font-sans transition-all duration-500 px-2 sm:px-4">
-        <div className="flex flex-col items-center justify-center h-72 sm:h-96 w-full max-w-xl bg-white/80 rounded-xl shadow-lg p-4 sm:p-8 animate-fade-in">
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-purple-100 font-sans transition-all duration-500 p-4">
+        <div className="h-[95vh] w-[95vw] max-w-2xl flex flex-col items-center justify-center bg-white/80 rounded-xl shadow-lg p-6 sm:p-8 animate-fade-in">
           <svg className="w-12 h-12 mb-4 text-blue-400 animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" /><path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
           <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-blue-700 text-center">Waiting for host to start the quiz…</h1>
           <div className="text-gray-600 text-lg text-center">You have joined the session. Please wait for the host to begin.</div>
@@ -562,159 +655,112 @@ export default function QuizPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-purple-100 font-sans transition-all duration-500 px-2 sm:px-4">
-      <div className="mb-4 flex flex-col sm:flex-row justify-between items-center w-full max-w-xl">
-        <div className="flex flex-col sm:flex-row items-center w-full sm:w-auto">
-          <span className="font-bold text-lg text-gray-800 truncate max-w-full">{username}</span>
-          <span className="ml-0 sm:ml-4 mt-2 sm:mt-0 px-3 py-1 bg-white/80 rounded-full shadow text-blue-700 font-semibold text-base">Score: {cumulativeScore}</span>
-        </div>
-        {quizPhase === 'question' && timeLeft > 0 && (
-          <div className="flex items-center gap-2 text-xl font-bold text-purple-700 bg-white/80 px-4 py-1 rounded-full shadow mt-2 sm:mt-0">
-            <svg className="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" /><path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-            {timeLeft}s
+    <div className="h-screen w-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-purple-100 font-sans transition-all duration-500 p-4">
+      {/* Main Quiz Container */}
+      <div className="h-[95vh] w-[95vw] max-w-4xl flex flex-col bg-white/80 rounded-xl shadow-lg p-4 sm:p-6 overflow-hidden">
+        {/* Header with Timer and Score */}
+        <div className="flex flex-col sm:flex-row justify-between items-center mb-4 p-2">
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+            <span className="font-bold text-lg text-gray-800 truncate">{username}</span>
+            <span className="px-3 py-1 bg-white/90 rounded-full shadow text-blue-700 font-semibold text-base">Score: {cumulativeScore}</span>
           </div>
-        )}
-      </div>
-
-      {/* Waiting for host to start */}
-      {participant && session && !['question', 'waiting', 'ended'].includes(quizPhase) && (
-        <div className="flex flex-col items-center justify-center
-          w-full
-          max-w-[95vw] sm:max-w-xl md:max-w-2xl
-          min-h-[60vh] sm:min-h-[28rem] md:min-h-[32rem]
-          bg-white/80 rounded-xl shadow-lg
-          p-4 sm:p-8
-          animate-fade-in
-          transition-all duration-500">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-blue-700 text-center">Waiting for host to start the quiz…</h1>
-          <div className="text-gray-600 text-lg text-center">You have joined the session. Please wait for the host to begin.</div>
-        </div>
-      )}
-
-      {/* Waiting for next question after answer */}
-      {quizPhase === 'question' && selectedAnswer !== null && timeLeft > 0 && (
-        <div className="flex flex-col items-center justify-center
-          w-full
-          max-w-[95vw] sm:max-w-xl md:max-w-2xl
-          min-h-[50vh] sm:min-h-[22rem] md:min-h-[26rem]
-          bg-white/80 rounded-xl shadow-lg
-          p-4 sm:p-8
-          animate-fade-in
-          transition-all duration-500">
-          <div className="text-2xl font-bold mb-2 text-purple-700">{timeLeft}s</div>
-          <div className="mb-2 text-lg text-gray-700 text-center">Waiting for the next question...</div>
-          <div className="text-blue-700 font-semibold text-lg">Score: {cumulativeScore}</div>
-        </div>
-      )}
-
-      {/* Question and options */}
-      {quizPhase === 'question' && currentQuestion && selectedAnswer === null && (
-        <div className="space-y-6
-          w-full
-          max-w-[95vw] sm:max-w-xl md:max-w-2xl
-          min-h-[55vh] sm:min-h-[26rem] md:min-h-[30rem]
-          bg-white/80 rounded-xl shadow-lg
-          p-4 sm:p-8
-          animate-fade-in
-          transition-all duration-500">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-4 transition-all duration-300 text-center break-words">{currentQuestion.question_text}</h2>
-          <div className="grid gap-3 sm:gap-4">
-            {currentQuestion.options.map((option, index) => (
-              <button
-                key={index}
-                onClick={() => submitAnswer(index)}
-                disabled={selectedAnswer !== null || timeLeft <= 0}
-                className={
-                  `p-3 sm:p-4 w-full text-left rounded-xl border border-gray-200 bg-white shadow-sm text-base sm:text-lg font-medium transition-all duration-200
-                  ${timeLeft > 0 ? 'hover:bg-blue-100 focus:ring-2 focus:ring-blue-300 active:scale-95' : 'opacity-50 cursor-not-allowed'}
-                  focus:outline-none`}
-                style={{ transition: 'background 0.2s, transform 0.2s' }}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-          <div className="mt-6 flex justify-center">
-            <div className={`flex items-center gap-2 text-xl font-bold px-4 py-1 rounded-full shadow ${
-              timeLeft > 0 ? 'text-purple-700 bg-white/80' : 'text-red-700 bg-red-100'
-            }`}>
+          {quizPhase === 'question' && (
+            <div className="flex items-center gap-2 text-xl font-bold text-purple-700 bg-white/90 px-4 py-2 rounded-full shadow">
               <svg className="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" /><path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
               {timeLeft > 0 ? `${timeLeft}s` : 'Time\'s up!'}
             </div>
-          </div>
+          )}
         </div>
-      )}
 
-      {/* Feedback/Results screen after answering, before moving to next question */}
-      {quizPhase === 'question' && currentQuestion && showCorrect && selectedAnswer !== null && (
-        <div className="flex flex-col items-center justify-center
-          w-full
-          max-w-[95vw] sm:max-w-xl md:max-w-2xl
-          min-h-[50vh] sm:min-h-[22rem] md:min-h-[26rem]
-          bg-white/80 rounded-xl shadow-lg
-          p-4 sm:p-8
-          animate-fade-in
-          transition-all duration-500">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 text-center">{selectedAnswer === currentQuestion.correct_answer_index ? 'Correct!' : 'Incorrect'}</h2>
-          <div className="mt-4 text-center">
-            {selectedAnswer === currentQuestion.correct_answer_index ? (
-              <span className="text-green-600 font-bold text-xl animate-pop">You got it right!</span>
-            ) : (
-              <span className="text-red-600 font-bold text-xl animate-pop">The correct answer was: <span className="underline">{currentQuestion.options[currentQuestion.correct_answer_index]}</span></span>
-            )}
-            <div className="mt-2 text-blue-700 font-semibold text-lg">Points earned: {pointsEarned}</div>
-          </div>
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto">
+          {/* Waiting for host to start */}
+          {participant && session && !['question', 'waiting', 'ended'].includes(quizPhase) && (
+            <div className="flex flex-col items-center justify-center text-center animate-fade-in">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-4 text-blue-700">Waiting for host to start the quiz…</h1>
+              <div className="text-gray-600 text-lg">You have joined the session. Please wait for the host to begin.</div>
+            </div>
+          )}
+
+          {/* Waiting for next question after answer */}
+          {quizPhase === 'question' && selectedAnswer !== null && timeLeft > 0 && (
+            <div className="flex flex-col items-center justify-center text-center animate-fade-in">
+              <div className="text-2xl font-bold mb-2 text-purple-700">{timeLeft}s</div>
+              <div className="mb-2 text-lg text-gray-700">Waiting for the next question...</div>
+              <div className="text-blue-700 font-semibold text-lg">Score: {cumulativeScore}</div>
+            </div>
+          )}
+
+          {/* Question and options */}
+          {quizPhase === 'question' && currentQuestion && selectedAnswer === null && (
+            <div className="w-full max-w-2xl space-y-6 animate-fade-in">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 text-center break-words">{currentQuestion.question_text}</h2>
+              <div className="grid gap-3 sm:gap-4">
+                {currentQuestion.options.map((option, index) => (
+                  <button
+                    key={index}
+                    onClick={() => submitAnswer(index)}
+                    disabled={selectedAnswer !== null || timeLeft <= 0}
+                    className={
+                      `p-3 sm:p-4 w-full text-left rounded-xl border border-gray-200 bg-white shadow-sm text-base sm:text-lg font-medium transition-all duration-200
+                      ${timeLeft > 0 ? 'hover:bg-blue-100 focus:ring-2 focus:ring-blue-300 active:scale-95' : 'opacity-50 cursor-not-allowed'}
+                      focus:outline-none`}
+                    style={{ transition: 'background 0.2s, transform 0.2s' }}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Feedback/Results screen after answering, before moving to next question */}
+          {quizPhase === 'question' && currentQuestion && showCorrect && selectedAnswer !== null && (
+            <div className="flex flex-col items-center justify-center text-center animate-fade-in">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">{selectedAnswer === currentQuestion.correct_answer_index ? 'Correct!' : 'Incorrect'}</h2>
+              <div className="mt-4">
+                {selectedAnswer === currentQuestion.correct_answer_index ? (
+                  <span className="text-green-600 font-bold text-xl animate-pop">You got it right!</span>
+                ) : (
+                  <span className="text-red-600 font-bold text-xl animate-pop">The correct answer was: <span className="underline">{currentQuestion.options[currentQuestion.correct_answer_index]}</span></span>
+                )}
+                <div className="mt-2 text-blue-700 font-semibold text-lg">Points earned: {pointsEarned}</div>
+              </div>
+            </div>
+          )}
+
+          {/* After timer ends, show time's up if user did not answer */}
+          {quizPhase === 'question' && currentQuestion && showCorrect && selectedAnswer === null && timeLeft === 0 && (
+            <div className="flex flex-col items-center justify-center text-center animate-fade-in">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Time's up!</h2>
+              <div className="text-gray-600 text-lg">You did not answer in time.</div>
+            </div>
+          )}
+
+          {/* Waiting for next question phase */}
+          {quizPhase === 'waiting' && (
+            <div className="flex flex-col items-center justify-center text-center animate-fade-in">
+              <h2 className="text-2xl font-bold text-blue-700 mb-2">Waiting for next question...</h2>
+            </div>
+          )}
+
+          {/* Quiz ended */}
+          {quizPhase === 'ended' && (
+            <div className="flex flex-col items-center justify-center text-center animate-fade-in">
+              <h2 className="text-2xl sm:text-3xl font-bold text-green-700 mb-2">Quiz Ended</h2>
+              <p className="mt-2 text-xl font-semibold text-gray-800">Final Score: {cumulativeScore}</p>
+            </div>
+          )}
         </div>
-      )}
-      {/* After timer ends, show time's up if user did not answer */}
-      {quizPhase === 'question' && currentQuestion && showCorrect && selectedAnswer === null && timeLeft === 0 && (
-        <div className="flex flex-col items-center justify-center
-          w-full
-          max-w-[95vw] sm:max-w-xl md:max-w-2xl
-          min-h-[50vh] sm:min-h-[22rem] md:min-h-[26rem]
-          bg-white/80 rounded-xl shadow-lg
-          p-4 sm:p-8
-          animate-fade-in
-          transition-all duration-500">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2 text-center">Time's up!</h2>
-          <div className="mt-4 text-gray-600 text-lg">You did not answer in time.</div>
+
+        {/* Footer for warnings and errors */}
+        <div className="mt-4">
+          {timerWarning && (
+            <div className="text-yellow-600 font-semibold text-center text-sm">Warning: Timer was missing from the session. Defaulted to 20 seconds.</div>
+          )}
+          {error && <div className="text-red-500 text-center text-sm">{error}</div>}
         </div>
-      )}
-
-      {/* Waiting for next question phase */}
-      {quizPhase === 'waiting' && (
-        <div className="flex flex-col items-center justify-center
-          w-full
-          max-w-[95vw] sm:max-w-xl md:max-w-2xl
-          min-h-[50vh] sm:min-h-[22rem] md:min-h-[26rem]
-          bg-white/80 rounded-xl shadow-lg
-          p-4 sm:p-8
-          animate-fade-in
-          transition-all duration-500">
-          <h2 className="text-2xl font-bold text-blue-700 mb-2 text-center">Waiting for next question...</h2>
-        </div>
-      )}
-
-      {/* Quiz ended */}
-      {quizPhase === 'ended' && (
-        <div className="flex flex-col items-center justify-center
-          w-full
-          max-w-[95vw] sm:max-w-xl md:max-w-2xl
-          min-h-[50vh] sm:min-h-[22rem] md:min-h-[26rem]
-          bg-white/80 rounded-xl shadow-lg
-          p-4 sm:p-8
-          animate-fade-in
-          transition-all duration-500">
-          <h2 className="text-2xl sm:text-3xl font-bold text-green-700 mb-2 text-center">Quiz Ended</h2>
-          <p className="mt-2 text-xl font-semibold text-gray-800 text-center">Final Score: {cumulativeScore}</p>
-        </div>
-      )}
-
-      {timerWarning && (
-        <div className="mb-2 text-yellow-600 font-semibold text-center">Warning: Timer was missing from the session. Defaulted to 20 seconds.</div>
-      )}
-
-      {error && <div className="mt-4 text-red-500 text-center">{error}</div>}
+      </div>
     </div>
   );
 } 
