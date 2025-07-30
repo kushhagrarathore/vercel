@@ -82,6 +82,9 @@ export default function QuestionsPage() {
   // 3. Add right sidebar state
   const [customSidebarOpen, setCustomSidebarOpen] = useState(true);
 
+  // Left sidebar collapse state
+  const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState(false);
+
   // Full screen preview state
   const [isFullScreenPreview, setIsFullScreenPreview] = useState(false);
 
@@ -99,7 +102,21 @@ export default function QuestionsPage() {
     if (quizId) {
       fetchQuizAndQuestions(quizId);
     } else {
-      fetchQuestions();
+      // Start with empty quiz state for new quizzes
+      setQuestions([]);
+      setQuizName('');
+      setSelectedQuizId(null);
+      setSelectedQuestionIdx(null);
+      setForm({
+        question_text: '',
+        options: ['', ''],
+        correct_answer_index: 0,
+        timer: 20,
+        settings: { ...settingsDefaults },
+      });
+      setIsEditingExisting(false);
+      setHasUnsavedChanges(false);
+      setLoading(false);
     }
     // eslint-disable-next-line
   }, [quizId]);
@@ -426,8 +443,38 @@ export default function QuestionsPage() {
     if (hasUnsavedChanges && !isSavingRef.current) {
       e.preventDefault();
       setShowLeaveModal(true);
-      pendingNavigationRef.current = () => navigate('/dashboard');
+      pendingNavigationRef.current = () => {
+        // Clear the quiz state when going back to dashboard
+        setQuestions([]);
+        setQuizName('');
+        setSelectedQuizId(null);
+        setSelectedQuestionIdx(null);
+        setForm({
+          question_text: '',
+          options: ['', ''],
+          correct_answer_index: 0,
+          timer: 20,
+          settings: { ...settingsDefaults },
+        });
+        setIsEditingExisting(false);
+        setHasUnsavedChanges(false);
+        navigate('/dashboard');
+      };
     } else {
+      // Clear the quiz state when going back to dashboard
+      setQuestions([]);
+      setQuizName('');
+      setSelectedQuizId(null);
+      setSelectedQuestionIdx(null);
+      setForm({
+        question_text: '',
+        options: ['', ''],
+        correct_answer_index: 0,
+        timer: 20,
+        settings: { ...settingsDefaults },
+      });
+      setIsEditingExisting(false);
+      setHasUnsavedChanges(false);
       navigate('/dashboard');
     }
   };
@@ -550,65 +597,67 @@ export default function QuestionsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation Buttons */}
-      <div className="flex justify-between items-center px-10 py-5 bg-white rounded-b-2xl shadow-md sticky top-0 z-30 border-b border-gray-100" style={{minHeight:'4.5rem'}}>
+      <header className="sticky top-0 z-30 bg-white border-b border-gray-200 p-4 flex justify-between items-center shrink-0">
         <div className="flex items-center gap-4">
-          <button
-            className="text-blue-400 font-bold text-base hover:underline focus:outline-none"
-            style={{background:'none',border:'none',padding:0}}
+          <button 
+            className="bg-transparent border-none cursor-pointer text-sm text-gray-500 hover:text-indigo-600 transition flex items-center gap-2" 
             onClick={handleBackToDashboard}
           >
-            ← Back to Dashboard
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back
           </button>
-        <input
-          ref={quizNameInputRef}
-          type="text"
-          value={quizName}
-          onChange={e => {
-            setQuizName(e.target.value);
-            if (e.target.value.trim()) setQuizTitleError('');
-            if (e.target.value.trim()) {
-              setShowTitlePrompt(false);
-              setTitleInputGlow(false);
-              setTitleInputBg(false);
-            }
-          }}
-          placeholder="Untitled Quiz"
-            className={`ml-4 text-3xl font-bold truncate max-w-xs border-none focus:ring-0 focus:outline-none p-0 m-0 transition-all duration-300 text-gray-500 ${titleInputGlow ? 'ring-2 ring-amber-400 ring-offset-2 border-amber-400' : ''} ${titleInputBg ? 'bg-amber-100/70' : 'bg-transparent'}`}
-          style={{ minWidth: '120px', letterSpacing: '-0.01em' }}
-        />
-        </div>
-        <div className="flex items-center gap-4">
-          {/* Remove the Preview button in the top menu bar */}
-          <button
-            className="px-6 py-2 rounded-xl font-bold text-white transition-colors"
-            style={{
-              background: 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)',
-              boxShadow: 'none',
-              border: 'none',
-              fontSize: '1.15rem',
-              marginRight: '0.5rem',
+          <input
+            ref={quizNameInputRef}
+            type="text"
+            placeholder="Untitled Quiz"
+            value={quizName}
+            onChange={e => {
+              setQuizName(e.target.value);
+              if (e.target.value.trim()) setQuizTitleError('');
+              if (e.target.value.trim()) {
+                setShowTitlePrompt(false);
+                setTitleInputGlow(false);
+                setTitleInputBg(false);
+              }
             }}
+            className={`text-xl font-bold border-none outline-none bg-transparent text-gray-800 w-72 ${titleInputGlow ? 'ring-2 ring-amber-400 ring-offset-2 border-amber-400' : ''} ${titleInputBg ? 'bg-amber-100/70' : 'bg-transparent'}`}
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm"
             onClick={handleStartQuiz}
           >
-            Start Quiz →
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+            Start Quiz
           </button>
           <button
             type="button"
             onClick={handleCreateOrSaveQuiz}
-            className={`px-6 py-2 rounded-xl font-bold text-white transition-colors whitespace-nowrap`}
-            style={{
-              background: selectedQuizId ? '#facc15' : 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)',
-              color: selectedQuizId ? '#222' : '#fff',
-              boxShadow: 'none',
-              border: 'none',
-              fontSize: '1.15rem',
-            }}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-sm hover:bg-indigo-700 transition-colors text-sm"
             disabled={loading}
           >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+            </svg>
             {loading ? (selectedQuizId ? 'Saving...' : 'Creating...') : (selectedQuizId ? 'Save' : 'Create Quiz')}
           </button>
+          <button 
+            onClick={() => setCustomSidebarOpen(v => !v)} 
+            className="flex items-center justify-center w-9 h-9 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 text-gray-600 transition-colors" 
+            title={customSidebarOpen ? 'Hide Customize Panel' : 'Show Customize Panel'}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
         </div>
-      </div>
+      </header>
       {/* Confirm Leave Modal */}
       <ConfirmLeaveModal open={showLeaveModal} onConfirm={handleLeaveConfirm} onCancel={handleLeaveCancel} />
       {/* Floating Prompt Box */}
@@ -635,65 +684,82 @@ export default function QuestionsPage() {
       {/* Layout: Sidebar + Main + (optional) Right Panel */}
       <div className="flex flex-row w-full">
         {/* Fixed, full-height Sidebar with native drag-and-drop */}
-        <aside className="fixed top-[4.5rem] left-0 h-[calc(100vh-4.5rem)] w-64 min-w-[13rem] bg-white rounded-2xl shadow-xl flex flex-col justify-between z-20 border border-gray-100" style={{margin:'1.5rem 0 1.5rem 1.5rem',padding:'0.5rem 0'}}>
+        <aside className={`fixed top-[4.5rem] left-0 h-[calc(100vh-4.5rem)] bg-white flex flex-col justify-between z-20 border-r border-gray-200 transition-all duration-300 ease-in-out ${isLeftSidebarCollapsed ? 'w-20' : 'w-64'}`}>
           <div className="overflow-y-auto flex-1 p-4">
-            <h2 className="text-lg font-bold mb-3 text-purple-700">Questions</h2>
-            <ul className="space-y-2">
-              {questions.map((q, idx) => (
-                <li
-                  key={q.id}
-                  draggable
-                  onDragStart={() => handleDragStart(idx)}
-                  onDragEnter={() => handleDragEnter(idx)}
-                  onDragEnd={handleDragEnd}
-                  onDragOver={e => e.preventDefault()}
-                 className={`w-full text-left px-3 py-2 rounded-xl transition-colors flex items-center gap-2 cursor-move select-none ${selectedQuestionIdx === idx ? 'bg-blue-50 font-bold text-blue-700' : 'hover:bg-gray-50'}`}
-                  onClick={() => handleSidebarClick(idx)}
-                >
-                  <span className="text-xs font-semibold text-gray-400 mr-2">Q{idx + 1}</span>
-                  <span className="truncate flex-1">{q.question_text || `Question ${idx + 1}`}</span>
-                  <button
-                    type="button"
-                   className="ml-2 text-red-400 hover:text-red-600 p-1 rounded-full bg-red-50 hover:bg-red-100"
-                    title="Delete Question"
-                    onClick={e => { e.stopPropagation(); handleDeleteQuestion(idx); }}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="p-4 border-t border-gray-100">
             <button
-              className="w-full px-6 py-3 rounded-2xl font-bold text-white"
-              style={{
-                background: 'linear-gradient(90deg, #4f8cff 0%, #a084ee 100%)',
-                boxShadow: 'none',
-                border: 'none',
-                fontSize: '1.12rem',
-                letterSpacing: '-0.01em',
-                marginTop: '0.5rem',
-                marginBottom: '0.5rem',
-              }}
-              onClick={handleAddQuestion}
+              onClick={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
+              className="w-full flex items-center justify-center gap-2 p-2 rounded-lg text-sm text-gray-600 hover:bg-gray-100 mb-4"
+              title={isLeftSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+              style={{ border: '1px solid #e5e7eb' }}
             >
-              + Add Question
+              {isLeftSidebarCollapsed ? (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              )}
             </button>
+            <button
+              onClick={handleAddQuestion}
+              className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg shadow-sm hover:bg-indigo-700 transition-all duration-200 ease-in-out mb-4"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              {!isLeftSidebarCollapsed && <span>Add Question</span>}
+            </button>
+                          <ul className="space-y-2">
+                {questions.map((q, idx) => (
+                  <li
+                    key={q.id}
+                    draggable
+                    onDragStart={() => handleDragStart(idx)}
+                    onDragEnter={() => handleDragEnter(idx)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={e => e.preventDefault()}
+                   className={`w-full text-left px-3 py-2 rounded-xl transition-colors flex items-center gap-2 cursor-move select-none ${selectedQuestionIdx === idx ? 'bg-blue-50 font-bold text-blue-700' : 'hover:bg-gray-50'}`}
+                    onClick={() => handleSidebarClick(idx)}
+                  >
+                    <span className="text-xs font-semibold text-gray-400 mr-2">Q{idx + 1}</span>
+                    {!isLeftSidebarCollapsed && (
+                      <>
+                        <span className="truncate flex-1">{q.question_text || `Question ${idx + 1}`}</span>
+                        <button
+                          type="button"
+                         className="ml-2 text-red-400 hover:text-red-600 p-1 rounded-full bg-red-50 hover:bg-red-100"
+                          title="Delete Question"
+                          onClick={e => { e.stopPropagation(); handleDeleteQuestion(idx); }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                      </>
+                    )}
+                  </li>
+                ))}
+              </ul>
           </div>
+
         </aside>
         {/* Responsive container for main content and right sidebar */}
         <div
-          className={`flex flex-row flex-1 transition-all duration-300 ml-60 ${customSidebarOpen ? 'mr-80' : ''}`}
-          style={{ minHeight: 'calc(100vh - 4.5rem)', overflowY: 'auto' }}
+          className={`flex flex-row flex-1 transition-all duration-300 ${isLeftSidebarCollapsed ? 'ml-20' : 'ml-64'} ${customSidebarOpen ? 'mr-80' : ''}`}
+          style={{ minHeight: 'calc(100vh - 4.5rem)', overflowY: 'auto', paddingLeft: '1rem' }}
         >
           {/* Main Content: Only show selected question for editing, or the add form if none selected */}
           <main
-            className={`flex-1 p-8 transition-all duration-300 flex flex-col items-center justify-start`}
+            className={`flex-1 transition-all duration-300 flex flex-col items-center justify-center`}
             style={{
-              maxWidth: customSidebarOpen ? 'calc(100vw - 15rem - 20rem)' : 'calc(100vw - 15rem)',
+              maxWidth: customSidebarOpen 
+                ? `calc(100vw - ${isLeftSidebarCollapsed ? '5rem' : '16rem'} - 20rem)` 
+                : `calc(100vw - ${isLeftSidebarCollapsed ? '5rem' : '16rem'})`,
               width: '100%',
+              height: 'calc(100vh - 4.5rem)',
               overflowY: 'auto',
+              paddingLeft: customSidebarOpen ? '1rem' : '2rem',
+              paddingRight: customSidebarOpen ? '1rem' : '2rem',
             }}
           >
             {successMessage && (
@@ -701,10 +767,10 @@ export default function QuestionsPage() {
             )}
             {/* If a question is selected, show it for editing. Otherwise, show the add form. */}
             {/* Place this after the preview overlay logic */}
-            <div className="w-full max-w-5xl mx-auto flex flex-col gap-10 justify-center items-center px-2 md:px-8 mt-8 mb-12">
+            <div className="w-full max-w-4xl mx-auto flex flex-col gap-6 justify-center items-center px-2 md:px-4">
               <form
                 onSubmit={handleSubmit}
-                className="w-full flex flex-col gap-8 justify-center items-center"
+                className="w-full flex flex-col gap-6 justify-center items-center"
                 style={{
                   background: getSettings(form.settings).questionContainerBgColor,
                   borderRadius: getSettings(form.settings).borderRadius,
@@ -714,11 +780,11 @@ export default function QuestionsPage() {
                   fontWeight: getSettings(form.settings).bold ? 'bold' : 'normal',
                   fontStyle: getSettings(form.settings).italic ? 'italic' : 'normal',
                   boxShadow: getSettings(form.settings).shadow ? '0 8px 32px 0 rgba(44,62,80,0.13)' : 'none',
-                  padding: getSettings(form.settings).padding,
-                  margin: getSettings(form.settings).margin,
+                  padding: Math.min(getSettings(form.settings).padding, 32),
+                  margin: Math.min(getSettings(form.settings).margin, 16),
                   textAlign: getSettings(form.settings).alignment,
                   transition: 'all 0.3s',
-                  minHeight: '420px',
+                  minHeight: '320px',
                   maxWidth: '100vw',
                 }}
               >
@@ -728,17 +794,17 @@ export default function QuestionsPage() {
                   style={{
                     background: form.settings?.questionBlockBgColor || '#f3f4f6',
                     borderRadius: getSettings(form.settings).borderRadius,
-                    padding: '2.5rem 2rem',
+                    padding: '1.5rem 1.5rem',
                     marginTop: '0.5rem',
-                    marginBottom: '2.5rem',
+                    marginBottom: '1.5rem',
                     boxShadow: '0 2px 12px 0 rgba(44,62,80,0.07)',
-                    minHeight: '80px',
-                    maxWidth: 900,
+                    minHeight: '60px',
+                    maxWidth: 800,
                   }}
                 >
                   <input
-                    className="w-full text-5xl font-bold text-blue-700 text-center tracking-tight break-words bg-transparent outline-none border-none"
-                    style={{fontSize: Math.max(36, getSettings(form.settings).fontSize + 12), margin: 0}}
+                    className="w-full text-4xl font-bold text-gray-900 text-center tracking-tight break-words bg-transparent outline-none border-none"
+                    style={{fontSize: Math.max(28, getSettings(form.settings).fontSize + 8), margin: 0}}
                     type="text"
                     placeholder="Enter your question..."
                     value={form.question_text}
@@ -756,29 +822,29 @@ export default function QuestionsPage() {
     [opts[2] !== undefined ? 2 : null, opts[3] !== undefined ? 3 : null],
   ];
   return (
-    <div className="w-full flex flex-col gap-8 mt-8 items-center justify-center">
+    <div className="w-full flex flex-col gap-4 mt-4 items-center justify-center">
       {grid.map((row, rowIdx) => (
-        <div key={rowIdx} className="w-full flex flex-row gap-12 justify-center items-center">
+        <div key={rowIdx} className="w-full flex flex-row gap-6 justify-center items-center">
           {row.map((idx, colIdx) => (
             <div key={colIdx} style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
               {idx !== null && (
                 <div
-                  className={`flex-1 flex items-center px-6 py-6 rounded-2xl border-2 transition-all duration-200 group bg-white relative ${form.correct_answer_index === idx ? 'border-green-500 ring-2 ring-green-400 bg-green-50/60' : 'border-gray-200'}`}
+                  className={`flex-1 flex items-center px-4 py-4 rounded-xl border-2 transition-all duration-200 group bg-white relative ${form.correct_answer_index === idx ? 'border-green-500 ring-2 ring-green-400 bg-green-50/60' : 'border-gray-200'}`}
                   style={{
                     color: getSettings(form.settings).textColor,
                     fontFamily: getSettings(form.settings).fontFamily,
-                    fontSize: Math.max(22, getSettings(form.settings).fontSize),
+                    fontSize: Math.max(18, getSettings(form.settings).fontSize),
                     fontWeight: getSettings(form.settings).bold ? 'bold' : 'normal',
                     fontStyle: getSettings(form.settings).italic ? 'italic' : 'normal',
-                    minHeight: '96px',
-                    minWidth: '220px',
-                    maxWidth: '340px',
+                    minHeight: '72px',
+                    minWidth: '180px',
+                    maxWidth: '280px',
                     boxShadow: 'none',
-                    borderRadius: getSettings(form.settings).borderRadius * 0.7,
+                    borderRadius: getSettings(form.settings).borderRadius * 0.6,
                     borderWidth: 2,
                     background: form.correct_answer_index === idx ? '#e6fbe6' : '#fff',
                     transition: 'all 0.2s',
-                    margin: '0 0.5rem',
+                    margin: '0 0.25rem',
                     alignItems: 'center',
                     position: 'relative',
                   }}
@@ -848,47 +914,61 @@ export default function QuestionsPage() {
     </div>
   );
 })()}
-                <div className="flex gap-4 mt-2">
+                <div className="flex gap-3 justify-center mt-6">
                   <button
                     type="button"
                     onClick={addOption}
-                    className="px-6 py-3 bg-blue-100 text-blue-700 rounded-xl font-semibold transition-colors text-lg"
+                    className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-400 text-gray-900 font-medium rounded-xl shadow-sm hover:bg-gray-50 transition-all duration-200 text-sm"
                     style={{
                       opacity: form.options.length >= 4 ? 0.6 : 1,
                       cursor: form.options.length >= 4 ? 'not-allowed' : 'pointer',
                       pointerEvents: 'auto',
                     }}
                   >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
                     Add Option
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsFullScreenPreview(true)}
-                    className="px-6 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors text-lg shadow-lg"
+                    className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-400 text-gray-900 font-medium rounded-xl shadow-sm hover:bg-gray-50 transition-all duration-200 text-sm"
                     disabled={form.options.length < 2}
                   >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
                     Preview
                   </button>
+                  <button
+                    type="submit"
+                    disabled={loading || form.options.length < 2}
+                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl shadow-sm hover:bg-blue-700 transition-all duration-200 text-sm"
+                    style={{ boxShadow: 'none', border: 'none' }}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {loading ? (isEditingExisting ? 'Saving...' : 'Adding...') : (isEditingExisting ? 'Save Changes' : 'Save Question')}
+                  </button>
                 </div>
-                <button
-                  type="submit"
-                  disabled={loading || form.options.length < 2}
-                  className="w-full py-4 bg-green-600 text-white rounded-2xl font-bold text-2xl hover:bg-green-700 disabled:bg-gray-300 mt-6 transition-colors"
-                  style={{ boxShadow: 'none', border: 'none' }}
-                >
-                  {loading ? (isEditingExisting ? 'Saving...' : 'Adding...') : (isEditingExisting ? 'Save Changes' : 'Save Question')}
-                </button>
               </form>
             </div>
           </main>
           {/* Customization panel */}
-          <aside className={`fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-80 min-w-[16rem] bg-white shadow-lg z-20 transition-transform duration-300 ${customSidebarOpen ? 'translate-x-0' : 'translate-x-full'} flex flex-col`}>
+          <aside className={`fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-80 min-w-[16rem] bg-white shadow-lg z-20 transition-transform duration-300 ${customSidebarOpen ? 'translate-x-0' : 'translate-x-[100vw]'} flex flex-col`}>
             <button
-              className="absolute -left-10 top-4 bg-blue-500 text-white rounded-l px-3 py-2 shadow hover:bg-blue-600 focus:outline-none"
-              onClick={() => setCustomSidebarOpen((open) => !open)}
-              aria-label={customSidebarOpen ? 'Close Customization Panel' : 'Open Customization Panel'}
+              className={`rounded-full px-3 py-2 shadow-sm border ml-2 ${customSidebarOpen ? 'bg-blue-100 text-blue-700' : 'bg-white text-gray-600'}`}
+              style={{ borderColor: 'var(--border)', position: 'absolute', left: '-3rem', top: '1rem' }}
+              onClick={() => setCustomSidebarOpen(v => !v)}
+              title={customSidebarOpen ? 'Hide Customize Panel' : 'Show Customize Panel'}
             >
-              {customSidebarOpen ? '→' : '←'}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
             </button>
             <div className="overflow-y-auto flex-1 p-6 space-y-6">
               <h3 className="text-lg font-bold mb-4 text-blue-700">Customize Question</h3>
