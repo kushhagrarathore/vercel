@@ -12,6 +12,8 @@ import './Dashboard.css';
 import { FiSun, FiMoon } from 'react-icons/fi';
 import DeleteQuizButton from '../components/quiz/DeleteQuizButton';
 import { FaHistory, FaEye } from 'react-icons/fa';
+import TemplateCard from '../components/shared/TemplateCard';
+import '../components/shared/TemplateCard.css';
 
 // Debounce hook
 function useDebounce(value, delay) {
@@ -25,66 +27,48 @@ function useDebounce(value, delay) {
 
 const MemoFormCardRow = React.memo(FormCardRow);
 
-const LiveQuizTemplateCard = ({ onClick }) => (
-  <div className="template-section">
-    <div
-      className="template-card"
-      onClick={onClick}
-      style={{ cursor: 'pointer' }}
+const LiveQuizTemplateCard = ({ onClick }) => {
+  const liveQuizIcon = (
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#ff6b81"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <div
-        className="file-icon"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 44,
-          height: 44,
-          borderRadius: 12,
-          background: '#ffeaea',
-          marginBottom: 0,
-        }}
-      >
-        <svg
-          width="28"
-          height="28"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#ff6b81"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="12" cy="12" r="6" fill="#fff0f3" />
-          <path
-            d="M12 8v4l3 2"
-            stroke="#ff6b81"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="#ff6b81"
-            strokeWidth="1.5"
-            fill="none"
-          />
-        </svg>
-      </div>
-      <div
-        className="template-label"
-        style={{ fontWeight: 700, fontSize: 17 }}
-      >
-        Live Quiz
-      </div>
-      <div className="template-desc">
-        Host a live, interactive quiz session.
-      </div>
+      <circle cx="12" cy="12" r="6" fill="#fff0f3" />
+      <path
+        d="M12 8v4l3 2"
+        stroke="#ff6b81"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="#ff6b81"
+        strokeWidth="1.5"
+        fill="none"
+      />
+    </svg>
+  );
+
+  return (
+    <div className="template-section">
+      <TemplateCard
+        icon={liveQuizIcon}
+        label="Live Quiz"
+        description="Host a live, interactive quiz session."
+        onClick={onClick}
+      />
     </div>
-  </div>
-);
+  );
+};
 
 const Dashboard = () => {
   const location = useLocation();

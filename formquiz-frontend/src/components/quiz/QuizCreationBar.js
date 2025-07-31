@@ -1,6 +1,8 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import TemplateCard from '../shared/TemplateCard';
+import '../shared/TemplateCard.css';
 import '../forms/FormCreationBar.css';
 
 const quizTemplates = [
@@ -36,17 +38,17 @@ const QuizCreationBar = () => {
     <div className="template-section">
       {quizTemplates.map((tpl) => (
         <motion.div
-          className="template-card"
           key={tpl.title}
           whileHover={{ scale: 1.04, boxShadow: '0 6px 24px rgba(74,107,255,0.13)' }}
           whileTap={{ scale: 0.98 }}
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-          onClick={() => tpl.onClick(navigate)}
-          style={{ cursor: 'pointer' }}
         >
-          <div className="file-icon" style={{ marginBottom: 8 }}>{tpl.icon}</div>
-          <div className="template-label" style={{ fontWeight: 700, fontSize: 17 }}>{tpl.title}</div>
-          <div className="template-desc">{tpl.desc}</div>
+          <TemplateCard
+            icon={tpl.icon}
+            label={tpl.title}
+            description={tpl.desc}
+            onClick={() => tpl.onClick(navigate)}
+          />
         </motion.div>
       ))}
     </div>

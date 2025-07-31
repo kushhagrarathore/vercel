@@ -929,12 +929,18 @@ export default function Quiz() {
         </aside>
 
         {/* Center Content Area */}
-        <div className="flex-1 flex justify-center items-start min-h-screen" style={{ 
-          paddingLeft: isCustomizeOpen ? '1rem' : '2rem',
-          paddingRight: isCustomizeOpen ? '1rem' : '2rem',
-          paddingTop: '2rem',
-          paddingBottom: '2rem'
-        }}>
+        <div
+          className="flex-1 flex min-h-screen"
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "2rem",
+            transition: "all 0.3s ease",
+            marginLeft: isLeftSidebarCollapsed ? "5rem" : "16rem", // left panel width
+            marginRight: isCustomizeOpen ? "20rem" : "0rem",       // right panel width
+          }}
+        >
           <div className="max-w-2xl w-full flex flex-col gap-10 justify-center items-center">
             <div className="border-2 rounded-2xl shadow-2xl bg-white" style={{
               boxShadow: '0 8px 32px 0 rgba(44,62,80,0.12)',
