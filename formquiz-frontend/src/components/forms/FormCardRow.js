@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import './FormsCardRow.css';
 import { useNavigate } from 'react-router-dom';
-import { FaEye, FaChartBar, FaTimes, FaCopy, FaLink, FaEdit, FaTrash, FaCheck } from 'react-icons/fa';
+import { FaEye, FaChartBar, FaTimes, FaCopy, FaLink, FaEdit, FaTrash, FaCheck, FaShare } from 'react-icons/fa';
 import { QRCodeSVG } from 'qrcode.react';
 import ReactDOM from 'react-dom';
 
 const typeColors = {
-  Feedback: '#34d399',
-  Survey: '#a78bfa',
-  Contact: '#60a5fa',
-  Blank: '#fbbf24',
-  Forms: '#6366f1',
-  Quiz: '#7c3aed',
+  Feedback: '#10b981',
+  Survey: '#8b5cf6',
+  Contact: '#06b6d4',
+  Blank: '#f59e0b',
+  Forms: '#3b82f6',
+  Quiz: '#8b5cf6',
   Live: '#ef4444',
-  blank: '#7c3aed',
+  blank: '#8b5cf6',
 };
 
 const FormCardRow = ({
@@ -30,17 +30,15 @@ const FormCardRow = ({
   formType,
   expanded,
   setExpandedCardId,
-  titleStyle, // add this prop
-  selected = false, // add selected prop
-  onSelect, // add onSelect prop
+  titleStyle,
+  selected = false,
+  onSelect,
 }) => {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
-  const [popoverOpen, setPopoverOpen] = useState(false);
-  const toggleRef = React.useRef(null);
-  // eslint-disable-next-line no-unused-vars
-  const [popoverStyle, setPopoverStyle] = useState({});
-  const [popoverCoords, setPopoverCoords] = useState({ top: 0, left: 0 });
+  const [sharePopupOpen, setSharePopupOpen] = useState(false);
+  const [sharePopupPosition, setSharePopupPosition] = useState({ x: 0, y: 0 });
+  const shareButtonRef = React.useRef(null);
 
   const handleEdit = (e) => {
     if (e) e.stopPropagation();
@@ -78,25 +76,8 @@ const FormCardRow = ({
   const handleToggle = (e) => {
     e.stopPropagation();
     if (onPublishToggle) onPublishToggle(formId, !isPublished);
-    // Remove logic that opens popover on activation
-    setPopoverOpen(false);
   };
 
-  const handleCopy = (e) => {
-    e.stopPropagation();
-    if (link) {
-      navigator.clipboard.writeText(link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
-    }
-  };
-
-  const handleCloseExpand = (e) => {
-    e.stopPropagation();
-    setExpandedCardId(null);
-  };
-
-  // Fix fullLink construction to avoid duplicate domains
   const fullLink = link
     ? link.startsWith('http://') || link.startsWith('https://')
       ? link
@@ -105,10 +86,22 @@ const FormCardRow = ({
 
   const handleShare = (e) => {
     e.stopPropagation();
+    if (shareButtonRef.current) {
+      const rect = shareButtonRef.current.getBoundingClientRect();
+      setSharePopupPosition({
+        x: rect.left + rect.width / 2,
+        y: rect.bottom + 10
+      });
+    }
+    setSharePopupOpen(true);
+  };
+
+  const handleCopyLink = (e) => {
+    e.stopPropagation();
     if (fullLink) {
       navigator.clipboard.writeText(fullLink);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
@@ -121,28 +114,55 @@ const FormCardRow = ({
     }
   };
 
-  // Update ActionButtons to be minimal:
+  // Close popup when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (sharePopupOpen && !event.target.closest('.share-popup')) {
+        setSharePopupOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [sharePopupOpen]);
+
   const ActionButtons = () => (
-    <div className="card-actions-big" style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+    <div className="card-actions-big" style={{ 
+      display: 'flex', 
+      gap: '6px', 
+      marginTop: '12px',
+      opacity: '0',
+      transition: 'opacity 0.3s ease'
+    }}>
       <button
         className="card-action-btn"
         title="Preview"
         onClick={handlePreview}
         tabIndex={-1}
         style={{
-          background: 'none',
+          background: 'rgba(59, 130, 246, 0.1)',
           border: 'none',
-          padding: 6,
-          borderRadius: 6,
-          color: '#6366f1',
-          fontSize: 18,
+          padding: '6px',
+          borderRadius: '6px',
+          color: '#3b82f6',
+          fontSize: '12px',
           cursor: 'pointer',
-          transition: 'background 0.15s, color 0.15s',
+          transition: 'all 0.2s ease',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: '1px solid rgba(59, 130, 246, 0.2)'
         }}
-        onMouseOver={e => { e.currentTarget.style.background = '#ede9fe'; e.currentTarget.style.color = '#4f46e5'; }}
-        onMouseOut={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#6366f1'; }}
+        onMouseOver={e => { 
+          e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)'; 
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        }}
+        onMouseOut={e => { 
+          e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'; 
+          e.currentTarget.style.transform = 'translateY(0)';
+        }}
       >
-        <FaEye size={18} />
+        <FaEye size={12} />
       </button>
       <button
         className="card-action-btn"
@@ -150,39 +170,61 @@ const FormCardRow = ({
         onClick={handleResults}
         tabIndex={-1}
         style={{
-          background: 'none',
+          background: 'rgba(16, 185, 129, 0.1)',
           border: 'none',
-          padding: 6,
-          borderRadius: 6,
-          color: '#22c55e',
-          fontSize: 18,
+          padding: '6px',
+          borderRadius: '6px',
+          color: '#10b981',
+          fontSize: '12px',
           cursor: 'pointer',
-          transition: 'background 0.15s, color 0.15s',
+          transition: 'all 0.2s ease',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: '1px solid rgba(16, 185, 129, 0.2)'
         }}
-        onMouseOver={e => { e.currentTarget.style.background = '#e0f2fe'; e.currentTarget.style.color = '#16a34a'; }}
-        onMouseOut={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#22c55e'; }}
+        onMouseOver={e => { 
+          e.currentTarget.style.background = 'rgba(16, 185, 129, 0.15)'; 
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        }}
+        onMouseOut={e => { 
+          e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)'; 
+          e.currentTarget.style.transform = 'translateY(0)';
+        }}
       >
-        <FaChartBar size={18} />
+        <FaChartBar size={12} />
       </button>
       <button
-        className="card-action-btn"
-        title="Link"
+        ref={shareButtonRef}
+        className="card-action-btn share-popup"
+        title="Share"
         onClick={handleShare}
         tabIndex={-1}
         style={{
-          background: 'none',
+          background: 'rgba(6, 182, 212, 0.1)',
           border: 'none',
-          padding: 6,
-          borderRadius: 6,
-          color: '#0ea5e9',
-          fontSize: 18,
+          padding: '6px',
+          borderRadius: '6px',
+          color: '#06b6d4',
+          fontSize: '12px',
           cursor: 'pointer',
-          transition: 'background 0.15s, color 0.15s',
+          transition: 'all 0.2s ease',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: '1px solid rgba(6, 182, 212, 0.2)',
+          position: 'relative'
         }}
-        onMouseOver={e => { e.currentTarget.style.background = '#e0f2fe'; e.currentTarget.style.color = '#0369a1'; }}
-        onMouseOut={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#0ea5e9'; }}
+        onMouseOver={e => { 
+          e.currentTarget.style.background = 'rgba(6, 182, 212, 0.15)'; 
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        }}
+        onMouseOut={e => { 
+          e.currentTarget.style.background = 'rgba(6, 182, 212, 0.1)'; 
+          e.currentTarget.style.transform = 'translateY(0)';
+        }}
       >
-        <FaLink size={18} />
+        <FaShare size={12} />
       </button>
       <button
         className="card-action-btn delete"
@@ -190,121 +232,503 @@ const FormCardRow = ({
         onClick={handleDelete}
         tabIndex={-1}
         style={{
-          background: 'none',
+          background: 'rgba(239, 68, 68, 0.1)',
           border: 'none',
-          padding: 6,
-          borderRadius: 6,
+          padding: '6px',
+          borderRadius: '6px',
           color: '#ef4444',
-          fontSize: 18,
+          fontSize: '12px',
           cursor: 'pointer',
-          transition: 'background 0.15s, color 0.15s',
+          transition: 'all 0.2s ease',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: '1px solid rgba(239, 68, 68, 0.2)'
         }}
-        onMouseOver={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.color = '#b91c1c'; }}
-        onMouseOut={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#ef4444'; }}
+        onMouseOver={e => { 
+          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'; 
+          e.currentTarget.style.transform = 'translateY(-1px)';
+        }}
+        onMouseOut={e => { 
+          e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; 
+          e.currentTarget.style.transform = 'translateY(0)';
+        }}
       >
-        <FaTimes size={18} />
+        <FaTrash size={12} />
       </button>
     </div>
   );
 
-  // --- Toggle Switch ---
   const ToggleSwitch = () => (
-    <label className={`toggle-switch${isPublished ? ' active' : ''}`} title={isPublished ? 'Deactivate' : 'Activate'} onClick={e => e.stopPropagation()}>
-      <input type="checkbox" checked={!!isPublished} onChange={handleToggle} />
-      <span className="slider" />
+    <label 
+      className={`toggle-switch${isPublished ? ' active' : ''}`} 
+      title={isPublished ? 'Deactivate' : 'Activate'} 
+      onClick={e => e.stopPropagation()}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        cursor: 'pointer',
+        opacity: isPublished ? '1' : '0.6',
+        transition: 'all 0.3s ease'
+      }}
+    >
+      <input type="checkbox" checked={!!isPublished} onChange={handleToggle} style={{ display: 'none' }} />
+      <span className="slider" style={{
+        width: '28px',
+        height: '16px',
+        background: isPublished ? 'linear-gradient(135deg, #10b981, #059669)' : '#e5e7eb',
+        borderRadius: '999px',
+        position: 'relative',
+        transition: 'all 0.3s ease',
+        boxShadow: isPublished ? '0 2px 6px rgba(16, 185, 129, 0.3)' : '0 1px 3px rgba(0, 0, 0, 0.1)'
+      }}>
+        <span style={{
+          content: '',
+          position: 'absolute',
+          left: isPublished ? '12px' : '2px',
+          top: '2px',
+          width: '12px',
+          height: '12px',
+          background: '#ffffff',
+          borderRadius: '50%',
+          transition: 'all 0.3s ease',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+        }} />
+      </span>
     </label>
   );
 
-  // --- Link Display ---
-  const LinkDisplay = () => {
-    if (!isPublished || !expanded) return null;
-    return link ? (
-      <div className="enhanced-share-section">
-        <div className="enhanced-share-header">
-          <span>Share this form</span>
-          <button className="enhanced-close-btn" onClick={handleCloseExpand} title="Close">&times;</button>
-        </div>
-        <div className="enhanced-link-box">
-          <FaLink style={{ marginRight: 8, color: 'var(--accent)' }} />
-          <span className="enhanced-link-text">{link}</span>
-          <button className="enhanced-copy-btn" onClick={handleCopy} title="Copy link">
-            {copied ? 'Copied!' : <FaCopy />}
-          </button>
-        </div>
-        <div className="enhanced-qr-section">
-          <QRCodeSVG value={window.location.origin + link} size={80} />
-        </div>
-      </div>
-    ) : (
-      <div className="share-link-row" style={{ color: '#aaa', fontStyle: 'italic', fontSize: 13 }}>No public link available</div>
-    );
-  };
+  const SharePopup = () => {
+    if (!sharePopupOpen) return null;
 
-  // --- Quiz Type Symbol ---
-  const QuizTypeSymbol = () => {
-    if (isForm || !quizType) return null;
-    if (quizType === 'live') {
-      return (
-        <span className="quiz-type-symbol" title="Live Quiz">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff6b81" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="6" fill="#fff0f3"/><path d="M12 8v4l3 2" stroke="#ff6b81" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><circle cx="12" cy="12" r="10" stroke="#ff6b81" strokeWidth="1.5" fill="none"/></svg>
-        </span>
-      );
-    }
-    // Default to blank quiz
-    return (
-      <span className="quiz-type-symbol" title="Blank Quiz">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#4a6bff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="20" rx="4" fill="#f3f4f8"/><rect x="7" y="7" width="10" height="14" rx="2" fill="#fff"/><rect x="9" y="10" width="6" height="2" rx="1" fill="#e0e7ff"/><rect x="9" y="14" width="6" height="2" rx="1" fill="#e0e7ff"/></svg>
-      </span>
-    );
-  };
-
-  // --- Form Type Symbol ---
-  const FormTypeSymbol = () => {
-    if (!isForm || !formType) return null;
-    if (formType === 'Feedback') {
-      return (
-        <span className="form-type-symbol" title="Feedback Form">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="4" fill="#eafaf3"/><path d="M8 12h8M8 16h5" stroke="#22c55e" strokeWidth="2"/><circle cx="9" cy="9" r="1.5" fill="#22c55e"/></svg>
-        </span>
-      );
-    }
-    if (formType === 'Contact') {
-      return (
-        <span className="form-type-symbol" title="Contact Form">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="4" fill="#eafafc"/><path d="M8 10h8M8 14h8" stroke="#06b6d4" strokeWidth="2"/><circle cx="9" cy="9" r="1.5" fill="#06b6d4"/></svg>
-        </span>
-      );
-    }
-    if (formType === 'Survey') {
-      return (
-        <span className="form-type-symbol" title="Survey Form">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="4" fill="#f9f5ff"/><path d="M8 12h8M8 16h5" stroke="#a855f7" strokeWidth="2"/><circle cx="9" cy="9" r="1.5" fill="#a855f7"/></svg>
-        </span>
-      );
-    }
-    // Default to blank form
-    return (
-      <span className="form-type-symbol" title="Blank Form">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="4" width="16" height="16" rx="4" fill="#f3f4f8"/><rect x="7" y="7" width="10" height="10" rx="2" fill="#fff"/><rect x="9" y="10" width="6" height="2" rx="1" fill="#fecaca"/><rect x="9" y="14" width="6" height="2" rx="1" fill="#fecaca"/></svg>
-      </span>
-    );
-  };
-
-  React.useEffect(() => {
-    function handleClickOutside(event) {
-      if (popoverOpen && toggleRef.current && !toggleRef.current.contains(event.target)) {
-        setPopoverOpen(false);
+    const handleSocialShare = (platform) => {
+      const text = `Check out this form: ${name}`;
+      const url = fullLink;
+      
+      let shareUrl = '';
+      switch (platform) {
+        case 'twitter':
+          shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+          break;
+        case 'facebook':
+          shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+          break;
+        case 'linkedin':
+          shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+          break;
+        case 'whatsapp':
+          shareUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + url)}`;
+          break;
+        case 'telegram':
+          shareUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+          break;
+        case 'email':
+          shareUrl = `mailto:?subject=${encodeURIComponent('Check out this form')}&body=${encodeURIComponent(text + '\n\n' + url)}`;
+          break;
+        default:
+          return;
       }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [popoverOpen]);
+      
+      window.open(shareUrl, '_blank', 'width=600,height=400');
+    };
 
-  // --- Grid View ---
+    return ReactDOM.createPortal(
+      <>
+        {/* Backdrop with blur */}
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => setSharePopupOpen(false)}
+        />
+        
+                {/* Glassmorphism popup */}
+        <div
+          className="share-popup"
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: 'rgba(255, 255, 255, 0.85)',
+            backdropFilter: 'blur(24px)',
+            borderRadius: '16px',
+            boxShadow: '0 20px 40px -12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.15)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            padding: '24px',
+            zIndex: 1000,
+            minWidth: '320px',
+            maxWidth: '380px',
+            fontFamily: 'Inter, sans-serif',
+            animation: 'popupSlideIn 0.3s ease-out'
+          }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: '20px'
+          }}>
+            <h3 style={{
+              margin: 0,
+              fontSize: '18px',
+              fontWeight: '600',
+              color: '#111827',
+              letterSpacing: '-0.025em'
+            }}>
+              Share Form
+            </h3>
+            <button
+              onClick={() => setSharePopupOpen(false)}
+              style={{
+                background: 'rgba(0, 0, 0, 0.04)',
+                border: 'none',
+                fontSize: '16px',
+                color: '#6b7280',
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: '6px',
+                transition: 'all 0.2s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '28px',
+                height: '28px'
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.background = 'rgba(0, 0, 0, 0.08)';
+                e.currentTarget.style.color = '#374151';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = 'rgba(0, 0, 0, 0.04)';
+                e.currentTarget.style.color = '#6b7280';
+              }}
+            >
+              <FaTimes />
+            </button>
+          </div>
+
+          {/* Form Link Section with Copy Icon */}
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.6)',
+            border: '1px solid rgba(0, 0, 0, 0.08)',
+            borderRadius: '10px',
+            padding: '12px',
+            marginBottom: '20px'
+          }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '6px'
+            }}>
+              <div style={{
+                fontSize: '13px',
+                color: '#374151',
+                fontWeight: '600'
+              }}>
+                Form Link
+              </div>
+              <button
+                onClick={handleCopyLink}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: copied ? '#10b981' : '#3b82f6',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  borderRadius: '4px',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '24px',
+                  height: '24px'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+                title={copied ? 'Copied!' : 'Copy Link'}
+              >
+                {copied ? (
+                  <div style={{ fontSize: '14px' }}>✓</div>
+                ) : (
+                  <FaCopy style={{ fontSize: '12px' }} />
+                )}
+              </button>
+            </div>
+            <div style={{
+              fontSize: '12px',
+              color: '#111827',
+              wordBreak: 'break-all',
+              fontFamily: 'monospace',
+              background: 'rgba(0, 0, 0, 0.02)',
+              padding: '8px',
+              borderRadius: '6px',
+              border: '1px solid rgba(0, 0, 0, 0.06)',
+              lineHeight: '1.3'
+            }}>
+              {fullLink}
+            </div>
+          </div>
+
+          {/* QR Code Section */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            marginBottom: '20px'
+          }}>
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.8)',
+              padding: '16px',
+              borderRadius: '10px',
+              border: '1px solid rgba(0, 0, 0, 0.08)',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
+            }}>
+              <QRCodeSVG
+                value={fullLink}
+                size={180}
+                level="M"
+                style={{ display: 'block' }}
+              />
+            </div>
+          </div>
+
+                    {/* Social Media Sharing */}
+          <div style={{
+            borderTop: '1px solid rgba(0, 0, 0, 0.08)',
+            paddingTop: '20px'
+          }}>
+            
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '16px'
+            }}>
+              {/* Twitter */}
+              <button
+                onClick={() => handleSocialShare('twitter')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#1da1f2',
+                  cursor: 'pointer',
+                  padding: '8px',
+                  borderRadius: '8px',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = 'rgba(29, 161, 242, 0.1)';
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+                title="Share on Twitter"
+              >
+                <div style={{ fontSize: '18px' }}>𝕏</div>
+              </button>
+
+              {/* Facebook */}
+              <button
+                onClick={() => handleSocialShare('facebook')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#1877f2',
+                  cursor: 'pointer',
+                  padding: '8px',
+                  borderRadius: '8px',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = 'rgba(24, 119, 242, 0.1)';
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+                title="Share on Facebook"
+              >
+                <div style={{ fontSize: '18px' }}>f</div>
+              </button>
+
+              {/* LinkedIn */}
+              <button
+                onClick={() => handleSocialShare('linkedin')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#0077b5',
+                  cursor: 'pointer',
+                  padding: '8px',
+                  borderRadius: '8px',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = 'rgba(0, 119, 181, 0.1)';
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+                title="Share on LinkedIn"
+              >
+                <div style={{ fontSize: '18px' }}>in</div>
+              </button>
+
+              {/* WhatsApp */}
+              <button
+                onClick={() => handleSocialShare('whatsapp')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#25d366',
+                  cursor: 'pointer',
+                  padding: '8px',
+                  borderRadius: '8px',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = 'rgba(37, 211, 102, 0.1)';
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+                title="Share on WhatsApp"
+              >
+                <div style={{ fontSize: '18px' }}>💬</div>
+              </button>
+
+              {/* Telegram */}
+              <button
+                onClick={() => handleSocialShare('telegram')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#0088cc',
+                  cursor: 'pointer',
+                  padding: '8px',
+                  borderRadius: '8px',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = 'rgba(0, 136, 204, 0.1)';
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+                title="Share on Telegram"
+              >
+                <div style={{ fontSize: '18px' }}>✈️</div>
+              </button>
+
+              {/* Email */}
+              <button
+                onClick={() => handleSocialShare('email')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#ea4335',
+                  cursor: 'pointer',
+                  padding: '8px',
+                  borderRadius: '8px',
+                  transition: 'all 0.2s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px'
+                }}
+                onMouseOver={e => {
+                  e.currentTarget.style.background = 'rgba(234, 67, 53, 0.1)';
+                  e.currentTarget.style.transform = 'scale(1.1)';
+                }}
+                onMouseOut={e => {
+                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }}
+                title="Share via Email"
+              >
+                <div style={{ fontSize: '18px' }}>✉️</div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* CSS Animation */}
+        <style>
+          {`
+            @keyframes popupSlideIn {
+              from {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.9);
+              }
+              to {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1);
+              }
+            }
+          `}
+        </style>
+      </>,
+      document.body
+    );
+  };
+
   if (view === 'grid') {
-    // Determine accent color and type label
     const accentColor = isForm
-      ? typeColors[formType] || '#6366f1'
+      ? typeColors[formType] || '#3b82f6'
       : quizType === 'live'
         ? typeColors['Live']
         : typeColors[quizType] || typeColors['Quiz'];
@@ -315,131 +739,129 @@ const FormCardRow = ({
         : quizType || 'Quiz';
 
     return (
+      <>
       <div
         className={`modern-form-card${expanded ? ' expanded' : ''}`}
         style={{
-          boxShadow: '0 4px 24px rgba(80, 80, 180, 0.08)',
-          borderRadius: 18,
-          background: '#fff',
-          border: '1.5px solid #f3f4f6',
-          transition: 'box-shadow 0.22s, transform 0.18s',
+            background: '#ffffff',
+            borderRadius: '12px',
+            border: '1px solid #e5e7eb',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           position: 'relative',
           overflow: 'hidden',
-          minHeight: 120,
+            minHeight: '160px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
           cursor: 'pointer',
-          ...(expanded ? { boxShadow: '0 8px 32px rgba(80,80,180,0.16)', transform: 'scale(1.03)' } : {}),
+            fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
+            ...(expanded ? { 
+              boxShadow: '0 8px 12px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+              transform: 'scale(1.01)',
+              borderColor: accentColor
+            } : {}),
         }}
         onClick={handleEdit}
         tabIndex={0}
         role="button"
-      >
-        {/* Accent bar */}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = expanded ? 'scale(1.01)' : 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 8px 12px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)';
+            e.currentTarget.style.borderColor = accentColor;
+            e.currentTarget.querySelector('.card-actions-big').style.opacity = '1';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = expanded ? 'scale(1.01)' : 'translateY(0)';
+            e.currentTarget.style.boxShadow = expanded ? '0 8px 12px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' : '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)';
+            e.currentTarget.style.borderColor = expanded ? accentColor : '#e5e7eb';
+            e.currentTarget.querySelector('.card-actions-big').style.opacity = '0';
+          }}
+        >
+          {/* Accent line */}
         <div style={{
           position: 'absolute',
           left: 0,
           top: 0,
           height: '100%',
-          width: 6,
-          background: accentColor,
-          borderTopLeftRadius: 18,
-          borderBottomLeftRadius: 18,
-        }} />
-        {/* Top-right flex container for checkbox and toggle */}
-        <div className="formcard-topright-controls">
-          <div
-            className={`formcard-checkbox${selected ? ' selected' : ''}`}
-            onClick={e => {
-              e.stopPropagation();
-              onSelect && onSelect(formId, !selected);
-            }}
-            title="Select"
-            tabIndex={0}
-            aria-checked={selected}
-            role="checkbox"
-            onKeyDown={e => {
-              if (e.key === ' ' || e.key === 'Enter') {
-                e.preventDefault();
-                onSelect && onSelect(formId, !selected);
-              }
-            }}
-          >
-            {selected && <FaCheck color="#fff" size={16} style={{ transition: 'opacity 0.18s' }} />}
-          </div>
-          <ToggleSwitch />
-        </div>
-        <div style={{ padding: '18px 18px 12px 28px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-            {/* Multi-select button (circle) */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              {/* Title */}
-              <div className="form-card-title" style={titleStyle || { fontWeight: 400, color: '#222' }}>{name}</div>
-            </div>
-            {/* Toggle Switch */}
+            width: '3px',
+            background: isPublished ? accentColor : '#e5e7eb',
+            borderTopLeftRadius: '12px',
+            borderBottomLeftRadius: '12px',
+          }} />
+          
+          {/* Top controls - only toggle switch, no checkbox */}
+          <div className="formcard-topright-controls" style={{
+            position: 'absolute',
+            top: '12px',
+            right: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            zIndex: 20
+          }}>
             <ToggleSwitch />
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+          
+          {/* Main content */}
+          <div style={{ padding: '16px 16px 12px 20px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+            {/* Title */}
+            <div style={{ marginBottom: '10px' }}>
+              <div className="form-card-title" style={titleStyle || { 
+                fontWeight: '600', 
+                color: '#111827',
+                fontSize: '15px',
+                lineHeight: '1.3'
+              }}>
+                {name}
+              </div>
+            </div>
+            
+            {/* Status badges */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+              <span style={{
+                fontSize: '10px',
+                fontWeight: '600',
+                color: isPublished ? '#059669' : '#d97706',
+                background: isPublished ? '#d1fae5' : '#fef3c7',
+                borderRadius: '10px',
+                padding: '2px 6px',
+              }}>
+                {isPublished ? 'Published' : 'Draft'}
+              </span>
             <span style={{
-              fontSize: 13,
-              fontWeight: 600,
-              color: isPublished ? '#22c55e' : '#f59e42',
-              background: isPublished ? 'rgba(34,197,94,0.08)' : 'rgba(251,191,36,0.10)',
-              borderRadius: 8,
-              padding: '2px 10px',
-            }}>{isPublished ? 'Published' : 'Draft'}</span>
-            <span style={{ fontSize: 12, color: accentColor, fontWeight: 600, background: 'rgba(99,102,241,0.07)', borderRadius: 8, padding: '2px 8px' }}>{typeLabel}</span>
+                fontSize: '10px', 
+                color: accentColor, 
+                fontWeight: '600', 
+                background: `${accentColor}10`, 
+                borderRadius: '10px', 
+                padding: '2px 6px'
+              }}>
+                {typeLabel}
+              </span>
+            </div>
+            
+            {/* Timestamp */}
+            <div style={{ 
+              fontSize: '11px', 
+              color: '#6b7280', 
+              marginBottom: '10px',
+              lineHeight: '1.3'
+            }}>
+              Created: {timestamp}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8 }}>
-            <button className="card-action-btn edit" title="Preview" onClick={handlePreviewOnly} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 18, cursor: 'pointer' }}>
-              <FaEye />
-            </button>
-            <button className="card-action-btn results" title="Results" onClick={handleResults} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#22c55e', fontSize: 18, cursor: 'pointer' }}>
-              <FaChartBar />
-            </button>
-            <button className="card-action-btn share" title={copied ? 'Copied!' : fullLink} onClick={handleShare} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: 18, cursor: 'pointer' }}>
-              {copied ? 'Copied!' : <FaLink />}
-            </button>
-            <button className="card-action-btn delete" title="Delete" onClick={handleDelete} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#f87171', fontSize: 18, cursor: 'pointer' }}>
-              <FaTrash />
-            </button>
+            
+            {/* Action buttons - visible on hover for all cards */}
+            <ActionButtons />
           </div>
         </div>
-        {/* Always show the link for all cards */}
-        {fullLink && (
-          <div style={{ fontSize: 13, color: '#18181a', marginTop: 6, wordBreak: 'break-all', background: '#f3f4f6', borderRadius: 8, padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 6 }} className="card-url-link">
-            <FaLink style={{ fontSize: 14 }} />
-            <a href={fullLink} target="_blank" rel="noopener noreferrer" style={{ color: '#18181a', textDecoration: 'underline', fontWeight: 500 }}>
-              {fullLink}
-            </a>
-          </div>
-        )}
-        {/* Popover and other overlays remain unchanged */}
-        {popoverOpen && isPublished && !!link && ReactDOM.createPortal(
-          <div className="pretty-popover portal-popover" style={{ top: popoverCoords.top, left: popoverCoords.left, position: 'absolute' }}>
-            <div className="popover-arrow portal-arrow" />
-            <button className="popover-close-btn" onClick={() => setPopoverOpen(false)} title="Close">&times;</button>
-            <div className="popover-title">Share this form</div>
-            <div className="pretty-link-box">
-              <FaLink style={{ marginRight: 8, color: 'var(--accent)' }} />
-              <span className="pretty-link-text">{link}</span>
-              <button className="pretty-copy-btn" onClick={handleCopy} title="Copy link">
-                {copied ? 'Copied!' : <FaCopy />}
-              </button>
-            </div>
-          </div>,
-          document.body
-        )}
-      </div>
+        <SharePopup />
+      </>
     );
   }
 
-  // --- List View ---
   if (view === 'list') {
-    // Horizontal, modern list view
     const accentColor = isForm
-      ? typeColors[formType] || '#6366f1'
+      ? typeColors[formType] || '#3b82f6'
       : quizType === 'live'
         ? typeColors['Live']
         : typeColors[quizType] || typeColors['Quiz'];
@@ -448,85 +870,229 @@ const FormCardRow = ({
       : quizType === 'live'
         ? 'Live Quiz'
         : quizType || 'Quiz';
+        
     return (
+      <>
       <div
         className={`modern-form-card-list`}
         style={{
-          boxShadow: '0 2px 12px rgba(120,130,150,0.08)',
-          borderRadius: 16,
-          background: '#f7f8fa',
-          border: '1px solid #e2e4ea',
+            background: '#ffffff',
+            borderRadius: '10px',
+            border: '1px solid #e5e7eb',
           display: 'flex',
           alignItems: 'center',
-          padding: '14px 24px',
-          marginBottom: 18,
-          gap: 18,
-          minHeight: 64,
+            padding: '12px 16px',
+            marginBottom: '6px',
+            gap: '12px',
+            minHeight: '56px',
           position: 'relative',
-        }}
-      >
-        {/* Checkbox for both views */}
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)'
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = 'translateY(-1px)';
+            e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)';
+            e.currentTarget.style.borderColor = accentColor;
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)';
+            e.currentTarget.style.borderColor = '#e5e7eb';
+          }}
+        >
         <input
           type="checkbox"
           checked={selected}
           onChange={e => onSelect && onSelect(formId, e.target.checked)}
           style={{
-            marginLeft: 18,
-            marginRight: 18,
-            width: 18,
-            height: 18,
-            accentColor: '#6366f1',
+              width: '14px',
+              height: '14px',
+              accentColor: accentColor,
             cursor: 'pointer',
-            boxShadow: selected ? '0 0 0 2px #6366f1' : 'none',
-            background: selected ? '#ede9fe' : '#fff',
-            borderRadius: 4,
-            border: '1.5px solid #e0e0e0',
+              border: `2px solid ${selected ? accentColor : '#d1d5db'}`,
+              borderRadius: '3px'
           }}
           title="Select for bulk actions"
         />
+          
         {/* Accent bar */}
         <div style={{
-          width: 5,
-          height: 44,
-          background: accentColor,
-          borderRadius: 8,
-          marginRight: 18,
-        }} />
-        <span style={{ fontWeight: 700, fontSize: 18, color: '#3730a3', minWidth: 120 }}>{name}</span>
+            width: '3px',
+            height: '32px',
+            background: isPublished ? accentColor : '#e5e7eb',
+            borderRadius: '2px',
+            marginRight: '12px',
+          }} />
+          
+          {/* Title */}
+          <span style={{ 
+            fontWeight: '600', 
+            fontSize: '14px', 
+            color: '#111827', 
+            minWidth: '160px',
+            flex: '1'
+          }}>
+            {name}
+          </span>
+          
+          {/* Status badge */}
+          <span style={{
+            fontSize: '10px',
+            fontWeight: '600',
+            color: isPublished ? '#059669' : '#d97706',
+            background: isPublished ? '#d1fae5' : '#fef3c7',
+            borderRadius: '10px',
+            padding: '2px 6px',
+            whiteSpace: 'nowrap'
+          }}>
+            {isPublished ? 'Published' : 'Draft'}
+          </span>
+          
+          {/* Type badge */}
         <span style={{
-          fontSize: 13,
-          fontWeight: 600,
-          color: isPublished ? '#22c55e' : '#f59e42',
-          background: isPublished ? 'rgba(34,197,94,0.08)' : 'rgba(251,191,36,0.10)',
-          borderRadius: 8,
-          padding: '2px 10px',
-          marginLeft: 10,
-        }}>{isPublished ? 'Published' : 'Draft'}</span>
-        <span style={{ fontSize: 12, color: accentColor, fontWeight: 600, background: 'rgba(99,102,241,0.07)', borderRadius: 8, padding: '2px 8px', marginLeft: 10 }}>{typeLabel}</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginLeft: 18 }}>
-          <button className="card-action-btn edit" title="Preview" onClick={handlePreviewOnly} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 18, cursor: 'pointer' }}>
+            fontSize: '10px', 
+            color: accentColor, 
+            fontWeight: '600', 
+            background: `${accentColor}10`, 
+            borderRadius: '10px', 
+            padding: '2px 6px',
+            whiteSpace: 'nowrap'
+          }}>
+            {typeLabel}
+          </span>
+          
+          {/* Action buttons - visible on hover for all cards */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '4px', 
+            marginLeft: '12px',
+            opacity: '0',
+            transition: 'opacity 0.3s ease'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.opacity = '1'}
+          onMouseOut={(e) => e.currentTarget.style.opacity = '0'}
+          >
+            <button 
+              className="card-action-btn edit" 
+              title="Preview" 
+              onClick={handlePreviewOnly} 
+              tabIndex={-1} 
+              style={{ 
+                background: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid rgba(59, 130, 246, 0.2)',
+                color: '#3b82f6', 
+                fontSize: '12px', 
+                cursor: 'pointer',
+                padding: '4px',
+                borderRadius: '4px',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.15)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
             <FaEye />
           </button>
-          <button className="card-action-btn results" title="Results" onClick={handleResults} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#22c55e', fontSize: 18, cursor: 'pointer' }}>
+            <button 
+              className="card-action-btn results" 
+              title="Results" 
+              onClick={handleResults} 
+              tabIndex={-1} 
+              style={{ 
+                background: 'rgba(16, 185, 129, 0.1)',
+                border: '1px solid rgba(16, 185, 129, 0.2)',
+                color: '#10b981', 
+                fontSize: '12px', 
+                cursor: 'pointer',
+                padding: '4px',
+                borderRadius: '4px',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.15)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.1)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
             <FaChartBar />
           </button>
-          <button className="card-action-btn share" title={copied ? 'Copied!' : fullLink} onClick={handleShare} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: 18, cursor: 'pointer' }}>
-            {copied ? 'Copied!' : <FaLink />}
+            <button 
+              ref={shareButtonRef}
+              className="card-action-btn share share-popup" 
+              title="Share" 
+              onClick={handleShare} 
+              tabIndex={-1} 
+              style={{ 
+                background: 'rgba(6, 182, 212, 0.1)',
+                border: '1px solid rgba(6, 182, 212, 0.2)',
+                color: '#06b6d4', 
+                fontSize: '12px', 
+                cursor: 'pointer',
+                padding: '4px',
+                borderRadius: '4px',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.background = 'rgba(6, 182, 212, 0.15)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = 'rgba(6, 182, 212, 0.1)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <FaShare />
           </button>
-          <button className="card-action-btn delete" title="Delete" onClick={handleDelete} tabIndex={-1} style={{ background: 'none', border: 'none', color: '#f87171', fontSize: 18, cursor: 'pointer' }}>
+            <button 
+              className="card-action-btn delete" 
+              title="Delete" 
+              onClick={handleDelete} 
+              tabIndex={-1} 
+              style={{ 
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.2)',
+                color: '#ef4444', 
+                fontSize: '12px', 
+                cursor: 'pointer',
+                padding: '4px',
+                borderRadius: '4px',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseOver={e => {
+                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)';
+                e.currentTarget.style.transform = 'translateY(-1px)';
+              }}
+              onMouseOut={e => {
+                e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
             <FaTrash />
           </button>
-          <div style={{ marginLeft: 18 }}>
-            <a href={fullLink} target="_blank" rel="noopener noreferrer" style={{ color: '#18181a', textDecoration: 'underline', fontWeight: 500, fontSize: 13, wordBreak: 'break-all' }}>
-              {fullLink}
-            </a>
           </div>
-        </div>
-        {/* Toggle Switch for all types */}
-        <div style={{ position: 'absolute', top: 16, right: 18, zIndex: 2 }} onClick={e => e.stopPropagation()}>
+          
+          {/* Toggle switch */}
+          <div style={{ 
+            position: 'absolute', 
+            top: '12px', 
+            right: '12px', 
+            zIndex: 2 
+          }} onClick={e => e.stopPropagation()}>
           <ToggleSwitch />
         </div>
       </div>
+        <SharePopup />
+      </>
     );
   }
 };

@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabase';
 import { useToast } from '../components/Toast';
 import './Dashboard.css';
-import { FiSun, FiMoon } from 'react-icons/fi';
+import { FiSun, FiMoon, FiSearch } from 'react-icons/fi';
 import DeleteQuizButton from '../components/quiz/DeleteQuizButton';
 import { FaHistory, FaEye } from 'react-icons/fa';
 import TemplateCard from '../components/shared/TemplateCard';
@@ -463,7 +463,11 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="dashboard-animated-layout" style={{ background: isDarkMode ? '#181c24' : '#f8f9fb', minHeight: '100vh' }}>
+    <div className="dashboard-animated-layout" style={{ 
+      background: isDarkMode ? '#0f172a' : '#ffffff', 
+      minHeight: '100vh',
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
+    }}>
       <Navbar activeTab={activeTab} onToggle={handleTabToggle} />
 
       <div className="dashboard-animated-content">
@@ -472,6 +476,13 @@ const Dashboard = () => {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, type: 'spring' }}
+          style={{
+            fontSize: '28px',
+            fontWeight: '700',
+            color: isDarkMode ? '#f8fafc' : '#1e293b',
+            marginBottom: '8px',
+            letterSpacing: '-0.025em'
+          }}
         >
           {activeTab === 'forms'
             ? 'Form Templates'
@@ -479,6 +490,24 @@ const Dashboard = () => {
             ? 'Live Quizzes'
             : 'Quiz Templates'}
         </motion.h2>
+
+        <motion.p
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.1, type: 'spring' }}
+          style={{
+            fontSize: '16px',
+            color: isDarkMode ? '#94a3b8' : '#64748b',
+            marginBottom: '32px',
+            fontWeight: '400'
+          }}
+        >
+          {activeTab === 'forms'
+            ? 'Create and manage your forms with ease'
+            : activeTab === 'livequiz'
+            ? 'Host interactive live quiz sessions'
+            : 'Build engaging quiz experiences'}
+        </motion.p>
 
         <motion.div
           className="dashboard-creation-bar"
@@ -495,48 +524,120 @@ const Dashboard = () => {
           )}
         </motion.div>
 
-        <div className="dashboard-controls-bar">
-          <input
-            className="dashboard-search"
-            type="text"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <div className="dashboard-view-toggle">
+        <div className="dashboard-controls-bar" style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          padding: '24px 0',
+          marginBottom: '24px',
+          flexWrap: 'wrap'
+        }}>
+          <div style={{
+            position: 'relative',
+            flex: '1',
+            minWidth: '280px',
+            maxWidth: '400px'
+          }}>
+            <FiSearch style={{
+              position: 'absolute',
+              left: '16px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: isDarkMode ? '#64748b' : '#94a3b8',
+              fontSize: '18px'
+            }} />
+            <input
+              className="dashboard-search"
+              type="text"
+              placeholder="Search templates..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px 16px 12px 48px',
+                border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
+                borderRadius: '12px',
+                fontSize: '15px',
+                background: isDarkMode ? '#1e293b' : '#ffffff',
+                color: isDarkMode ? '#f1f5f9' : '#1e293b',
+                outline: 'none',
+                transition: 'all 0.2s ease',
+                fontFamily: 'Inter, sans-serif'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = isDarkMode ? '#3b82f6' : '#3b82f6';
+                e.target.style.boxShadow = `0 0 0 3px ${isDarkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.1)'}`;
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = isDarkMode ? '#334155' : '#e2e8f0';
+                e.target.style.boxShadow = 'none';
+              }}
+            />
+          </div>
+          
+          <div className="dashboard-view-toggle" style={{
+            display: 'flex',
+            gap: '4px',
+            background: isDarkMode ? '#1e293b' : '#f1f5f9',
+            borderRadius: '10px',
+            padding: '4px'
+          }}>
             <button
-              className={`dashboard-view-btn${
-                viewMode === 'grid' ? ' active' : ''
-              }`}
+              className={`dashboard-view-btn${viewMode === 'grid' ? ' active' : ''}`}
               onClick={() => setViewMode('grid')}
+              style={{
+                background: viewMode === 'grid' ? (isDarkMode ? '#3b82f6' : '#3b82f6') : 'transparent',
+                color: viewMode === 'grid' ? '#ffffff' : (isDarkMode ? '#94a3b8' : '#64748b'),
+                border: 'none',
+                borderRadius: '8px',
+                padding: '8px 16px',
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                fontFamily: 'Inter, sans-serif'
+              }}
             >
               Grid
             </button>
             <button
-              className={`dashboard-view-btn${
-                viewMode === 'list' ? ' active' : ''
-              }`}
+              className={`dashboard-view-btn${viewMode === 'list' ? ' active' : ''}`}
               onClick={() => setViewMode('list')}
+              style={{
+                background: viewMode === 'list' ? (isDarkMode ? '#3b82f6' : '#3b82f6') : 'transparent',
+                color: viewMode === 'list' ? '#ffffff' : (isDarkMode ? '#94a3b8' : '#64748b'),
+                border: 'none',
+                borderRadius: '8px',
+                padding: '8px 16px',
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                fontFamily: 'Inter, sans-serif'
+              }}
             >
               List
             </button>
           </div>
+          
           <button
             onClick={() => setIsDarkMode((prev) => !prev)}
             style={{
-              background: isDarkMode ? '#2563eb' : '#f3f4f6',
-              color: isDarkMode ? '#fff' : '#2563eb',
-              border: 'none',
-              borderRadius: 999,
-              padding: '8px 16px',
-              fontWeight: 700,
-              fontSize: 17,
+              background: isDarkMode ? '#1e293b' : '#f1f5f9',
+              color: isDarkMode ? '#f1f5f9' : '#64748b',
+              border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
+              borderRadius: '10px',
+              padding: '10px',
+              fontWeight: '600',
+              fontSize: '16px',
               cursor: 'pointer',
-              boxShadow: '0 2px 8px rgba(37,99,235,0.10)',
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
-              marginLeft: 16
+              justifyContent: 'center',
+              transition: 'all 0.2s ease',
+              fontFamily: 'Inter, sans-serif',
+              minWidth: '44px',
+              height: '44px'
             }}
             title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
@@ -559,16 +660,19 @@ const Dashboard = () => {
                     bottom: 32,
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    background: isDarkMode ? '#2a2d3a' : '#fff',
-                    color: isDarkMode ? '#fff' : '#000',
-                    borderRadius: 16,
-                    boxShadow: '0 4px 24px #a5b4fc33',
-                    padding: '16px 32px',
+                    background: isDarkMode ? '#1e293b' : '#ffffff',
+                    color: isDarkMode ? '#f1f5f9' : '#1e293b',
+                    borderRadius: '16px',
+                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                    padding: '16px 24px',
                     zIndex: 200,
                     display: 'flex',
-                    gap: 18,
+                    gap: '16px',
                     alignItems: 'center',
-                    fontWeight: 700
+                    fontWeight: '600',
+                    fontSize: '14px',
+                    border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
+                    fontFamily: 'Inter, sans-serif'
                   }}>
                     <span>{selectedIds.length} selected</span>
                     {activeTab === 'livequiz' ? (
@@ -578,16 +682,81 @@ const Dashboard = () => {
                         onDeleted={id => setLiveQuizzes(prev => prev.filter(q => q.id !== id))}
                       />
                     ) : (
-                      <button onClick={handleBulkDelete} style={{ color: '#ef4444', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Delete</button>
+                      <button 
+                        onClick={handleBulkDelete} 
+                        style={{ 
+                          color: '#ef4444', 
+                          background: 'none', 
+                          border: 'none', 
+                          fontWeight: '600', 
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontFamily: 'Inter, sans-serif'
+                        }}
+                      >
+                        Delete
+                      </button>
                     )}
                     {(activeTab === 'forms' || activeTab === 'quizzes') && (
                       <>
-                        <button onClick={() => handleBulkActivate(true)} style={{ color: '#22c55e', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Activate</button>
-                        <button onClick={() => handleBulkActivate(false)} style={{ color: '#6366f1', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Deactivate</button>
+                        <button 
+                          onClick={() => handleBulkActivate(true)} 
+                          style={{ 
+                            color: '#10b981', 
+                            background: 'none', 
+                            border: 'none', 
+                            fontWeight: '600', 
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontFamily: 'Inter, sans-serif'
+                          }}
+                        >
+                          Activate
+                        </button>
+                        <button 
+                          onClick={() => handleBulkActivate(false)} 
+                          style={{ 
+                            color: '#6366f1', 
+                            background: 'none', 
+                            border: 'none', 
+                            fontWeight: '600', 
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            fontFamily: 'Inter, sans-serif'
+                          }}
+                        >
+                          Deactivate
+                        </button>
                       </>
                     )}
-                    <button onClick={handleSelectAll} style={{ color: '#6366f1', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Select All</button>
-                    <button onClick={handleDeselectAll} style={{ color: '#6366f1', background: 'none', border: 'none', fontWeight: 700, cursor: 'pointer' }}>Clear</button>
+                    <button 
+                      onClick={handleSelectAll} 
+                      style={{ 
+                        color: '#6366f1', 
+                        background: 'none', 
+                        border: 'none', 
+                        fontWeight: '600', 
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontFamily: 'Inter, sans-serif'
+                      }}
+                    >
+                      Select All
+                    </button>
+                    <button 
+                      onClick={handleDeselectAll} 
+                      style={{ 
+                        color: '#6366f1', 
+                        background: 'none', 
+                        border: 'none', 
+                        fontWeight: '600', 
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        fontFamily: 'Inter, sans-serif'
+                      }}
+                    >
+                      Clear
+                    </button>
                   </div>
                 )}
                 {currentData.map((item, idx) => (
@@ -601,25 +770,27 @@ const Dashboard = () => {
                       className="dashboard-animated-card livequiz-card-hover"
                       style={{ 
                         position: 'relative', 
-                        borderLeft: '6px solid #a78bfa', 
-                        background: isDarkMode ? '#2a2d3a' : '#fff',
-                        color: isDarkMode ? '#fff' : '#000',
-                        borderRadius: 18, 
-                        boxShadow: '0 2px 12px #a5b4fc22', 
-                        padding: 18, 
-                        minHeight: 120, 
+                        borderLeft: '4px solid #8b5cf6', 
+                        background: isDarkMode ? '#1e293b' : '#ffffff',
+                        color: isDarkMode ? '#f1f5f9' : '#1e293b',
+                        borderRadius: '16px', 
+                        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', 
+                        padding: '20px', 
+                        minHeight: '120px', 
                         display: 'flex', 
                         flexDirection: 'column', 
                         justifyContent: 'center', 
-                        gap: 8, 
-                        marginBottom: 30,
+                        gap: '12px', 
+                        marginBottom: '20px',
                         cursor: 'pointer',
-                        transition: 'box-shadow 0.2s, transform 0.2s',
+                        transition: 'all 0.2s ease',
+                        border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
+                        fontFamily: 'Inter, sans-serif'
                       }}
                       onClick={() => navigate(`/livequiz/questions/${item.id}`)}
                       whileHover={{
-                        boxShadow: '0 8px 32px 0 rgba(44,62,80,0.18)',
-                        scale: 1.025,
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                        scale: 1.02,
                         zIndex: 10
                       }}
                     >
@@ -633,29 +804,152 @@ const Dashboard = () => {
                         onClick={e => e.stopPropagation()}
                         style={{
                           position: 'absolute',
-                          top: 18,
-                          right: 18,
+                          top: '20px',
+                          right: '20px',
                           zIndex: 2,
-                          width: 20,
-                          height: 20,
+                          width: '20px',
+                          height: '20px',
+                          accentColor: '#8b5cf6'
                         }}
                         title="Select"
                       />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <span style={{ fontWeight: 700, fontSize: 18 }}>{item.title || 'Untitled Live Quiz'}</span>
-                        <span style={{ background: '#fde68a', color: '#b45309', fontWeight: 600, fontSize: 13, borderRadius: 8, padding: '2px 10px', marginLeft: 6 }}>Draft</span>
-                        <span style={{ background: '#a78bfa', color: '#fff', fontWeight: 600, fontSize: 13, borderRadius: 8, padding: '2px 10px', marginLeft: 4 }}>Live</span>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '12px', 
+                        marginBottom: '8px' 
+                      }}>
+                        <span style={{ 
+                          fontWeight: '600', 
+                          fontSize: '18px',
+                          color: isDarkMode ? '#f1f5f9' : '#1e293b'
+                        }}>
+                          {item.title || 'Untitled Live Quiz'}
+                        </span>
+                        <span style={{ 
+                          background: '#fef3c7', 
+                          color: '#d97706', 
+                          fontWeight: '600', 
+                          fontSize: '12px', 
+                          borderRadius: '6px', 
+                          padding: '4px 8px'
+                        }}>
+                          Draft
+                        </span>
+                        <span style={{ 
+                          background: '#8b5cf6', 
+                          color: '#ffffff', 
+                          fontWeight: '600', 
+                          fontSize: '12px', 
+                          borderRadius: '6px', 
+                          padding: '4px 8px'
+                        }}>
+                          Live
+                        </span>
                       </div>
-                      <div style={{ color: isDarkMode ? '#ccc' : '#555', fontSize: 15, wordBreak: 'break-all', marginBottom: 4 }}>Code: {item.code || item.id}</div>
-                      <div style={{ color: isDarkMode ? '#888' : '#888', fontSize: 13, marginBottom: 8 }}>Created: {item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A'}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>
-                        <button title="View" style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); navigate(`/livequiz/details/${item.id}`); }}><i className="fa fa-eye" /></button>
-                        <button title="Results" style={{ background: 'none', border: 'none', color: '#22c55e', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); navigate(`/livequiz/details/${item.id}`); }}><i className="fa fa-bar-chart" /></button>
-                        <button title="Link" style={{ background: 'none', border: 'none', color: '#0ea5e9', fontSize: 18, cursor: 'pointer' }} onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(window.location.origin + `/livequiz/details/${item.id}`); toast('Link copied!', 'success'); }}><i className="fa fa-link" /></button>
+                      <div style={{ 
+                        color: isDarkMode ? '#94a3b8' : '#64748b', 
+                        fontSize: '14px', 
+                        wordBreak: 'break-all', 
+                        marginBottom: '4px' 
+                      }}>
+                        Code: {item.code || item.id}
+                      </div>
+                      <div style={{ 
+                        color: isDarkMode ? '#64748b' : '#94a3b8', 
+                        fontSize: '13px', 
+                        marginBottom: '12px' 
+                      }}>
+                        Created: {item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A'}
+                      </div>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '16px', 
+                        marginBottom: '8px' 
+                      }}>
+                        <button 
+                          title="View" 
+                          style={{ 
+                            background: 'none', 
+                            border: 'none', 
+                            color: '#3b82f6', 
+                            fontSize: '18px', 
+                            cursor: 'pointer',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            transition: 'background 0.2s ease'
+                          }} 
+                          onMouseOver={e => e.currentTarget.style.background = isDarkMode ? '#1e293b' : '#f1f5f9'}
+                          onMouseOut={e => e.currentTarget.style.background = 'none'}
+                          onClick={e => { 
+                            e.stopPropagation(); 
+                            navigate(`/livequiz/details/${item.id}`); 
+                          }}
+                        >
+                          <FaEye />
+                        </button>
+                        <button 
+                          title="Results" 
+                          style={{ 
+                            background: 'none', 
+                            border: 'none', 
+                            color: '#10b981', 
+                            fontSize: '18px', 
+                            cursor: 'pointer',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            transition: 'background 0.2s ease'
+                          }} 
+                          onMouseOver={e => e.currentTarget.style.background = isDarkMode ? '#1e293b' : '#f1f5f9'}
+                          onMouseOut={e => e.currentTarget.style.background = 'none'}
+                          onClick={e => { 
+                            e.stopPropagation(); 
+                            navigate(`/livequiz/details/${item.id}`); 
+                          }}
+                        >
+                          <i className="fa fa-bar-chart" />
+                        </button>
+                        <button 
+                          title="Link" 
+                          style={{ 
+                            background: 'none', 
+                            border: 'none', 
+                            color: '#06b6d4', 
+                            fontSize: '18px', 
+                            cursor: 'pointer',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            transition: 'background 0.2s ease'
+                          }} 
+                          onMouseOver={e => e.currentTarget.style.background = isDarkMode ? '#1e293b' : '#f1f5f9'}
+                          onMouseOut={e => e.currentTarget.style.background = 'none'}
+                          onClick={e => { 
+                            e.stopPropagation(); 
+                            navigator.clipboard.writeText(window.location.origin + `/livequiz/details/${item.id}`); 
+                            toast('Link copied!', 'success'); 
+                          }}
+                        >
+                          <i className="fa fa-link" />
+                        </button>
                         <button 
                           title="Past Sessions" 
-                          style={{ background: 'none', border: 'none', color: '#a78bfa', fontSize: 18, cursor: 'pointer' }} 
-                          onClick={e => { e.stopPropagation(); navigate(`/admin/${item.id}/sessions`); }}
+                          style={{ 
+                            background: 'none', 
+                            border: 'none', 
+                            color: '#8b5cf6', 
+                            fontSize: '18px', 
+                            cursor: 'pointer',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            transition: 'background 0.2s ease'
+                          }} 
+                          onMouseOver={e => e.currentTarget.style.background = isDarkMode ? '#1e293b' : '#f1f5f9'}
+                          onMouseOut={e => e.currentTarget.style.background = 'none'}
+                          onClick={e => { 
+                            e.stopPropagation(); 
+                            navigate(`/admin/${item.id}/sessions`); 
+                          }}
                         >
                           <FaHistory size={18} />
                         </button>
@@ -671,8 +965,8 @@ const Dashboard = () => {
                       className="dashboard-animated-card formquiz-card-hover"
                       style={{ marginBottom: 30, transition: 'box-shadow 0.2s, transform 0.2s' }}
                       whileHover={{
-                        boxShadow: '0 8px 32px 0 rgba(44,62,80,0.18)',
-                        scale: 1.025,
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                        scale: 1.02,
                         zIndex: 10
                       }}
                     >
@@ -716,7 +1010,11 @@ const Dashboard = () => {
                         }
                         expanded={expandedCardId === item.id}
                         setExpandedCardId={setExpandedCardId}
-                        titleStyle={{ fontWeight: 400, color: isDarkMode ? '#fff' : '#222' }}
+                        titleStyle={{ 
+                          fontWeight: '600', 
+                          color: isDarkMode ? '#f1f5f9' : '#1e293b',
+                          fontSize: '16px'
+                        }}
                         selected={selectedIds.includes(item.id)}
                         onSelect={handleSelect}
                       />
@@ -731,13 +1029,20 @@ const Dashboard = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
-                style={{ color: isDarkMode ? '#ccc' : '#666' }}
+                style={{ 
+                  color: isDarkMode ? '#94a3b8' : '#64748b',
+                  fontSize: '16px',
+                  textAlign: 'center',
+                  padding: '60px 0',
+                  fontWeight: '500',
+                  fontFamily: 'Inter, sans-serif'
+                }}
               >
                 {activeTab === 'forms'
-                  ? 'No forms found.'
+                  ? 'No forms found. Create your first form to get started.'
                   : activeTab === 'livequiz'
-                  ? 'No live quizzes found.'
-                  : 'No quizzes found.'}
+                  ? 'No live quizzes found. Create your first live quiz session.'
+                  : 'No quizzes found. Create your first quiz to get started.'}
               </motion.div>
             )}
           </AnimatePresence>
