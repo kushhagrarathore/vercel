@@ -97,10 +97,6 @@ const FormCreationBar = () => {
 =======
           style={{ cursor: template.onClick ? 'pointer' : 'default' }}
 <<<<<<< Updated upstream
-<<<<<<< Updated upstream
-=======
->>>>>>> 27fbc336d9e47fee18ffcdac7ab6d2b29c1c2d84
->>>>>>> Stashed changes
 =======
 >>>>>>> 27fbc336d9e47fee18ffcdac7ab6d2b29c1c2d84
 >>>>>>> Stashed changes
