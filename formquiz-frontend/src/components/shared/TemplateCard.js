@@ -1,5 +1,4 @@
 import React from 'react';
-import './TemplateCard.css';
 
 const TemplateCard = ({ icon, label, description, onClick, style, children }) => {
   return (

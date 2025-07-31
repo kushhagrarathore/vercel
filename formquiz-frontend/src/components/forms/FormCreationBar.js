@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import TemplateCard from '../shared/TemplateCard';
 import '../shared/TemplateCard.css';
 import './FormCreationBar.css';
-import { formTemplates } from '../../utils/formTemplates';
 
 const FormCreationBar = () => {
   const navigate = useNavigate();
@@ -11,17 +10,8 @@ const FormCreationBar = () => {
   const handleFormClick = () => navigate('/builder');
 
   const handleTemplateClick = (templateKey) => {
-    if (formTemplates[templateKey]) {
-      navigate('/builder', {
-        state: {
-          questions: formTemplates[templateKey].questions,
-          title: formTemplates[templateKey].title,
-          description: formTemplates[templateKey].description,
-        },
-      });
-    } else {
-      handleFormClick();
-    }
+    // For now, just navigate to the builder
+    handleFormClick();
   };
 
   const templates = [
@@ -103,7 +93,13 @@ const FormCreationBar = () => {
           label={template.label}
           description={template.desc}
           onClick={template.onClick}
+<<<<<<< HEAD
+=======
           style={{ cursor: template.onClick ? 'pointer' : 'default' }}
+<<<<<<< Updated upstream
+=======
+>>>>>>> 27fbc336d9e47fee18ffcdac7ab6d2b29c1c2d84
+>>>>>>> Stashed changes
         />
       ))}
     </div>
