@@ -104,13 +104,7 @@ const FormCreationBar = () => {
           description={template.desc}
           onClick={template.onClick}
           style={{ cursor: template.onClick ? 'pointer' : 'default' }}
-        >
-          <div className="file-icon">
-            {template.icon}
-          </div>
-          <div className="template-label">{template.label}</div>
-          <div className="template-desc">{template.desc}</div>
-        </div>
+        />
       ))}
     </div>
   );
