@@ -12,6 +12,7 @@ import './Dashboard.css';
 import { FiSun, FiMoon, FiSearch } from 'react-icons/fi';
 import DeleteQuizButton from '../components/quiz/DeleteQuizButton';
 import { FaHistory, FaEye } from 'react-icons/fa';
+import TemplateCard from '../components/shared/TemplateCard';
 import '../components/shared/TemplateCard.css';
 
 // Debounce hook
@@ -59,13 +60,12 @@ const LiveQuizTemplateCard = ({ onClick }) => {
 
   return (
     <div className="template-section">
-      <div className="template-card" onClick={onClick} style={{ cursor: 'pointer' }}>
-        <div className="file-icon">
-          {liveQuizIcon}
-        </div>
-        <div className="template-label">Live Quiz</div>
-        <div className="template-desc">Host a live, interactive quiz session.</div>
-      </div>
+      <TemplateCard
+        icon={liveQuizIcon}
+        label="Live Quiz"
+        description="Host a live, interactive quiz session."
+        onClick={onClick}
+      />
     </div>
   );
 };
