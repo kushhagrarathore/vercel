@@ -21,33 +21,33 @@ function useDebounce(value, delay) {
 
 const LiveQuizTemplateCard = ({ onClick }) => {
   const liveQuizIcon = (
-        <svg
-          width="28"
-          height="28"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#ff6b81"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="12" cy="12" r="6" fill="#fff0f3" />
-          <path
-            d="M12 8v4l3 2"
-            stroke="#ff6b81"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-          <circle
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="#ff6b81"
-            strokeWidth="1.5"
-            fill="none"
-          />
-        </svg>
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="#ff6b81"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="6" fill="#fff0f3" />
+      <path
+        d="M12 8v4l3 2"
+        stroke="#ff6b81"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle
+        cx="12"
+        cy="12"
+        r="10"
+        stroke="#ff6b81"
+        strokeWidth="1.5"
+        fill="none"
+      />
+    </svg>
   );
 
   return (
@@ -58,8 +58,8 @@ const LiveQuizTemplateCard = ({ onClick }) => {
         description="Host a live, interactive quiz session."
         onClick={onClick}
       />
-  </div>
-);
+    </div>
+  );
 };
 
 const Dashboard = () => {
@@ -212,15 +212,15 @@ const Dashboard = () => {
     let data = [];
     if (activeTab === 'forms') {
       data = forms.filter((form) =>
-      form.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+        form.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
       );
     } else if (activeTab === 'quizzes') {
       data = quizzes.filter((quiz) =>
-      quiz.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+        quiz.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
       );
     } else if (activeTab === 'livequiz') {
       data = liveQuizzes.filter((quiz) =>
-      quiz.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+        quiz.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
       );
     }
 
@@ -520,11 +520,11 @@ const Dashboard = () => {
             <FiSearch className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
               isDarkMode ? 'text-gray-400' : 'text-gray-500'
             }`} />
-          <input
-            type="text"
+            <input
+              type="text"
               placeholder="Search templates..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className={`w-full pl-10 pr-4 py-3 rounded-xl border transition-all duration-200 ${
                 isDarkMode 
                   ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500' 
@@ -594,187 +594,162 @@ const Dashboard = () => {
             Templates
           </h2>
           
-                     {activeTab === 'forms' && (
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-               {/* Blank Form Template */}
-               <motion.div
-                 whileHover={{ scale: 1.05, y: -5 }}
-                 className={`p-6 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 ${
-                   isDarkMode 
-                     ? 'border-gray-600 hover:border-blue-500 bg-gray-800/50' 
-                     : 'border-gray-300 hover:border-blue-500 bg-white'
-                 }`}
-                 onClick={() => navigate('/builder', { state: { template: 'blank' } })}
-               >
-                 <div className="text-center">
-                   <div className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center ${
-                     isDarkMode ? 'bg-blue-600' : 'bg-blue-500'
-                   }`}>
-                     <span className="text-white text-xl">📝</span>
-        </div>
-                   <h3 className={`font-semibold mb-2 ${
-                     isDarkMode ? 'text-white' : 'text-gray-900'
-                   }`}>
-                     Blank Form
-                   </h3>
-                   <p className={`text-sm ${
-                     isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                   }`}>
-                     Start from scratch
-                   </p>
-                 </div>
-               </motion.div>
+          {activeTab === 'forms' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {/* Blank Form Template */}
+              <motion.div
+                whileHover={{ scale: 1.05, y: -5 }}
+                className={`p-6 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 ${
+                  isDarkMode 
+                    ? 'border-gray-600 hover:border-blue-500 bg-gray-800/50' 
+                    : 'border-gray-300 hover:border-blue-500 bg-white'
+                }`}
+                onClick={() => navigate('/builder')}
+              >
+                <div className="text-center">
+                  <div className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center ${
+                    isDarkMode ? 'bg-blue-600' : 'bg-blue-500'
+                  }`}>
+                    <span className="text-white text-xl">📝</span>
+                  </div>
+                  <h3 className={`font-semibold mb-2 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    Blank Form
+                  </h3>
+                  <p className={`text-sm ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Start from scratch
+                  </p>
+                </div>
+              </motion.div>
 
-               {/* Survey Template */}
-               <motion.div
-                 whileHover={{ scale: 1.05, y: -5 }}
-                 className={`p-6 rounded-xl cursor-pointer transition-all duration-200 ${
-                   isDarkMode 
-                     ? 'bg-gray-800 hover:bg-gray-700 border border-gray-700' 
-                     : 'bg-white hover:bg-gray-50 border border-gray-200'
-                 }`}
-                 onClick={() => navigate('/builder', { state: { template: 'survey' } })}
-               >
-                 <div className="text-center">
-                   <div className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center ${
-                     isDarkMode ? 'bg-green-600' : 'bg-green-500'
-                   }`}>
-                     <span className="text-white text-xl">📊</span>
-                   </div>
-                   <h3 className={`font-semibold mb-2 ${
-                     isDarkMode ? 'text-white' : 'text-gray-900'
-                   }`}>
-                     Survey
-                   </h3>
-                   <p className={`text-sm ${
-                     isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                   }`}>
-                     Collect feedback
-                   </p>
-                 </div>
-               </motion.div>
+              {/* Survey Template */}
+              <motion.div
+                whileHover={{ scale: 1.05, y: -5 }}
+                className={`p-6 rounded-xl cursor-pointer transition-all duration-200 ${
+                  isDarkMode 
+                    ? 'bg-gray-800 hover:bg-gray-700 border border-gray-700' 
+                    : 'bg-white hover:bg-gray-50 border border-gray-200'
+                }`}
+                onClick={() => navigate('/builder')}
+              >
+                <div className="text-center">
+                  <div className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center ${
+                    isDarkMode ? 'bg-green-600' : 'bg-green-500'
+                  }`}>
+                    <span className="text-white text-xl">📊</span>
+                  </div>
+                  <h3 className={`font-semibold mb-2 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    Survey
+                  </h3>
+                  <p className={`text-sm ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Collect feedback
+                  </p>
+                </div>
+              </motion.div>
 
-               {/* Contact Form Template */}
-               <motion.div
-                 whileHover={{ scale: 1.05, y: -5 }}
-                 className={`p-6 rounded-xl cursor-pointer transition-all duration-200 ${
-                   isDarkMode 
-                     ? 'bg-gray-800 hover:bg-gray-700 border border-gray-700' 
-                     : 'bg-white hover:bg-gray-50 border border-gray-200'
-                 }`}
-                 onClick={() => navigate('/builder', { state: { template: 'contact' } })}
-               >
-                 <div className="text-center">
-                   <div className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center ${
-                     isDarkMode ? 'bg-purple-600' : 'bg-purple-500'
-                   }`}>
-                     <span className="text-white text-xl">📧</span>
-                   </div>
-                   <h3 className={`font-semibold mb-2 ${
-                     isDarkMode ? 'text-white' : 'text-gray-900'
-                   }`}>
-                     Contact Form
-                   </h3>
-                   <p className={`text-sm ${
-                     isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                   }`}>
-                     Get in touch
-                   </p>
-                 </div>
-               </motion.div>
-             </div>
-           )}
+              {/* Contact Form Template */}
+              <motion.div
+                whileHover={{ scale: 1.05, y: -5 }}
+                className={`p-6 rounded-xl cursor-pointer transition-all duration-200 ${
+                  isDarkMode 
+                    ? 'bg-gray-800 hover:bg-gray-700 border border-gray-700' 
+                    : 'bg-white hover:bg-gray-50 border border-gray-200'
+                }`}
+                onClick={() => navigate('/builder')}
+              >
+                <div className="text-center">
+                  <div className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center ${
+                    isDarkMode ? 'bg-purple-600' : 'bg-purple-500'
+                  }`}>
+                    <span className="text-white text-xl">📧</span>
+                  </div>
+                  <h3 className={`font-semibold mb-2 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    Contact Form
+                  </h3>
+                  <p className={`text-sm ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Get in touch
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+          )}
 
-                     {activeTab === 'quizzes' && (
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-               {/* Blank Quiz Template */}
-               <motion.div
-                 whileHover={{ scale: 1.05, y: -5 }}
-                 className={`p-6 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 ${
-                   isDarkMode 
-                     ? 'border-gray-600 hover:border-blue-500 bg-gray-800/50' 
-                     : 'border-gray-300 hover:border-blue-500 bg-white'
-                 }`}
-                 onClick={() => navigate('/quiz')}
-               >
-                 <div className="text-center">
-                   <div className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center ${
-                     isDarkMode ? 'bg-blue-600' : 'bg-blue-500'
-                   }`}>
-                     <span className="text-white text-xl">🧠</span>
-                   </div>
-                   <h3 className={`font-semibold mb-2 ${
-                     isDarkMode ? 'text-white' : 'text-gray-900'
-                   }`}>
-                     Blank Quiz
-                   </h3>
-                   <p className={`text-sm ${
-                     isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                   }`}>
-                     Start from scratch
-                   </p>
-                 </div>
-               </motion.div>
+          {activeTab === 'quizzes' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {/* Blank Quiz Template */}
+              <motion.div
+                whileHover={{ scale: 1.05, y: -5 }}
+                className={`p-6 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 ${
+                  isDarkMode 
+                    ? 'border-gray-600 hover:border-blue-500 bg-gray-800/50' 
+                    : 'border-gray-300 hover:border-blue-500 bg-white'
+                }`}
+                onClick={() => navigate('/quiz/create')}
+              >
+                <div className="text-center">
+                  <div className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center ${
+                    isDarkMode ? 'bg-blue-600' : 'bg-blue-500'
+                  }`}>
+                    <span className="text-white text-xl">🧠</span>
+                  </div>
+                  <h3 className={`font-semibold mb-2 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    Blank Quiz
+                  </h3>
+                  <p className={`text-sm ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Start from scratch
+                  </p>
+                </div>
+              </motion.div>
 
-               {/* Knowledge Quiz Template */}
-               <motion.div
-                 whileHover={{ scale: 1.05, y: -5 }}
-                 className={`p-6 rounded-xl cursor-pointer transition-all duration-200 ${
-                   isDarkMode 
-                     ? 'bg-gray-800 hover:bg-gray-700 border border-gray-700' 
-                     : 'bg-white hover:bg-gray-50 border border-gray-200'
-                 }`}
-                 onClick={() => navigate('/quiz')}
-               >
-                 <div className="text-center">
-                   <div className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center ${
-                     isDarkMode ? 'bg-green-600' : 'bg-green-500'
-                   }`}>
-                     <span className="text-white text-xl">🎓</span>
-                   </div>
-                   <h3 className={`font-semibold mb-2 ${
-                     isDarkMode ? 'text-white' : 'text-gray-900'
-                   }`}>
-                     Knowledge Quiz
-                   </h3>
-                   <p className={`text-sm ${
-                     isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                   }`}>
-                     Test knowledge
-                   </p>
-                 </div>
-               </motion.div>
+              {/* Knowledge Quiz Template */}
+              <motion.div
+                whileHover={{ scale: 1.05, y: -5 }}
+                className={`p-6 rounded-xl cursor-pointer transition-all duration-200 ${
+                  isDarkMode 
+                    ? 'bg-gray-800 hover:bg-gray-700 border border-gray-700' 
+                    : 'bg-white hover:bg-gray-50 border border-gray-200'
+                }`}
+                onClick={() => navigate('/quiz/create')}
+              >
+                <div className="text-center">
+                  <div className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center ${
+                    isDarkMode ? 'bg-green-600' : 'bg-green-500'
+                  }`}>
+                    <span className="text-white text-xl">🎓</span>
+                  </div>
+                  <h3 className={`font-semibold mb-2 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    Knowledge Quiz
+                  </h3>
+                  <p className={`text-sm ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Test knowledge
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+          )}
 
-               {/* Generate with Gemini Template */}
-               <motion.div
-                 whileHover={{ scale: 1.05, y: -5 }}
-                 className={`p-6 rounded-xl cursor-pointer transition-all duration-200 ${
-                   isDarkMode 
-                     ? 'bg-gradient-to-br from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700' 
-                     : 'bg-gradient-to-br from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
-                 }`}
-                 onClick={() => navigate('/quiz?ai=true')}
-               >
-                 <div className="text-center">
-                   <div className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center ${
-                     isDarkMode ? 'bg-white/20' : 'bg-white/20'
-                   }`}>
-                     <span className="text-white text-xl">🤖</span>
-                   </div>
-                   <h3 className={`font-semibold mb-2 text-white`}>
-                     Generate with Gemini
-                   </h3>
-                   <p className={`text-sm text-white/80`}>
-                     AI-powered quiz creation
-                   </p>
-                 </div>
-               </motion.div>
-             </div>
-           )}
-
-                     {activeTab === 'livequiz' && (
-             <LiveQuizTemplateCard onClick={() => navigate('/questions')} />
-           )}
+          {activeTab === 'livequiz' && (
+            <LiveQuizTemplateCard onClick={() => navigate('/quiz/create')} />
+          )}
         </motion.div>
 
         {/* My Items Section */}
@@ -851,15 +826,15 @@ const Dashboard = () => {
                     }`}
                   />
                 ))}
-                  </div>
+              </div>
             ) : filteredAndSortedData.length > 0 ? (
               <div className={viewMode === 'grid' 
                 ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6' 
                 : 'space-y-4'
               }>
                 {filteredAndSortedData.map((item, idx) => (
-                    <motion.div
-                      key={item.id || idx}
+                  <motion.div
+                    key={item.id || idx}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
@@ -876,9 +851,9 @@ const Dashboard = () => {
                     whileHover={{ scale: 1.02, y: -2 }}
                   >
                     {/* Selection Checkbox */}
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(item.id)}
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(item.id)}
                       onChange={(e) => handleSelect(item.id, e.target.checked)}
                       className="absolute top-4 right-4 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                     />
@@ -912,7 +887,7 @@ const Dashboard = () => {
                             <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
                               Live
                             </span>
-                      </div>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -922,34 +897,26 @@ const Dashboard = () => {
                       isDarkMode ? 'bg-gray-800/90' : 'bg-white/90'
                     }`}>
                       <div className="flex space-x-2">
-                                                 <motion.button
-                           whileHover={{ scale: 1.1 }}
-                           whileTap={{ scale: 0.9 }}
-                           className={`p-2 rounded-lg ${
-                             isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                           }`}
-                           onClick={() => {
-                             if (activeTab === 'forms') navigate(`/form/${item.id}`);
-                             else if (activeTab === 'quizzes') navigate(`/quiz/${item.id}`);
-                             else if (activeTab === 'livequiz') navigate(`/admin/${item.id}`);
-                           }}
-                         >
-                           <FiEye size={16} />
-                         </motion.button>
-                         <motion.button
-                           whileHover={{ scale: 1.1 }}
-                           whileTap={{ scale: 0.9 }}
-                           className={`p-2 rounded-lg ${
-                             isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                           }`}
-                           onClick={() => {
-                             if (activeTab === 'forms') navigate('/builder', { state: { formId: item.id } });
-                             else if (activeTab === 'quizzes') navigate(`/quiz/${item.id}`);
-                             else if (activeTab === 'livequiz') navigate(`/questions/${item.id}`);
-                           }}
-                         >
-                           <FiEdit3 size={16} />
-                         </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          className={`p-2 rounded-lg ${
+                            isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                          onClick={() => navigate(`/${activeTab === 'forms' ? 'form' : 'quiz'}/${item.id}`)}
+                        >
+                          <FiEye size={16} />
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          className={`p-2 rounded-lg ${
+                            isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                          onClick={() => navigate(`/${activeTab === 'forms' ? 'builder' : 'quiz/create'}`)}
+                        >
+                          <FiEdit3 size={16} />
+                        </motion.button>
                         <motion.button
                           whileHover={{ scale: 1.1 }}
                           whileTap={{ scale: 0.9 }}
@@ -973,7 +940,7 @@ const Dashboard = () => {
                         </motion.button>
                       </div>
                     </div>
-                    </motion.div>
+                  </motion.div>
                 ))}
               </div>
             ) : (
@@ -1013,11 +980,10 @@ const Dashboard = () => {
         className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg flex items-center justify-center ${
           isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
         } text-white z-50`}
-                 onClick={() => {
-           if (activeTab === 'forms') navigate('/builder');
-           else if (activeTab === 'quizzes') navigate('/quiz');
-           else if (activeTab === 'livequiz') navigate('/questions');
-         }}
+        onClick={() => {
+          if (activeTab === 'forms') navigate('/builder');
+          else if (activeTab === 'quizzes' || activeTab === 'livequiz') navigate('/quiz/create');
+        }}
       >
         <FiPlus size={24} />
       </motion.button>
