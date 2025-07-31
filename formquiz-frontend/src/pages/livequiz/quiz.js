@@ -864,7 +864,12 @@ export default function Quiz() {
         </div>
       </header>
       {/* Main Layout */}
-      <div className="flex w-full" style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+      <div className="flex w-full" style={{ 
+        background: 'var(--bg)', 
+        minHeight: '100vh',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
         {/* Left Sidebar: Add Slide & Slide List */}
         <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-64'}`} style={{ width: isLeftSidebarCollapsed ? '5rem' : '16rem', flexShrink: 0 }}>
           <div className="p-4 flex-1 overflow-y-auto">
@@ -929,19 +934,19 @@ export default function Quiz() {
         </aside>
 
         {/* Center Content Area */}
-        <div
-          className="flex-1 flex min-h-screen"
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: "2rem",
-            transition: "all 0.3s ease",
-            marginLeft: isLeftSidebarCollapsed ? "5rem" : "16rem", // left panel width
-            marginRight: isCustomizeOpen ? "20rem" : "0rem",       // right panel width
-          }}
-        >
-          <div className="max-w-2xl w-full flex flex-col gap-10 justify-center items-center">
+        <div className="flex-1 flex justify-center items-start min-h-screen" style={{ 
+          paddingLeft: isCustomizeOpen ? '1rem' : '2rem',
+          paddingRight: isCustomizeOpen ? '1rem' : '2rem',
+          paddingTop: '2rem',
+          paddingBottom: '2rem',
+          transform: isCustomizeOpen && !isLeftSidebarCollapsed ? 'translateX(calc((20rem - 5rem) / 2))' : 'translateX(0)',
+          transition: 'transform 0.3s ease-in-out',
+          position: 'relative',
+          zIndex: 1
+        }}>
+          <div className="max-w-2xl w-full flex flex-col gap-10 justify-center items-center" style={{
+            maxWidth: isCustomizeOpen && !isLeftSidebarCollapsed ? 'calc(100vw - 44rem)' : '42rem'
+          }}>
             <div className="border-2 rounded-2xl shadow-2xl bg-white" style={{
               boxShadow: '0 8px 32px 0 rgba(44,62,80,0.12)',
               borderColor: '#e0e7ff',
