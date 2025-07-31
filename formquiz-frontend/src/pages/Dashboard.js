@@ -1,17 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import Navbar from '../components/navbar';
-import FormCreationBar from '../components/forms/FormCreationBar';
-import FormCardRow from '../components/forms/FormCardRow';
-import QuizCreationBar from '../components/QuizCreationBar';
-import Skeleton from '../components/Skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FiSun, FiMoon, FiSearch, FiPlus, FiGrid, FiList, FiEdit3, FiCopy, FiTrash2, FiEye, FiShare2 } from 'react-icons/fi';
+import { FaHistory, FaEye } from 'react-icons/fa';
 import { supabase } from '../supabase';
 import { useToast } from '../components/Toast';
-import './Dashboard.css';
-import { FiSun, FiMoon, FiSearch } from 'react-icons/fi';
 import DeleteQuizButton from '../components/quiz/DeleteQuizButton';
-import { FaHistory, FaEye } from 'react-icons/fa';
 import TemplateCard from '../components/shared/TemplateCard';
 import '../components/shared/TemplateCard.css';
 
@@ -24,8 +18,6 @@ function useDebounce(value, delay) {
   }, [value, delay]);
   return debouncedValue;
 }
-
-const MemoFormCardRow = React.memo(FormCardRow);
 
 const LiveQuizTemplateCard = ({ onClick }) => {
   const liveQuizIcon = (
@@ -73,13 +65,10 @@ const LiveQuizTemplateCard = ({ onClick }) => {
 const Dashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const initialTab =
-    localStorage.getItem('dashboardTab') ||
-    location.state?.activeTab ||
-    'forms';
+  const initialTab = localStorage.getItem('dashboardTab') || location.state?.activeTab || 'forms';
 
   const [searchTerm, setSearchTerm] = useState('');
-  const debouncedSearchTerm = useDebounce(searchTerm, 250);
+  const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState('grid');
   const [username, setUsername] = useState('');
   const [forms, setForms] = useState([]);
@@ -94,6 +83,7 @@ const Dashboard = () => {
   const [expandedCardId, setExpandedCardId] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
 
+  const debouncedSearchTerm = useDebounce(searchTerm, 250);
   const toast = useToast();
 
   useEffect(() => {
@@ -114,8 +104,6 @@ const Dashboard = () => {
           error: userError,
         } = await supabase.auth.getUser();
 
-        console.log("Fetched current user:", user);
-
         if (userError) {
           console.error("Error fetching user:", userError);
           toast('Error fetching user data', 'error');
@@ -123,7 +111,7 @@ const Dashboard = () => {
         }
 
         if (user && user.email) {
-          // Fetch profile name with error handling
+          // Fetch profile name
           try {
             const { data: profile, error: profileError } = await supabase
               .from('users')
@@ -131,7 +119,7 @@ const Dashboard = () => {
               .eq('id', user.id)
               .single();
 
-            if (profileError && profileError.code !== 'PGRST116') { // PGRST116 is "not found"
+            if (profileError && profileError.code !== 'PGRST116') {
               console.error("Error fetching profile:", profileError);
               toast('Error fetching profile', 'error');
             } else if (profile?.name) {
@@ -141,7 +129,7 @@ const Dashboard = () => {
             console.error("Profile fetch error:", err);
           }
 
-          // Fetch forms with improved error handling
+          // Fetch forms
           try {
             const { data: formData, error: formError } = await supabase
               .from('forms')
@@ -154,18 +142,17 @@ const Dashboard = () => {
 
             if (formError) {
               console.error("Error fetching forms:", formError);
-              if (formError.code !== '409') { // Don't show toast for 409 errors
+              if (formError.code !== '409') {
                 toast('Error fetching forms', 'error');
               }
             } else {
-              console.log("Fetched forms:", formData);
               setForms(formData || []);
             }
           } catch (err) {
             console.error("Forms fetch error:", err);
           }
 
-          // Fetch quizzes with improved error handling
+          // Fetch quizzes
           try {
             const { data: quizData, error: quizError } = await supabase
               .from('quizzes')
@@ -178,18 +165,17 @@ const Dashboard = () => {
 
             if (quizError) {
               console.error("Error fetching quizzes:", quizError);
-              if (quizError.code !== '409') { // Don't show toast for 409 errors
+              if (quizError.code !== '409') {
                 toast('Error fetching quizzes', 'error');
               }
             } else {
-              console.log("Fetched quizzes:", quizData);
               setQuizzes(quizData || []);
             }
           } catch (err) {
             console.error("Quizzes fetch error:", err);
           }
 
-          // Fetch live quizzes with improved error handling
+          // Fetch live quizzes
           try {
             const { data: liveQuizData, error: liveQuizError } = await supabase
               .from('lq_quizzes')
@@ -199,7 +185,7 @@ const Dashboard = () => {
 
             if (liveQuizError) {
               console.error("Error fetching live quizzes:", liveQuizError);
-              if (liveQuizError.code !== '409') { // Don't show toast for 409 errors
+              if (liveQuizError.code !== '409') {
                 toast('Error fetching live quizzes', 'error');
               }
             } else {
@@ -210,7 +196,6 @@ const Dashboard = () => {
           }
         } else {
           toast('User not logged in', 'error');
-          console.error('User not logged in:', userError);
         }
       } catch (err) {
         toast('Failed to fetch dashboard data', 'error');
@@ -223,69 +208,59 @@ const Dashboard = () => {
     fetchUserData();
   }, [toast]);
 
-  const filteredForms = useMemo(() =>
-    forms.filter((form) =>
-      form.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-    ), [forms, debouncedSearchTerm]);
-
-  const filteredQuizzes = useMemo(() =>
-    quizzes.filter((quiz) =>
-      quiz.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-    ), [quizzes, debouncedSearchTerm]);
-
-  const filteredLiveQuizzes = useMemo(() =>
-    liveQuizzes.filter((quiz) =>
-      quiz.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-    ), [liveQuizzes, debouncedSearchTerm]);
-
-  let currentData;
-  if (activeTab === 'forms') {
-    currentData = filteredForms;
-  } else if (activeTab === 'livequiz') {
-    currentData = filteredLiveQuizzes;
-  } else if (activeTab === 'quizzes') {
-    currentData = filteredQuizzes;
-  } else {
-    currentData = [];
-  }
-
-  const handlePublishToggle = async (formId, newStatus) => {
-    try {
-      const { error } = await supabase
-        .from('forms')
-        .update({ is_published: newStatus })
-        .eq('id', formId);
-      
-      if (error) {
-        console.error("Error updating form publish status:", error);
-        toast('Error updating form status', 'error');
-        return;
-      }
-
-      setForms((prev) =>
-        prev.map((f) =>
-          f.id === formId ? { ...f, is_published: newStatus } : f
-        )
+  const filteredAndSortedData = useMemo(() => {
+    let data = [];
+    if (activeTab === 'forms') {
+      data = forms.filter((form) =>
+        form.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
       );
-      setExpandedCardId(newStatus ? formId : null);
-    } catch (err) {
-      console.error("Publish toggle error:", err);
-      toast('Error updating form status', 'error');
+    } else if (activeTab === 'quizzes') {
+      data = quizzes.filter((quiz) =>
+        quiz.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+      );
+    } else if (activeTab === 'livequiz') {
+      data = liveQuizzes.filter((quiz) =>
+        quiz.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+      );
     }
+
+    // Sort data
+    switch (sortBy) {
+      case 'newest':
+        return data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      case 'oldest':
+        return data.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      case 'name':
+        return data.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+      default:
+        return data;
+    }
+  }, [activeTab, forms, quizzes, liveQuizzes, debouncedSearchTerm, sortBy]);
+
+  const handleTabToggle = (tab) => {
+    setActiveTab(tab);
+    setSelectedIds([]);
   };
+
+  const handleSelect = (id, checked) => {
+    setSelectedIds(prev => checked ? [...prev, id] : prev.filter(x => x !== id));
+  };
+
+  const handleSelectAll = () => {
+    const ids = filteredAndSortedData.map(item => item.id);
+    setSelectedIds(ids);
+  };
+
+  const handleDeselectAll = () => setSelectedIds([]);
 
   const handleDeleteForm = async (formId) => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast('User not authenticated', 'error');
         return;
       }
 
-      // First delete all questions associated with this form
       const { error: questionsError } = await supabase
         .from('questions')
         .delete()
@@ -297,7 +272,6 @@ const Dashboard = () => {
         return;
       }
 
-      // Then delete the form itself
       const { error: formError } = await supabase
         .from('forms')
         .delete()
@@ -310,7 +284,6 @@ const Dashboard = () => {
         return;
       }
 
-      // Update UI state
       setForms((prev) => prev.filter((f) => f.id !== formId));
       toast('Form deleted successfully!', 'success');
     } catch (err) {
@@ -321,10 +294,7 @@ const Dashboard = () => {
 
   const handleDeleteQuiz = async (quizId) => {
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         toast('User not authenticated', 'error');
         return;
@@ -353,7 +323,6 @@ const Dashboard = () => {
   const handleDeleteLiveQuiz = async (quizId) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
       if (!user) {
         toast('User not authenticated', 'error');
         return;
@@ -366,7 +335,7 @@ const Dashboard = () => {
         .eq('user_id', user?.id);
       
       if (error) {
-        console.error('Error deleting live quiz:', error?.message || JSON.stringify(error, null, 2));
+        console.error('Error deleting live quiz:', error);
         toast('Failed to delete live quiz', 'error');
         return;
       }
@@ -375,54 +344,10 @@ const Dashboard = () => {
       toast('Live quiz deleted!', 'success');
     } catch (err) {
       toast('Failed to delete live quiz', 'error');
-      console.error('Error deleting live quiz:', err?.message || JSON.stringify(err, null, 2));
+      console.error('Error deleting live quiz:', err);
     }
   };
 
-  const handleQuizPublishToggle = async (quizId, newStatus) => {
-    try {
-      const { error } = await supabase
-        .from('quizzes')
-        .update({ is_published: newStatus })
-        .eq('id', quizId);
-      
-      if (error) {
-        console.error("Error updating quiz publish status:", error);
-        toast('Error updating quiz status', 'error');
-        return;
-      }
-
-      setQuizzes((prev) =>
-        prev.map((q) =>
-          q.id === quizId ? { ...q, is_published: newStatus } : q
-        )
-      );
-      setExpandedCardId(newStatus ? quizId : null);
-    } catch (err) {
-      console.error("Quiz publish toggle error:", err);
-      toast('Error updating quiz status', 'error');
-    }
-  };
-
-  const handleTabToggle = (tab) => {
-    setActiveTab(tab);
-    setSelectedIds([]); // Clear selections when switching tabs
-  };
-
-  // Handler for selecting/deselecting a card
-  const handleSelect = (id, checked) => {
-    setSelectedIds(prev => checked ? [...prev, id] : prev.filter(x => x !== id));
-  };
-  
-  // Handler for select all
-  const handleSelectAll = () => {
-    const ids = currentData.map(item => item.id);
-    setSelectedIds(ids);
-  };
-  
-  const handleDeselectAll = () => setSelectedIds([]);
-  
-  // Bulk delete with improved error handling
   const handleBulkDelete = async () => {
     if (!window.confirm('Delete selected items?')) return;
     
@@ -444,610 +369,590 @@ const Dashboard = () => {
     setSelectedIds([]);
   };
 
-  // Bulk activate/deactivate with improved error handling
-  const handleBulkActivate = async (activate) => {
-    const updatePromises = selectedIds.map(async (id) => {
-      try {
-        if (activeTab === 'forms') {
-          await handlePublishToggle(id, activate);
-        } else if (activeTab === 'quizzes') {
-          await handleQuizPublishToggle(id, activate);
-        }
-      } catch (err) {
-        console.error(`Error updating item ${id}:`, err);
-      }
-    });
+  const tabItems = [
+    { key: 'forms', label: 'My Forms', icon: '📋' },
+    { key: 'livequiz', label: 'My LiveQuiz', icon: '🎯' },
+    { key: 'quizzes', label: 'My Quizzes', icon: '🧠' }
+  ];
 
-    await Promise.allSettled(updatePromises);
-    setSelectedIds([]);
-  };
+  const sortOptions = [
+    { value: 'newest', label: 'Newest' },
+    { value: 'oldest', label: 'Oldest' },
+    { value: 'name', label: 'Name A-Z' }
+  ];
 
   return (
-    <div className="dashboard-animated-layout" style={{ 
-      background: isDarkMode ? '#0f172a' : '#ffffff', 
-      minHeight: '100vh',
-      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
-    }}>
-      <Navbar activeTab={activeTab} onToggle={handleTabToggle} />
+    <div className={`min-h-screen transition-colors duration-300 ${
+      isDarkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-gray-900'
+    }`}>
+      {/* Top Navbar */}
+      <motion.nav 
+        className={`sticky top-0 z-50 backdrop-blur-lg border-b ${
+          isDarkMode ? 'bg-gray-900/80 border-gray-700' : 'bg-white/80 border-gray-200'
+        }`}
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo */}
+            <motion.div 
+              className="flex items-center space-x-3"
+              whileHover={{ scale: 1.05 }}
+            >
+              <div className={`w-8 h-8 rounded-lg ${
+                isDarkMode ? 'bg-blue-600' : 'bg-blue-500'
+              } flex items-center justify-center`}>
+                <span className="text-white font-bold text-sm">F</span>
+              </div>
+              <span className="font-bold text-xl">FormQuiz</span>
+            </motion.div>
 
-      <div className="dashboard-animated-content">
-        <motion.h2
-          className="dashboard-animated-title"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, type: 'spring' }}
-          style={{
-            fontSize: '28px',
-            fontWeight: '700',
-            color: isDarkMode ? '#f8fafc' : '#1e293b',
-            marginBottom: '8px',
-            letterSpacing: '-0.025em'
-          }}
-        >
-          {activeTab === 'forms'
-            ? 'Form Templates'
-            : activeTab === 'livequiz'
-            ? 'Live Quizzes'
-            : 'Quiz Templates'}
-        </motion.h2>
+            {/* Tab Navigation */}
+            <div className="flex items-center space-x-1">
+              {tabItems.map((tab) => (
+                <motion.button
+                  key={tab.key}
+                  onClick={() => handleTabToggle(tab.key)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 flex items-center space-x-2 ${
+                    activeTab === tab.key
+                      ? isDarkMode 
+                        ? 'bg-blue-600 text-white shadow-lg' 
+                        : 'bg-blue-500 text-white shadow-lg'
+                      : isDarkMode
+                        ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <span>{tab.icon}</span>
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </motion.button>
+              ))}
+            </div>
 
-        <motion.p
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.1, type: 'spring' }}
-          style={{
-            fontSize: '16px',
-            color: isDarkMode ? '#94a3b8' : '#64748b',
-            marginBottom: '32px',
-            fontWeight: '400'
-          }}
-        >
-          {activeTab === 'forms'
-            ? 'Create and manage your forms with ease'
-            : activeTab === 'livequiz'
-            ? 'Host interactive live quiz sessions'
-            : 'Build engaging quiz experiences'}
-        </motion.p>
+            {/* Dark Mode Toggle */}
+            <motion.button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className={`p-2 rounded-lg transition-colors duration-200 ${
+                isDarkMode 
+                  ? 'text-gray-300 hover:text-white hover:bg-gray-800' 
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              {isDarkMode ? <FiSun size={20} /> : <FiMoon size={20} />}
+            </motion.button>
+          </div>
+        </div>
+      </motion.nav>
 
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
         <motion.div
-          className="dashboard-creation-bar"
-          initial={{ opacity: 0, y: -10 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7, delay: 0.2, type: 'spring' }}
+          transition={{ duration: 0.5 }}
+          className="mb-8"
         >
-          {activeTab === 'forms' && <FormCreationBar />}
-          {activeTab === 'quizzes' && <QuizCreationBar />}
-          {activeTab === 'livequiz' && (
-            <LiveQuizTemplateCard
-              onClick={() => navigate('/quiz/create')}
-            />
-          )}
+          <h1 className={`text-3xl font-bold mb-2 ${
+            isDarkMode ? 'text-white' : 'text-gray-900'
+          }`}>
+            {activeTab === 'forms' ? 'Form Templates' : 
+             activeTab === 'livequiz' ? 'Live Quizzes' : 'Quiz Templates'}
+          </h1>
+          <p className={`text-lg ${
+            isDarkMode ? 'text-gray-400' : 'text-gray-600'
+          }`}>
+            {activeTab === 'forms' ? 'Create and manage your forms with ease' :
+             activeTab === 'livequiz' ? 'Host interactive live quiz sessions' :
+             'Build engaging quiz experiences'}
+          </p>
         </motion.div>
 
-        <div className="dashboard-controls-bar" style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          padding: '24px 0',
-          marginBottom: '24px',
-          flexWrap: 'wrap'
-        }}>
-          <div style={{
-            position: 'relative',
-            flex: '1',
-            minWidth: '280px',
-            maxWidth: '400px'
-          }}>
-            <FiSearch style={{
-              position: 'absolute',
-              left: '16px',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              color: isDarkMode ? '#64748b' : '#94a3b8',
-              fontSize: '18px'
-            }} />
+        {/* Search and Controls */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+          className="flex flex-col sm:flex-row gap-4 mb-8"
+        >
+          {/* Search Bar */}
+          <div className="flex-1 relative">
+            <FiSearch className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${
+              isDarkMode ? 'text-gray-400' : 'text-gray-500'
+            }`} />
             <input
-              className="dashboard-search"
               type="text"
               placeholder="Search templates..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '12px 16px 12px 48px',
-                border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
-                borderRadius: '12px',
-                fontSize: '15px',
-                background: isDarkMode ? '#1e293b' : '#ffffff',
-                color: isDarkMode ? '#f1f5f9' : '#1e293b',
-                outline: 'none',
-                transition: 'all 0.2s ease',
-                fontFamily: 'Inter, sans-serif'
-              }}
-              onFocus={(e) => {
-                e.target.style.borderColor = isDarkMode ? '#3b82f6' : '#3b82f6';
-                e.target.style.boxShadow = `0 0 0 3px ${isDarkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.1)'}`;
-              }}
-              onBlur={(e) => {
-                e.target.style.borderColor = isDarkMode ? '#334155' : '#e2e8f0';
-                e.target.style.boxShadow = 'none';
-              }}
+              className={`w-full pl-10 pr-4 py-3 rounded-xl border transition-all duration-200 ${
+                isDarkMode 
+                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:border-blue-500 focus:ring-blue-500' 
+                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-blue-500'
+              }`}
             />
           </div>
-          
-          <div className="dashboard-view-toggle" style={{
-            display: 'flex',
-            gap: '4px',
-            background: isDarkMode ? '#1e293b' : '#f1f5f9',
-            borderRadius: '10px',
-            padding: '4px'
-          }}>
-            <button
-              className={`dashboard-view-btn${viewMode === 'grid' ? ' active' : ''}`}
-              onClick={() => setViewMode('grid')}
-              style={{
-                background: viewMode === 'grid' ? (isDarkMode ? '#3b82f6' : '#3b82f6') : 'transparent',
-                color: viewMode === 'grid' ? '#ffffff' : (isDarkMode ? '#94a3b8' : '#64748b'),
-                border: 'none',
-                borderRadius: '8px',
-                padding: '8px 16px',
-                fontWeight: '600',
-                fontSize: '14px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                fontFamily: 'Inter, sans-serif'
-              }}
-            >
-              Grid
-            </button>
-            <button
-              className={`dashboard-view-btn${viewMode === 'list' ? ' active' : ''}`}
-              onClick={() => setViewMode('list')}
-              style={{
-                background: viewMode === 'list' ? (isDarkMode ? '#3b82f6' : '#3b82f6') : 'transparent',
-                color: viewMode === 'list' ? '#ffffff' : (isDarkMode ? '#94a3b8' : '#64748b'),
-                border: 'none',
-                borderRadius: '8px',
-                padding: '8px 16px',
-                fontWeight: '600',
-                fontSize: '14px',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                fontFamily: 'Inter, sans-serif'
-              }}
-            >
-              List
-            </button>
-          </div>
-          
-          <button
-            onClick={() => setIsDarkMode((prev) => !prev)}
-            style={{
-              background: isDarkMode ? '#1e293b' : '#f1f5f9',
-              color: isDarkMode ? '#f1f5f9' : '#64748b',
-              border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
-              borderRadius: '10px',
-              padding: '10px',
-              fontWeight: '600',
-              fontSize: '16px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s ease',
-              fontFamily: 'Inter, sans-serif',
-              minWidth: '44px',
-              height: '44px'
-            }}
-            title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-          >
-            {isDarkMode ? <FiSun /> : <FiMoon />}
-          </button>
-        </div>
 
-        <section
-          className={`dashboard-animated-section ${viewMode}`}
-          style={{ paddingBottom: 30 }}
+          {/* Sort Dropdown */}
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className={`px-4 py-3 rounded-xl border transition-all duration-200 ${
+              isDarkMode 
+                ? 'bg-gray-800 border-gray-700 text-white focus:border-blue-500 focus:ring-blue-500' 
+                : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-500'
+            }`}
+          >
+            {sortOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
+          {/* View Toggle */}
+          <div className={`flex rounded-xl p-1 ${
+            isDarkMode ? 'bg-gray-800' : 'bg-gray-100'
+          }`}>
+            <motion.button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-lg transition-all duration-200 ${
+                viewMode === 'grid'
+                  ? isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'
+                  : isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'
+              }`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <FiGrid size={18} />
+            </motion.button>
+            <motion.button
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded-lg transition-all duration-200 ${
+                viewMode === 'list'
+                  ? isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'
+                  : isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'
+              }`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <FiList size={18} />
+            </motion.button>
+          </div>
+        </motion.div>
+
+        {/* Template Cards Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="mb-12"
         >
+          <h2 className={`text-xl font-semibold mb-6 ${
+            isDarkMode ? 'text-white' : 'text-gray-900'
+          }`}>
+            Templates
+          </h2>
+          
+          {activeTab === 'forms' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {/* Blank Form Template */}
+              <motion.div
+                whileHover={{ scale: 1.05, y: -5 }}
+                className={`p-6 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 ${
+                  isDarkMode 
+                    ? 'border-gray-600 hover:border-blue-500 bg-gray-800/50' 
+                    : 'border-gray-300 hover:border-blue-500 bg-white'
+                }`}
+                onClick={() => navigate('/builder')}
+              >
+                <div className="text-center">
+                  <div className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center ${
+                    isDarkMode ? 'bg-blue-600' : 'bg-blue-500'
+                  }`}>
+                    <span className="text-white text-xl">📝</span>
+                  </div>
+                  <h3 className={`font-semibold mb-2 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    Blank Form
+                  </h3>
+                  <p className={`text-sm ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Start from scratch
+                  </p>
+                </div>
+              </motion.div>
+
+              {/* Survey Template */}
+              <motion.div
+                whileHover={{ scale: 1.05, y: -5 }}
+                className={`p-6 rounded-xl cursor-pointer transition-all duration-200 ${
+                  isDarkMode 
+                    ? 'bg-gray-800 hover:bg-gray-700 border border-gray-700' 
+                    : 'bg-white hover:bg-gray-50 border border-gray-200'
+                }`}
+                onClick={() => navigate('/builder')}
+              >
+                <div className="text-center">
+                  <div className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center ${
+                    isDarkMode ? 'bg-green-600' : 'bg-green-500'
+                  }`}>
+                    <span className="text-white text-xl">📊</span>
+                  </div>
+                  <h3 className={`font-semibold mb-2 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    Survey
+                  </h3>
+                  <p className={`text-sm ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Collect feedback
+                  </p>
+                </div>
+              </motion.div>
+
+              {/* Contact Form Template */}
+              <motion.div
+                whileHover={{ scale: 1.05, y: -5 }}
+                className={`p-6 rounded-xl cursor-pointer transition-all duration-200 ${
+                  isDarkMode 
+                    ? 'bg-gray-800 hover:bg-gray-700 border border-gray-700' 
+                    : 'bg-white hover:bg-gray-50 border border-gray-200'
+                }`}
+                onClick={() => navigate('/builder')}
+              >
+                <div className="text-center">
+                  <div className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center ${
+                    isDarkMode ? 'bg-purple-600' : 'bg-purple-500'
+                  }`}>
+                    <span className="text-white text-xl">📧</span>
+                  </div>
+                  <h3 className={`font-semibold mb-2 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    Contact Form
+                  </h3>
+                  <p className={`text-sm ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Get in touch
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+          )}
+
+          {activeTab === 'quizzes' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {/* Blank Quiz Template */}
+              <motion.div
+                whileHover={{ scale: 1.05, y: -5 }}
+                className={`p-6 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 ${
+                  isDarkMode 
+                    ? 'border-gray-600 hover:border-blue-500 bg-gray-800/50' 
+                    : 'border-gray-300 hover:border-blue-500 bg-white'
+                }`}
+                onClick={() => navigate('/quiz/create')}
+              >
+                <div className="text-center">
+                  <div className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center ${
+                    isDarkMode ? 'bg-blue-600' : 'bg-blue-500'
+                  }`}>
+                    <span className="text-white text-xl">🧠</span>
+                  </div>
+                  <h3 className={`font-semibold mb-2 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    Blank Quiz
+                  </h3>
+                  <p className={`text-sm ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Start from scratch
+                  </p>
+                </div>
+              </motion.div>
+
+              {/* Knowledge Quiz Template */}
+              <motion.div
+                whileHover={{ scale: 1.05, y: -5 }}
+                className={`p-6 rounded-xl cursor-pointer transition-all duration-200 ${
+                  isDarkMode 
+                    ? 'bg-gray-800 hover:bg-gray-700 border border-gray-700' 
+                    : 'bg-white hover:bg-gray-50 border border-gray-200'
+                }`}
+                onClick={() => navigate('/quiz/create')}
+              >
+                <div className="text-center">
+                  <div className={`w-12 h-12 rounded-lg mx-auto mb-4 flex items-center justify-center ${
+                    isDarkMode ? 'bg-green-600' : 'bg-green-500'
+                  }`}>
+                    <span className="text-white text-xl">🎓</span>
+                  </div>
+                  <h3 className={`font-semibold mb-2 ${
+                    isDarkMode ? 'text-white' : 'text-gray-900'
+                  }`}>
+                    Knowledge Quiz
+                  </h3>
+                  <p className={`text-sm ${
+                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                  }`}>
+                    Test knowledge
+                  </p>
+                </div>
+              </motion.div>
+            </div>
+          )}
+
+          {activeTab === 'livequiz' && (
+            <LiveQuizTemplateCard onClick={() => navigate('/quiz/create')} />
+          )}
+        </motion.div>
+
+        {/* My Items Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <div className="flex items-center justify-between mb-6">
+            <h2 className={`text-xl font-semibold ${
+              isDarkMode ? 'text-white' : 'text-gray-900'
+            }`}>
+              My {activeTab === 'forms' ? 'Forms' : activeTab === 'livequiz' ? 'Live Quizzes' : 'Quizzes'}
+            </h2>
+            
+            {selectedIds.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex items-center space-x-2"
+              >
+                <span className={`text-sm ${
+                  isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                }`}>
+                  {selectedIds.length} selected
+                </span>
+                <motion.button
+                  onClick={handleSelectAll}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                    isDarkMode 
+                      ? 'bg-blue-600 text-white hover:bg-blue-700' 
+                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                  }`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Select All
+                </motion.button>
+                <motion.button
+                  onClick={handleDeselectAll}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition-colors ${
+                    isDarkMode 
+                      ? 'bg-gray-700 text-white hover:bg-gray-600' 
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Clear
+                </motion.button>
+                <motion.button
+                  onClick={handleBulkDelete}
+                  className="px-3 py-1 rounded-lg text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition-colors"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Delete
+                </motion.button>
+              </motion.div>
+            )}
+          </div>
+
           <AnimatePresence>
             {loading ? (
-              <Skeleton count={4} height={60} />
-            ) : currentData.length > 0 ? (
-              <>
-                {selectedIds.length > 0 && (
-                  <div style={{
-                    position: 'fixed',
-                    bottom: 32,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: isDarkMode ? '#1e293b' : '#ffffff',
-                    color: isDarkMode ? '#f1f5f9' : '#1e293b',
-                    borderRadius: '16px',
-                    boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                    padding: '16px 24px',
-                    zIndex: 200,
-                    display: 'flex',
-                    gap: '16px',
-                    alignItems: 'center',
-                    fontWeight: '600',
-                    fontSize: '14px',
-                    border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
-                    fontFamily: 'Inter, sans-serif'
-                  }}>
-                    <span>{selectedIds.length} selected</span>
-                    {activeTab === 'livequiz' ? (
-                      <DeleteQuizButton
-                        quizIds={selectedIds}
-                        label="Delete Quiz"
-                        onDeleted={id => setLiveQuizzes(prev => prev.filter(q => q.id !== id))}
-                      />
-                    ) : (
-                      <button 
-                        onClick={handleBulkDelete} 
-                        style={{ 
-                          color: '#ef4444', 
-                          background: 'none', 
-                          border: 'none', 
-                          fontWeight: '600', 
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          fontFamily: 'Inter, sans-serif'
-                        }}
-                      >
-                        Delete
-                      </button>
-                    )}
-                    {(activeTab === 'forms' || activeTab === 'quizzes') && (
-                      <>
-                        <button 
-                          onClick={() => handleBulkActivate(true)} 
-                          style={{ 
-                            color: '#10b981', 
-                            background: 'none', 
-                            border: 'none', 
-                            fontWeight: '600', 
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontFamily: 'Inter, sans-serif'
-                          }}
-                        >
-                          Activate
-                        </button>
-                        <button 
-                          onClick={() => handleBulkActivate(false)} 
-                          style={{ 
-                            color: '#6366f1', 
-                            background: 'none', 
-                            border: 'none', 
-                            fontWeight: '600', 
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            fontFamily: 'Inter, sans-serif'
-                          }}
-                        >
-                          Deactivate
-                        </button>
-                      </>
-                    )}
-                    <button 
-                      onClick={handleSelectAll} 
-                      style={{ 
-                        color: '#6366f1', 
-                        background: 'none', 
-                        border: 'none', 
-                        fontWeight: '600', 
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        fontFamily: 'Inter, sans-serif'
-                      }}
-                    >
-                      Select All
-                    </button>
-                    <button 
-                      onClick={handleDeselectAll} 
-                      style={{ 
-                        color: '#6366f1', 
-                        background: 'none', 
-                        border: 'none', 
-                        fontWeight: '600', 
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        fontFamily: 'Inter, sans-serif'
-                      }}
-                    >
-                      Clear
-                    </button>
-                  </div>
-                )}
-                {currentData.map((item, idx) => (
-                  activeTab === 'livequiz' ? (
-                    <motion.div
-                      key={item.id || idx}
-                      initial={{ opacity: 0, scale: 0.96, y: 18 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: 18 }}
-                      transition={{ duration: 0.32, type: 'spring' }}
-                      className="dashboard-animated-card livequiz-card-hover"
-                      style={{ 
-                        position: 'relative', 
-                        borderLeft: '4px solid #8b5cf6', 
-                        background: isDarkMode ? '#1e293b' : '#ffffff',
-                        color: isDarkMode ? '#f1f5f9' : '#1e293b',
-                        borderRadius: '16px', 
-                        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', 
-                        padding: '20px', 
-                        minHeight: '120px', 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        justifyContent: 'center', 
-                        gap: '12px', 
-                        marginBottom: '20px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
-                        fontFamily: 'Inter, sans-serif'
-                      }}
-                      onClick={() => navigate(`/livequiz/questions/${item.id}`)}
-                      whileHover={{
-                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                        scale: 1.02,
-                        zIndex: 10
-                      }}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(item.id)}
-                        onChange={e => {
-                          e.stopPropagation();
-                          handleSelect(item.id, e.target.checked);
-                        }}
-                        onClick={e => e.stopPropagation()}
-                        style={{
-                          position: 'absolute',
-                          top: '20px',
-                          right: '20px',
-                          zIndex: 2,
-                          width: '20px',
-                          height: '20px',
-                          accentColor: '#8b5cf6'
-                        }}
-                        title="Select"
-                      />
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '12px', 
-                        marginBottom: '8px' 
-                      }}>
-                        <span style={{ 
-                          fontWeight: '600', 
-                          fontSize: '18px',
-                          color: isDarkMode ? '#f1f5f9' : '#1e293b'
-                        }}>
-                          {item.title || 'Untitled Live Quiz'}
-                        </span>
-                        <span style={{ 
-                          background: '#fef3c7', 
-                          color: '#d97706', 
-                          fontWeight: '600', 
-                          fontSize: '12px', 
-                          borderRadius: '6px', 
-                          padding: '4px 8px'
-                        }}>
-                          Draft
-                        </span>
-                        <span style={{ 
-                          background: '#8b5cf6', 
-                          color: '#ffffff', 
-                          fontWeight: '600', 
-                          fontSize: '12px', 
-                          borderRadius: '6px', 
-                          padding: '4px 8px'
-                        }}>
-                          Live
-                        </span>
-                      </div>
-                      <div style={{ 
-                        color: isDarkMode ? '#94a3b8' : '#64748b', 
-                        fontSize: '14px', 
-                        wordBreak: 'break-all', 
-                        marginBottom: '4px' 
-                      }}>
-                        Code: {item.code || item.id}
-                      </div>
-                      <div style={{ 
-                        color: isDarkMode ? '#64748b' : '#94a3b8', 
-                        fontSize: '13px', 
-                        marginBottom: '12px' 
-                      }}>
-                        Created: {item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A'}
-                      </div>
-                      <div style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '16px', 
-                        marginBottom: '8px' 
-                      }}>
-                        <button 
-                          title="View" 
-                          style={{ 
-                            background: 'none', 
-                            border: 'none', 
-                            color: '#3b82f6', 
-                            fontSize: '18px', 
-                            cursor: 'pointer',
-                            padding: '8px',
-                            borderRadius: '8px',
-                            transition: 'background 0.2s ease'
-                          }} 
-                          onMouseOver={e => e.currentTarget.style.background = isDarkMode ? '#1e293b' : '#f1f5f9'}
-                          onMouseOut={e => e.currentTarget.style.background = 'none'}
-                          onClick={e => { 
-                            e.stopPropagation(); 
-                            navigate(`/livequiz/details/${item.id}`); 
-                          }}
-                        >
-                          <FaEye />
-                        </button>
-                        <button 
-                          title="Results" 
-                          style={{ 
-                            background: 'none', 
-                            border: 'none', 
-                            color: '#10b981', 
-                            fontSize: '18px', 
-                            cursor: 'pointer',
-                            padding: '8px',
-                            borderRadius: '8px',
-                            transition: 'background 0.2s ease'
-                          }} 
-                          onMouseOver={e => e.currentTarget.style.background = isDarkMode ? '#1e293b' : '#f1f5f9'}
-                          onMouseOut={e => e.currentTarget.style.background = 'none'}
-                          onClick={e => { 
-                            e.stopPropagation(); 
-                            navigate(`/livequiz/details/${item.id}`); 
-                          }}
-                        >
-                          <i className="fa fa-bar-chart" />
-                        </button>
-                        <button 
-                          title="Link" 
-                          style={{ 
-                            background: 'none', 
-                            border: 'none', 
-                            color: '#06b6d4', 
-                            fontSize: '18px', 
-                            cursor: 'pointer',
-                            padding: '8px',
-                            borderRadius: '8px',
-                            transition: 'background 0.2s ease'
-                          }} 
-                          onMouseOver={e => e.currentTarget.style.background = isDarkMode ? '#1e293b' : '#f1f5f9'}
-                          onMouseOut={e => e.currentTarget.style.background = 'none'}
-                          onClick={e => { 
-                            e.stopPropagation(); 
-                            navigator.clipboard.writeText(window.location.origin + `/livequiz/details/${item.id}`); 
-                            toast('Link copied!', 'success'); 
-                          }}
-                        >
-                          <i className="fa fa-link" />
-                        </button>
-                        <button 
-                          title="Past Sessions" 
-                          style={{ 
-                            background: 'none', 
-                            border: 'none', 
-                            color: '#8b5cf6', 
-                            fontSize: '18px', 
-                            cursor: 'pointer',
-                            padding: '8px',
-                            borderRadius: '8px',
-                            transition: 'background 0.2s ease'
-                          }} 
-                          onMouseOver={e => e.currentTarget.style.background = isDarkMode ? '#1e293b' : '#f1f5f9'}
-                          onMouseOut={e => e.currentTarget.style.background = 'none'}
-                          onClick={e => { 
-                            e.stopPropagation(); 
-                            navigate(`/admin/${item.id}/sessions`); 
-                          }}
-                        >
-                          <FaHistory size={18} />
-                        </button>
-                      </div>
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      key={item.id || idx}
-                      initial={{ opacity: 0, scale: 0.96, y: 18 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: 18 }}
-                      transition={{ duration: 0.32, type: 'spring' }}
-                      className="dashboard-animated-card formquiz-card-hover"
-                      style={{ marginBottom: 30, transition: 'box-shadow 0.2s, transform 0.2s' }}
-                      whileHover={{
-                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                        scale: 1.02,
-                        zIndex: 10
-                      }}
-                    >
-                      <MemoFormCardRow
-                        view={viewMode}
-                        name={item.title}
-                        timestamp={new Date(
-                          item.created_at
-                        ).toLocaleString()}
-                        sharedWith={item.shared_with || []}
-                        link={
-                          activeTab === 'forms'
-                            ? `/form/${item.id}`
-                            : activeTab === 'quizzes'
-                            ? `/userend?quizId=${item.id}`
-                            : `/join/${item.id}`
-                        }
-                        creator={username}
-                        formId={item.id}
-                        isForm={activeTab === 'forms'}
-                        onDelete={
-                          activeTab === 'forms'
-                            ? handleDeleteForm
-                            : handleDeleteQuiz
-                        }
-                        isPublished={item.is_published}
-                        onPublishToggle={
-                          activeTab === 'forms'
-                            ? handlePublishToggle
-                            : handleQuizPublishToggle
-                        }
-                        quizType={
-                          activeTab === 'quizzes'
-                            ? item.type || 'blank'
-                            : undefined
-                        }
-                        formType={
-                          activeTab === 'forms'
-                            ? item.type || 'Forms'
-                            : undefined
-                        }
-                        expanded={expandedCardId === item.id}
-                        setExpandedCardId={setExpandedCardId}
-                        titleStyle={{ 
-                          fontWeight: '600', 
-                          color: isDarkMode ? '#f1f5f9' : '#1e293b',
-                          fontSize: '16px'
-                        }}
-                        selected={selectedIds.includes(item.id)}
-                        onSelect={handleSelect}
-                      />
-                    </motion.div>
-                  )
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(6)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className={`h-48 rounded-xl ${
+                      isDarkMode ? 'bg-gray-800 animate-pulse' : 'bg-gray-200 animate-pulse'
+                    }`}
+                  />
                 ))}
-                <div style={{ height: 30 }} />
-              </>
+              </div>
+            ) : filteredAndSortedData.length > 0 ? (
+              <div className={viewMode === 'grid' 
+                ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6' 
+                : 'space-y-4'
+              }>
+                {filteredAndSortedData.map((item, idx) => (
+                  <motion.div
+                    key={item.id || idx}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3, delay: idx * 0.1 }}
+                    className={`group relative ${
+                      viewMode === 'grid' 
+                        ? 'p-6 rounded-xl border transition-all duration-200' 
+                        : 'p-4 rounded-xl border transition-all duration-200'
+                    } ${
+                      isDarkMode 
+                        ? 'bg-gray-800 border-gray-700 hover:bg-gray-700' 
+                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                    }`}
+                    whileHover={{ scale: 1.02, y: -2 }}
+                  >
+                    {/* Selection Checkbox */}
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(item.id)}
+                      onChange={(e) => handleSelect(item.id, e.target.checked)}
+                      className="absolute top-4 right-4 w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                    />
+
+                    {/* Content */}
+                    <div className={viewMode === 'grid' ? 'text-center' : 'flex items-center space-x-4'}>
+                      <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                        isDarkMode ? 'bg-blue-600' : 'bg-blue-500'
+                      }`}>
+                        <span className="text-white text-lg">
+                          {activeTab === 'forms' ? '📋' : activeTab === 'livequiz' ? '🎯' : '🧠'}
+                        </span>
+                      </div>
+                      
+                      <div className={viewMode === 'grid' ? 'mt-4' : 'flex-1'}>
+                        <h3 className={`font-semibold mb-1 ${
+                          isDarkMode ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          {item.title || 'Untitled'}
+                        </h3>
+                        <p className={`text-sm ${
+                          isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                        }`}>
+                          Created {new Date(item.created_at).toLocaleDateString()}
+                        </p>
+                        {activeTab === 'livequiz' && (
+                          <div className="flex items-center space-x-2 mt-2">
+                            <span className="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">
+                              Draft
+                            </span>
+                            <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+                              Live
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className={`absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
+                      isDarkMode ? 'bg-gray-800/90' : 'bg-white/90'
+                    }`}>
+                      <div className="flex space-x-2">
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          className={`p-2 rounded-lg ${
+                            isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                          onClick={() => navigate(`/${activeTab === 'forms' ? 'form' : 'quiz'}/${item.id}`)}
+                        >
+                          <FiEye size={16} />
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          className={`p-2 rounded-lg ${
+                            isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                          onClick={() => navigate(`/${activeTab === 'forms' ? 'builder' : 'quiz/create'}`)}
+                        >
+                          <FiEdit3 size={16} />
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          className={`p-2 rounded-lg ${
+                            isDarkMode ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          <FiCopy size={16} />
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          className="p-2 rounded-lg bg-red-100 text-red-600 hover:bg-red-200"
+                          onClick={() => {
+                            if (activeTab === 'forms') handleDeleteForm(item.id);
+                            else if (activeTab === 'quizzes') handleDeleteQuiz(item.id);
+                            else if (activeTab === 'livequiz') handleDeleteLiveQuiz(item.id);
+                          }}
+                        >
+                          <FiTrash2 size={16} />
+                        </motion.button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
             ) : (
               <motion.div
-                className="dashboard-empty-message"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                style={{ 
-                  color: isDarkMode ? '#94a3b8' : '#64748b',
-                  fontSize: '16px',
-                  textAlign: 'center',
-                  padding: '60px 0',
-                  fontWeight: '500',
-                  fontFamily: 'Inter, sans-serif'
-                }}
+                className="text-center py-12"
               >
-                {activeTab === 'forms'
-                  ? 'No forms found. Create your first form to get started.'
-                  : activeTab === 'livequiz'
-                  ? 'No live quizzes found. Create your first live quiz session.'
-                  : 'No quizzes found. Create your first quiz to get started.'}
+                <div className={`w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center ${
+                  isDarkMode ? 'bg-gray-800' : 'bg-gray-100'
+                }`}>
+                  <span className="text-3xl">📝</span>
+                </div>
+                <h3 className={`text-lg font-semibold mb-2 ${
+                  isDarkMode ? 'text-white' : 'text-gray-900'
+                }`}>
+                  No {activeTab === 'forms' ? 'forms' : activeTab === 'livequiz' ? 'live quizzes' : 'quizzes'} found
+                </h3>
+                <p className={`${
+                  isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                  Create your first {activeTab === 'forms' ? 'form' : activeTab === 'livequiz' ? 'live quiz' : 'quiz'} to get started
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
-        </section>
+        </motion.div>
       </div>
+
+      {/* Floating Action Button */}
+      <motion.button
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.5, type: 'spring' }}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        className={`fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg flex items-center justify-center ${
+          isDarkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-500 hover:bg-blue-600'
+        } text-white z-50`}
+        onClick={() => {
+          if (activeTab === 'forms') navigate('/builder');
+          else if (activeTab === 'quizzes' || activeTab === 'livequiz') navigate('/quiz/create');
+        }}
+      >
+        <FiPlus size={24} />
+      </motion.button>
     </div>
   );
 };
