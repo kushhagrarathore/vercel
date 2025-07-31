@@ -216,20 +216,26 @@ export default function QuizPage() {
   // Timer logic using Supabase timer_end as single source of truth
   useEffect(() => {
     console.log('[QuizPage] Timer useEffect triggered:', {
+      hasSession: !!session,
+      hasCurrentQuestion: !!currentQuestion,
+      quizPhase,
       hasTimerEnd: !!session?.timer_end,
       timerEnd: session?.timer_end,
-      quizPhase,
-      sessionId: session?.id,
-      timerTrigger
+      timerTrigger,
+      currentQuestionId: currentQuestion?.id,
+      sessionId: session?.id
     });
 
-    if (!session?.timer_end || quizPhase !== 'question') {
-      console.log('[QuizPage] Timer stopped - no timer_end or not in question phase', {
-        hasTimerEnd: !!session?.timer_end,
-        timerEnd: session?.timer_end,
-        quizPhase,
-        sessionId: session?.id
-      });
+    if (!session || !currentQuestion || quizPhase !== 'question') {
+      console.log('[QuizPage] Timer stopped - missing session, question, or wrong phase');
+      setTimeLeft(0);
+      setShowCorrect(false);
+      return;
+    }
+
+    // Only proceed if we have a valid timer_end from the database
+    if (!session.timer_end) {
+      console.log('[QuizPage] Timer stopped - no timer_end in session');
       setTimeLeft(0);
       setShowCorrect(false);
       return;
@@ -244,36 +250,37 @@ export default function QuizPage() {
       return;
     }
 
-    let timer;
+    console.log('[QuizPage] Starting timer with end time:', timerEndDate.toISOString());
+    setShowCorrect(false); // Reset at the start of each question
     
-    function updateTimer() {
-      const now = Date.now();
-      const timerEnd = timerEndDate.getTime();
-      const remaining = Math.max(0, Math.floor((timerEnd - now) / 1000));
+    let interval = null;
+    
+    function updateTime() {
+      const now = new Date();
+      const secondsLeft = Math.max(0, Math.floor((timerEndDate.getTime() - now.getTime()) / 1000));
       
       console.log('[QuizPage] Timer update:', {
-        now: new Date(now).toISOString(),
-        timerEnd: new Date(timerEnd).toISOString(),
-        remaining,
-        difference: timerEnd - now
+        now: now.toISOString(),
+        timerEnd: timerEndDate.toISOString(),
+        secondsLeft,
+        timeDiff: timerEndDate.getTime() - now.getTime()
       });
       
-      setTimeLeft(remaining);
-      
-      if (remaining <= 0) {
+      setTimeLeft(secondsLeft);
+      if (secondsLeft === 0) {
         console.log('[QuizPage] Timer expired');
         setShowCorrect(true);
-        if (timer) clearInterval(timer);
+        if (interval) clearInterval(interval);
       }
     }
-
-    updateTimer();
-    timer = setInterval(updateTimer, 1000);
+    
+    updateTime(); // Set initial value
+    interval = setInterval(updateTime, 1000);
     
     return () => {
-      if (timer) clearInterval(timer);
+      if (interval) clearInterval(interval);
     };
-  }, [session?.timer_end, quizPhase, timerTrigger]);
+  }, [session?.timer_end, currentQuestion?.id, quizPhase, timerTrigger]);
 
   // Reset state when question changes
   useEffect(() => {
@@ -379,21 +386,30 @@ export default function QuizPage() {
       return;
     }
     
+    // Check if question has changed
+    const questionChanged = currentQuestion?.id !== sessionData.current_question_id;
+    
     console.log('[QuizPage] Session update received:', {
       phase: sessionData.phase,
       timerEnd: sessionData.timer_end,
+      hasTimerEnd: !!sessionData.timer_end,
       currentQuestionId: sessionData.current_question_id,
       sessionId: sessionData.id,
-      oldQuestionId: currentQuestion?.id
+      oldQuestionId: currentQuestion?.id,
+      questionChanged
     });
-    
-    // Check if question has changed
-    const questionChanged = currentQuestion?.id !== sessionData.current_question_id;
     
     // Update session state
     setSession(sessionData);
     setQuizPhase(sessionData.phase);
     setTimerWarning(false);
+    
+    // Force timer re-evaluation when session changes
+    // Use a longer delay to ensure session state is fully updated
+    setTimeout(() => {
+      console.log('[QuizPage] Forcing timer re-evaluation after session update');
+      setTimerTrigger(prev => prev + 1);
+    }, 200);
     
     // Log session update details
     console.log('[QuizPage] Local state updated:', {
@@ -403,12 +419,6 @@ export default function QuizPage() {
       currentPhase: sessionData.phase,
       questionChanged
     });
-    
-    // Trigger timer re-evaluation when session changes
-    setTimeout(() => {
-      console.log('[QuizPage] Triggering timer re-evaluation after session update');
-      setTimerTrigger(prev => prev + 1);
-    }, 100);
     
     if (sessionData.phase === 'question' && sessionData.current_question_id) {
       const { data: questionData } = await supabase

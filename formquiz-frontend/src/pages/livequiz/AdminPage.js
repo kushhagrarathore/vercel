@@ -130,8 +130,7 @@ export default function AdminPage() {
     if (session.timer_end) {
       end = new Date(session.timer_end);
     } else {
-      end = new Date();
-      end.setSeconds(end.getSeconds() + (currentQuestion.timer || 20));
+      end = new Date(Date.now() + (currentQuestion.timer || 20) * 1000);
     }
     setShowCorrect(false); // Reset at the start of each question
     function updateTime() {
@@ -334,18 +333,28 @@ export default function AdminPage() {
     if (!session?.id || !currentQuestion?.id) return;
 
     try {
-      const timerEnd = new Date();
-      timerEnd.setSeconds(timerEnd.getSeconds() + (currentQuestion.timer || 20));
+      const timerEnd = new Date(Date.now() + (currentQuestion.timer || 20) * 1000);
+      console.log('[AdminPage] Setting timer_end in startQuestion:', {
+        timerEnd: timerEnd.toISOString(),
+        currentQuestionTimer: currentQuestion.timer,
+        currentQuestionId: currentQuestion.id
+      });
 
-      await supabase
+      const { data, error } = await supabase
         .from('lq_sessions')
         .update({
           phase: 'question',
           timer_end: timerEnd.toISOString(),
           current_question_id: currentQuestion.id,
         })
-        .eq('id', session.id);
+        .eq('id', session.id)
+        .select()
+        .single();
 
+      if (error) throw error;
+      
+      // Update local session state with the database response
+      setSession(data);
       setQuizPhase('question');
     } catch (err) {
       setError(err.message);
@@ -368,15 +377,32 @@ export default function AdminPage() {
     const nextIndex = currentQuestionIndex + 1;
     setCurrentQuestionIndex(nextIndex);
     setCurrentQuestion(questions[nextIndex]);
-    // Update lq_sessions with new current_question_id and phase
+    
+    // Update lq_sessions with new current_question_id, phase, and timer_end
     if (session?.id && questions[nextIndex]?.id) {
-      await supabase
+      const timerEnd = new Date(Date.now() + (questions[nextIndex].timer || 20) * 1000);
+      console.log('[AdminPage] Setting timer_end in handleLeaderboardNext:', {
+        timerEnd: timerEnd.toISOString(),
+        nextQuestionTimer: questions[nextIndex].timer,
+        nextQuestionId: questions[nextIndex].id,
+        nextIndex
+      });
+      
+      const { data, error } = await supabase
         .from('lq_sessions')
         .update({
           current_question_id: questions[nextIndex].id,
           phase: 'question',
+          timer_end: timerEnd.toISOString(),
         })
-        .eq('id', session.id);
+        .eq('id', session.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      // Update local session state with the database response
+      setSession(data);
     }
     setQuizPhase('question');
     setShowLeaderboard(false);
@@ -386,14 +412,20 @@ export default function AdminPage() {
     if (!session?.id) return;
 
     try {
-      await supabase
+      const { data, error } = await supabase
         .from('lq_sessions')
         .update({
           is_live: false,
           phase: 'ended',
         })
-        .eq('id', session.id);
+        .eq('id', session.id)
+        .select()
+        .single();
 
+      if (error) throw error;
+      
+      // Update local session state with the database response
+      setSession(data);
       setQuizPhase('ended');
     } catch (err) {
       setError(err.message);
@@ -515,7 +547,7 @@ export default function AdminPage() {
 
   // Define a constant for the top bar height
   const TOP_BAR_HEIGHT = '4.5rem';
-  function handlePresentationNext() {
+  async function handlePresentationNext() {
     if (quizPhase === 'question' || quizPhase === 'answer_poll') {
       setQuizPhase('leaderboard');
       setShowLeaderboard(true);
@@ -533,16 +565,29 @@ export default function AdminPage() {
       setCurrentQuestionIndex(nextIndex);
       setCurrentQuestion(questions[nextIndex]);
       if (session?.id && questions[nextIndex]?.id) {
-        const timerEnd = new Date();
-        timerEnd.setSeconds(timerEnd.getSeconds() + (questions[nextIndex].timer || 20));
-        supabase
+        const timerEnd = new Date(Date.now() + (questions[nextIndex].timer || 20) * 1000);
+        console.log('[AdminPage] Setting timer_end in handlePresentationNext:', {
+          timerEnd: timerEnd.toISOString(),
+          nextQuestionTimer: questions[nextIndex].timer,
+          nextQuestionId: questions[nextIndex].id,
+          nextIndex
+        });
+        
+        const { data, error } = await supabase
           .from('lq_sessions')
           .update({
             current_question_id: questions[nextIndex].id,
             phase: 'question',
             timer_end: timerEnd.toISOString(),
           })
-          .eq('id', session.id);
+          .eq('id', session.id)
+          .select()
+          .single();
+
+        if (error) throw error;
+        
+        // Update local session state with the database response
+        setSession(data);
       }
       setQuizPhase('question');
       setShowLeaderboard(false);
