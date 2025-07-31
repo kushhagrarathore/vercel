@@ -84,21 +84,22 @@ export default function Profile() {
           if (user.email && (user.email_confirmed_at)) completion += 20;
           if (quizzes > 0) completion += 20;
           if (achievements > 0) completion += 20;
-          // Avatar - check both profiles table and user metadata
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('avatar_url')
-            .eq('id', user.id)
-            .single();
-          
-          // Check if avatar_url exists in profiles table
-          if (profileData?.avatar_url) {
-            setProfilePicUrl(profileData.avatar_url);
-            completion += 20;
-          } else if (user.user_metadata?.avatar_url) {
-            // Fallback to user metadata
+          // Avatar - check auth.users table first, then profiles table
+          if (user.user_metadata?.avatar_url) {
             setProfilePicUrl(user.user_metadata.avatar_url);
             completion += 20;
+          } else {
+            // Fallback to profiles table
+            const { data: profileData } = await supabase
+              .from('profiles')
+              .select('avatar_url')
+              .eq('id', user.id)
+              .single();
+            
+            if (profileData?.avatar_url) {
+              setProfilePicUrl(profileData.avatar_url);
+              completion += 20;
+            }
           }
           setProfileCompletion(completion);
           // Recent activity
@@ -215,7 +216,18 @@ export default function Profile() {
       const url = urlData.publicUrl;
       setProfilePicUrl(url);
 
-      // Update profiles table
+      // Update auth.users table avatar_url column
+      const { error: userError } = await supabase.auth.updateUser({
+        data: { avatar_url: url }
+      });
+
+      if (userError) {
+        console.error('User update error:', userError);
+        toast('Picture uploaded but failed to save to profile', 'error');
+        return;
+      }
+
+      // Also update profiles table for consistency
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ avatar_url: url })
@@ -223,16 +235,7 @@ export default function Profile() {
 
       if (profileError) {
         console.error('Profile update error:', profileError);
-        // Try updating user metadata as fallback
-        const { error: metadataError } = await supabase.auth.updateUser({
-          data: { avatar_url: url }
-        });
-        
-        if (metadataError) {
-          console.error('Metadata update error:', metadataError);
-          toast('Picture uploaded but failed to save to profile', 'error');
-          return;
-        }
+        // Profile update failed but users table was saved, so we continue
       }
 
       setProfileCompletion(pc => Math.min(pc + 20, 100));
@@ -248,7 +251,18 @@ export default function Profile() {
     try {
       setProfilePicUrl('');
       
-      // Update profiles table
+      // Update auth.users table avatar_url column
+      const { error: userError } = await supabase.auth.updateUser({
+        data: { avatar_url: null }
+      });
+
+      if (userError) {
+        console.error('User update error:', userError);
+        toast('Failed to remove profile picture', 'error');
+        return;
+      }
+
+      // Also update profiles table for consistency
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ avatar_url: null })
@@ -256,16 +270,7 @@ export default function Profile() {
 
       if (profileError) {
         console.error('Profile update error:', profileError);
-        // Try updating user metadata as fallback
-        const { error: metadataError } = await supabase.auth.updateUser({
-          data: { avatar_url: null }
-        });
-        
-        if (metadataError) {
-          console.error('Metadata update error:', metadataError);
-          toast('Failed to remove profile picture', 'error');
-          return;
-        }
+        // Profile update failed but users table was saved, so we continue
       }
 
       setProfileCompletion(pc => Math.max(pc - 20, 0));
@@ -298,10 +303,24 @@ export default function Profile() {
       // Test if the image loads
       const img = new Image();
       img.onload = async () => {
-        // Image loaded successfully, save to database
+        // Image loaded successfully, save to auth.users table
         setProfilePicUrl(url);
         
-        // Update profiles table
+        // Update auth.users table avatar_url column
+        const { error: userError } = await supabase.auth.updateUser({
+          data: { avatar_url: url }
+        });
+
+        if (userError) {
+          console.error('User update error:', userError);
+          toast('Failed to save profile picture URL', 'error');
+          setUrlLoading(false);
+          setShowUrlModal(false);
+          setUrlInput('');
+          return;
+        }
+
+        // Also update profiles table for consistency
         const { error: profileError } = await supabase
           .from('profiles')
           .update({ avatar_url: url })
@@ -309,19 +328,7 @@ export default function Profile() {
 
         if (profileError) {
           console.error('Profile update error:', profileError);
-          // Try updating user metadata as fallback
-          const { error: metadataError } = await supabase.auth.updateUser({
-            data: { avatar_url: url }
-          });
-          
-          if (metadataError) {
-            console.error('Metadata update error:', metadataError);
-            toast('Failed to save profile picture URL', 'error');
-            setUrlLoading(false);
-            setShowUrlModal(false);
-            setUrlInput('');
-            return;
-          }
+          // Profile update failed but users table was saved, so we continue
         }
 
         setProfileCompletion(pc => Math.min(pc + 20, 100));
