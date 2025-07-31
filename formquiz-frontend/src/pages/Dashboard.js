@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSun, FiMoon, FiSearch, FiPlus, FiGrid, FiList, FiEdit3, FiCopy, FiTrash2, FiEye, FiShare2 } from 'react-icons/fi';
+import { FiSun, FiMoon, FiSearch, FiPlus, FiGrid, FiList, FiEdit3, FiCopy, FiTrash2, FiEye, FiShare2, FiSettings, FiUser } from 'react-icons/fi';
 import { FaHistory, FaEye } from 'react-icons/fa';
 import { supabase } from '../supabase';
 import { useToast } from '../components/Toast';
@@ -433,19 +433,53 @@ const Dashboard = () => {
               ))}
             </div>
 
-            {/* Dark Mode Toggle */}
-            <motion.button
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className={`p-2 rounded-lg transition-colors duration-200 ${
-                isDarkMode 
-                  ? 'text-gray-300 hover:text-white hover:bg-gray-800' 
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-              }`}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-            >
-              {isDarkMode ? <FiSun size={20} /> : <FiMoon size={20} />}
-            </motion.button>
+            {/* Right Side Controls */}
+            <div className="flex items-center space-x-2">
+              {/* Settings Button */}
+              <motion.button
+                onClick={() => navigate('/settings')}
+                className={`p-2 rounded-lg transition-colors duration-200 ${
+                  isDarkMode 
+                    ? 'text-gray-300 hover:text-white hover:bg-gray-800' 
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                title="Settings"
+              >
+                <FiSettings size={20} />
+              </motion.button>
+
+              {/* Profile Button */}
+              <motion.button
+                onClick={() => navigate('/profile')}
+                className={`p-2 rounded-lg transition-colors duration-200 ${
+                  isDarkMode 
+                    ? 'text-gray-300 hover:text-white hover:bg-gray-800' 
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                title="Profile"
+              >
+                <FiUser size={20} />
+              </motion.button>
+
+              {/* Dark Mode Toggle */}
+              <motion.button
+                onClick={() => setIsDarkMode(!isDarkMode)}
+                className={`p-2 rounded-lg transition-colors duration-200 ${
+                  isDarkMode 
+                    ? 'text-gray-300 hover:text-white hover:bg-gray-800' 
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                }`}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+              >
+                {isDarkMode ? <FiSun size={20} /> : <FiMoon size={20} />}
+              </motion.button>
+            </div>
           </div>
         </div>
       </motion.nav>
