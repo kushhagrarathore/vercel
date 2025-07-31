@@ -1,5 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import TemplateCard from '../shared/TemplateCard';
+import '../shared/TemplateCard.css';
 import './FormCreationBar.css';
 import { formTemplates } from '../../utils/formTemplates'; // You will need to create this file
 
@@ -109,18 +111,13 @@ const FormCreationBar = () => {
   return (
     <div className="template-section">
       {templates.map((template, index) => (
-        <div
-          className="template-card"
+        <TemplateCard
           key={index}
+          icon={template.icon}
+          label={template.label}
+          description={template.desc}
           onClick={template.onClick}
-          style={{ cursor: template.onClick ? 'pointer' : 'default' }}
-        >
-          <div className="file-icon">
-            {template.icon}
-          </div>
-          <div className="template-label">{template.label}</div>
-          <div className="template-desc">{template.desc}</div>
-        </div>
+        />
       ))}
     </div>
   );
