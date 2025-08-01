@@ -189,7 +189,10 @@ export default function QuizPage() {
         
         if (remaining <= 0) {
           console.log('[QuizPage] Timer expired');
-          setShowCorrect(true);
+          // Only show correct answer if user hasn't answered yet
+          if (selectedAnswer === null) {
+            setShowCorrect(true);
+          }
           return;
         }
         
@@ -213,9 +216,8 @@ export default function QuizPage() {
 
   // Show feedback/results screen for 2.5s after answering, before moving to next question or waiting
   useEffect(() => {
-    if (!showCorrect) return;
-    if (selectedAnswer !== null) {
-      // Refetch participant score after timer ends
+    // Only run this logic when the results are meant to be shown and the user had answered.
+    if (showCorrect && selectedAnswer !== null) {
       async function fetchScore() {
         if (!participant?.id) return;
         const { data, error } = await supabase
@@ -223,17 +225,15 @@ export default function QuizPage() {
           .select('score')
           .eq('id', participant.id)
           .single();
-        if (!error && data) setLiveScore(data.score);
+        if (!error && data) {
+          setLiveScore(data.score);
+        }
       }
       fetchScore();
-      const timeout = setTimeout(() => {
-        setPointsEarned(null);
-        setSelectedAnswer(null);
-        // Optionally, move to waiting or next question here if needed
-      }, 2500); // 2.5s delay before reset
-      return () => clearTimeout(timeout);
     }
-  }, [showCorrect, selectedAnswer]);
+    // The timeout that reset selectedAnswer has been removed. The answer state
+    // will now correctly persist until the host moves to the next question.
+  }, [showCorrect, selectedAnswer, participant?.id]);
 
   useEffect(() => {
     if (!participant?.id) return;
@@ -306,45 +306,49 @@ export default function QuizPage() {
       console.log('[QuizPage] No session data in payload');
       return;
     }
-    
     console.log('[QuizPage] Session update received:', {
       phase: sessionData.phase,
       timerEnd: sessionData.timer_end,
       currentQuestionId: sessionData.current_question_id,
       sessionId: sessionData.id
     });
-    
     // Update session state
     setSession(sessionData);
-    setQuizPhase(sessionData.phase);
     setTimerWarning(false);
-    
+    // If the phase is 'times_up', we only trigger the display of results.
+    // We do NOT change the overall quizPhase, as this would hide the feedback
+    // screen for users who have already answered.
+    if (sessionData.phase === 'times_up') {
+      console.log('[QuizPage] Phase is times_up, showing correct answers.');
+      setShowCorrect(true);
+    } else {
+      // For all other phases ('waiting', 'question', 'ended'), we update the component's phase.
+      setQuizPhase(sessionData.phase);
+    }
     // Log session update details
     console.log('[QuizPage] Local state updated:', {
-      phase: sessionData.phase,
+      currentPhase: quizPhase,
+      newPhaseFromServer: sessionData.phase,
       timerEnd: sessionData.timer_end,
       hasTimerEnd: !!sessionData.timer_end,
-      currentPhase: sessionData.phase
     });
-    
     // Trigger timer re-evaluation when session changes
     setTimeout(() => {
       console.log('[QuizPage] Triggering timer re-evaluation after session update');
       setTimerTrigger(prev => prev + 1);
     }, 100);
-    
+    // When a new question is sent, reset the UI.
     if (sessionData.phase === 'question' && sessionData.current_question_id) {
       const { data: questionData } = await supabase
         .from('lq_questions')
         .select('*')
         .eq('id', sessionData.current_question_id)
         .single();
-      
       if (questionData) {
         setCurrentQuestion(questionData);
         setSelectedAnswer(null); // Reset selected answer for new question
         setShowCorrect(false);
-        
+        setPointsEarned(null);
         // Timer will be handled by the useEffect that watches session.timer_end
         if (!sessionData.timer_end) {
           console.log('[QuizPage] Warning: No timer_end in session data');
@@ -353,11 +357,8 @@ export default function QuizPage() {
           console.log('[QuizPage] Timer end set:', sessionData.timer_end);
         }
       }
-    } else if (sessionData.phase === 'times_up') {
-      // Timer has expired, show correct answers
-      console.log('[QuizPage] Phase changed to times_up');
-      setShowCorrect(true);
-    } else if (sessionData.phase !== 'question') {
+    // When the quiz moves to a state that is not a question, clear the question data.
+    } else if (sessionData.phase !== 'question' && sessionData.phase !== 'times_up') {
       setCurrentQuestion(null);
       setTimeLeft(0);
       setSelectedAnswer(null);
@@ -634,14 +635,14 @@ export default function QuizPage() {
               </button>
             ))}
           </div>
-          <div className="mt-6 flex justify-center">
-            <div className={`flex items-center gap-2 text-xl font-bold px-4 py-1 rounded-full shadow ${
-              timeLeft > 0 ? 'text-purple-700 bg-white/80' : 'text-red-700 bg-red-100'
-            }`}>
-              <svg className="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" /><path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              {timeLeft > 0 ? `${timeLeft}s` : 'Time\'s up!'}
-            </div>
-          </div>
+                     <div className="mt-6 flex justify-center">
+             <div className={`flex items-center gap-2 text-xl font-bold px-4 py-1 rounded-full shadow ${
+               selectedAnswer !== null ? 'text-green-700 bg-green-100' : timeLeft > 0 ? 'text-purple-700 bg-white/80' : 'text-red-700 bg-red-100'
+             }`}>
+               <svg className="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" /><path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+               {selectedAnswer !== null ? 'Answered!' : timeLeft > 0 ? `${timeLeft}s` : 'Time\'s up!'}
+             </div>
+           </div>
         </div>
       )}
 
