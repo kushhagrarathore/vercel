@@ -4,7 +4,6 @@ import { useQuiz } from '../../pages/livequiz/QuizContext';
 import { QRCodeSVG } from 'qrcode.react';
 import QuestionPreview from './QuestionPreview';
 import { useNavigate, useParams } from 'react-router-dom';
-import { advanceToNextQuestion, transitionToLeaderboard, endQuizSession, checkAndRecoverStuckState, checkAndRecoverFourthQuestionIssue, validateSessionState, forceSessionRefresh } from '../../utils/atomicUpdates.js';
 // Remove Confetti import
 // import Confetti from 'react-confetti';
 
@@ -156,67 +155,6 @@ export default function AdminPage() {
       // Keeping it for now, but it will be removed if not used elsewhere
     }
   }, [quizId]);
-
-  // Add enhanced fallback mechanism to check for stuck states, especially fourth question issue
-  useEffect(() => {
-    if (!session?.id || quizPhase !== 'question') return;
-    
-    const checkStuckState = async () => {
-      try {
-        // First, validate session state consistency
-        const isStateConsistent = await validateSessionState(session);
-        if (!isStateConsistent) {
-          console.log('[AdminPage] Detected state inconsistency, refreshing session');
-          const refreshedSession = await forceSessionRefresh(session.id);
-          setSession(refreshedSession);
-          return;
-        }
-
-        // Check for general stuck state
-        const recovered = await checkAndRecoverStuckState(session);
-        if (recovered) {
-          console.log('[AdminPage] Successfully recovered from stuck state');
-          setQuizPhase('leaderboard');
-          setShowLeaderboard(true);
-          return;
-        }
-
-        // Check specifically for fourth question issue
-        const fourthQuestionRecovered = await checkAndRecoverFourthQuestionIssue(session, currentQuestionIndex);
-        if (fourthQuestionRecovered) {
-          console.log('[AdminPage] Successfully recovered from fourth question stuck state');
-          setQuizPhase('leaderboard');
-          setShowLeaderboard(true);
-          return;
-        }
-      } catch (err) {
-        console.error('[AdminPage] Error checking stuck state:', err);
-      }
-    };
-
-    // Check every 8 seconds for more frequent monitoring
-    const interval = setInterval(checkStuckState, 8000);
-    return () => clearInterval(interval);
-  }, [session?.id, session?.timer_end, quizPhase, currentQuestionIndex]);
-
-  // Add retry mechanism for failed database updates
-  const retryDatabaseUpdate = async (updateFunction, maxRetries = 3) => {
-    let retryCount = 0;
-    while (retryCount < maxRetries) {
-      try {
-        const result = await updateFunction();
-        return result;
-      } catch (err) {
-        console.error(`[AdminPage] Database update failed (attempt ${retryCount + 1}):`, err);
-        retryCount++;
-        if (retryCount >= maxRetries) {
-          throw err;
-        }
-        // Exponential backoff
-        await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, retryCount - 1)));
-      }
-    }
-  };
 
   // Fetch and subscribe to participants for the current session
   useEffect(() => {
@@ -436,47 +374,38 @@ export default function AdminPage() {
       if (!showPodium) setShowPodium(true); // Only set if not already true
       return;
     }
-    
-    console.log('[AdminPage] handleLeaderboardNext called:', {
-      currentQuestionIndex,
-      questionsLength: questions.length,
-      sessionId: session?.id
-    });
-
     const nextIndex = currentQuestionIndex + 1;
-    const nextQuestion = questions[nextIndex];
+    setCurrentQuestionIndex(nextIndex);
+    setCurrentQuestion(questions[nextIndex]);
     
-    if (!session?.id || !nextQuestion?.id) {
-      console.error('[AdminPage] Missing session or next question:', {
-        sessionId: session?.id,
-        nextQuestionId: nextQuestion?.id
+    // Update lq_sessions with new current_question_id, phase, and timer_end
+    if (session?.id && questions[nextIndex]?.id) {
+      const timerEnd = new Date(Date.now() + (questions[nextIndex].timer || 20) * 1000);
+      console.log('[AdminPage] Setting timer_end in handleLeaderboardNext:', {
+        timerEnd: timerEnd.toISOString(),
+        nextQuestionTimer: questions[nextIndex].timer,
+        nextQuestionId: questions[nextIndex].id,
+        nextIndex
       });
-      return;
-    }
+      
+      const { data, error } = await supabase
+        .from('lq_sessions')
+        .update({
+          current_question_id: questions[nextIndex].id,
+          phase: 'question',
+          timer_end: timerEnd.toISOString(),
+        })
+        .eq('id', session.id)
+        .select()
+        .single();
 
-          try {
-        console.log('[AdminPage] Using atomic update to advance to next question');
-        
-        // Use the atomic update utility
-        const updatedSession = await advanceToNextQuestion(
-          session.id,
-          nextQuestion.id,
-          nextQuestion.timer || 20
-        );
-        
-        console.log('[AdminPage] Successfully advanced to next question:', updatedSession);
-        
-        // Update local state atomically
-        setCurrentQuestionIndex(nextIndex);
-        setCurrentQuestion(nextQuestion);
-        setSession(updatedSession);
-        setQuizPhase('question');
-        setShowLeaderboard(false);
-        
-      } catch (err) {
-        console.error('[AdminPage] Error in handleLeaderboardNext:', err);
-        setError(`Failed to advance to next question: ${err.message}`);
-      }
+      if (error) throw error;
+      
+      // Update local session state with the database response
+      setSession(data);
+    }
+    setQuizPhase('question');
+    setShowLeaderboard(false);
   }
 
   async function endQuiz() {
@@ -631,48 +560,37 @@ export default function AdminPage() {
         setQuizPhase('podium');
         return;
       }
-      
-      console.log('[AdminPage] handlePresentationNext called:', {
-        currentQuestionIndex,
-        questionsLength: questions.length,
-        sessionId: session?.id
-      });
-      
       // Advance to next question
       const nextIndex = currentQuestionIndex + 1;
-      const nextQuestion = questions[nextIndex];
-      
-      if (!session?.id || !nextQuestion?.id) {
-        console.error('[AdminPage] Missing session or next question:', {
-          sessionId: session?.id,
-          nextQuestionId: nextQuestion?.id
+      setCurrentQuestionIndex(nextIndex);
+      setCurrentQuestion(questions[nextIndex]);
+      if (session?.id && questions[nextIndex]?.id) {
+        const timerEnd = new Date(Date.now() + (questions[nextIndex].timer || 20) * 1000);
+        console.log('[AdminPage] Setting timer_end in handlePresentationNext:', {
+          timerEnd: timerEnd.toISOString(),
+          nextQuestionTimer: questions[nextIndex].timer,
+          nextQuestionId: questions[nextIndex].id,
+          nextIndex
         });
-        return;
-      }
+        
+        const { data, error } = await supabase
+          .from('lq_sessions')
+          .update({
+            current_question_id: questions[nextIndex].id,
+            phase: 'question',
+            timer_end: timerEnd.toISOString(),
+          })
+          .eq('id', session.id)
+          .select()
+          .single();
 
-      try {
-        console.log('[AdminPage] Using atomic update to advance to next question');
+        if (error) throw error;
         
-        // Use the atomic update utility
-        const updatedSession = await advanceToNextQuestion(
-          session.id,
-          nextQuestion.id,
-          nextQuestion.timer || 20
-        );
-        
-        console.log('[AdminPage] Successfully advanced to next question:', updatedSession);
-        
-        // Update local state atomically
-        setCurrentQuestionIndex(nextIndex);
-        setCurrentQuestion(nextQuestion);
-        setSession(updatedSession);
-        setQuizPhase('question');
-        setShowLeaderboard(false);
-        
-      } catch (err) {
-        console.error('[AdminPage] Error in handlePresentationNext:', err);
-        setError(`Failed to advance to next question: ${err.message}`);
+        // Update local session state with the database response
+        setSession(data);
       }
+      setQuizPhase('question');
+      setShowLeaderboard(false);
       return;
     }
   }
