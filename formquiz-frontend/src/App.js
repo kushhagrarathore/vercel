@@ -75,7 +75,6 @@ function App() {
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
             <Route path="/builder" element={<RequireAuth><FormBuilder /></RequireAuth>} />
             <Route path="/builder/:formId" element={<RequireAuth><FormBuilder /></RequireAuth>} />
-            <Route path="/form/create" element={<RequireAuth><FormBuilder /></RequireAuth>} />
             <Route path="/preview/:formId" element={<RequireAuth><FormView /></RequireAuth>} />
             <Route path="/form/:formId" element={<FormView />} />
             <Route path="/public/:formId" element={<RequireAuth><FormView /></RequireAuth>} />

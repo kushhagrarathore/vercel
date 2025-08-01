@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../supabase';
 import { useToast } from '../components/Toast';
 import './Dashboard.css';
-import { FiSun, FiMoon, FiSearch, FiPlus, FiChevronDown } from 'react-icons/fi';
+import { FiSun, FiMoon, FiSearch } from 'react-icons/fi';
 import DeleteQuizButton from '../components/quiz/DeleteQuizButton';
 import { FaHistory, FaEye } from 'react-icons/fa';
 import TemplateCard from '../components/shared/TemplateCard';
@@ -24,62 +24,6 @@ function useDebounce(value, delay) {
   }, [value, delay]);
   return debouncedValue;
 }
-
-// Template metadata for enhanced UI
-const templateMeta = [
-  {
-    type: 'Blank',
-    icon: (
-      <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <rect x="4" y="4" width="16" height="16" rx="4" strokeWidth="2" />
-        <path d="M8 12h8" strokeWidth="2" />
-      </svg>
-    ),
-    title: 'Blank Form',
-    desc: 'Start from scratch with an empty form.',
-  },
-  {
-    type: 'Contact',
-    icon: (
-      <svg className="w-8 h-8 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <rect x="3" y="5" width="18" height="14" rx="3" strokeWidth="2" />
-        <path d="M3 7l9 6 9-6" strokeWidth="2" />
-      </svg>
-    ),
-    title: 'Contact Form',
-    desc: 'Collect contact info and messages.',
-  },
-  {
-    type: 'Survey',
-    icon: (
-      <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <rect x="4" y="4" width="16" height="16" rx="4" strokeWidth="2" />
-        <path d="M8 9h8M8 13h6M8 17h4" strokeWidth="2" />
-      </svg>
-    ),
-    title: 'Survey Form',
-    desc: 'Get feedback and opinions.',
-  },
-  {
-    type: 'Feedback',
-    icon: (
-      <svg className="w-8 h-8 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <rect x="3" y="5" width="18" height="14" rx="3" strokeWidth="2" />
-        <path d="M8 10h.01M12 10h.01M16 10h.01M8 14h8" strokeWidth="2" />
-      </svg>
-    ),
-    title: 'Feedback Form',
-    desc: 'Let users share their thoughts.',
-  },
-];
-
-// Status badge helper
-const statusBadge = (status) => {
-  if (status === 'Draft') return <span className="inline-block px-2 py-0.5 rounded bg-yellow-100 text-yellow-700 text-xs font-semibold">Draft</span>;
-  if (status === 'Published') return <span className="inline-block px-2 py-0.5 rounded bg-green-100 text-green-700 text-xs font-semibold">Published</span>;
-  if (status === 'Archived') return <span className="inline-block px-2 py-0.5 rounded bg-gray-200 text-gray-600 text-xs font-semibold">Archived</span>;
-  return null;
-};
 
 const MemoFormCardRow = React.memo(FormCardRow);
 
@@ -137,7 +81,6 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 250);
   const [viewMode, setViewMode] = useState('grid');
-  const [sortBy, setSortBy] = useState('Newest');
   const [username, setUsername] = useState('');
   const [forms, setForms] = useState([]);
   const [quizzes, setQuizzes] = useState([]);
@@ -280,16 +223,10 @@ const Dashboard = () => {
     fetchUserData();
   }, [toast]);
 
-  // Sort and filter logic for forms
-  const filteredForms = useMemo(() => {
-    let arr = forms.filter((form) =>
+  const filteredForms = useMemo(() =>
+    forms.filter((form) =>
       form.title?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-    );
-    if (sortBy === 'Newest') arr = arr.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    if (sortBy === 'Oldest') arr = arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-    if (sortBy === 'Name A-Z') arr = arr.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
-    return arr;
-  }, [forms, debouncedSearchTerm, sortBy]);
+    ), [forms, debouncedSearchTerm]);
 
   const filteredQuizzes = useMemo(() =>
     quizzes.filter((quiz) =>
@@ -531,12 +468,7 @@ const Dashboard = () => {
       minHeight: '100vh',
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif'
     }}>
-      <Navbar 
-        activeTab={activeTab} 
-        onToggle={handleTabToggle} 
-        iconSize={28}
-        iconHoverEffect
-      />
+      <Navbar activeTab={activeTab} onToggle={handleTabToggle} />
 
       <div className="dashboard-animated-content">
         <motion.h2
@@ -577,255 +509,142 @@ const Dashboard = () => {
             : 'Build engaging quiz experiences'}
         </motion.p>
 
-        {activeTab === 'forms' ? (
-          // Enhanced Forms Tab UI
-          <div className="relative">
-            {/* Templates Section */}
-            <div className="mb-10">
-              <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200 mb-2 ml-1">Templates</h3>
-              <div className="flex gap-6 mb-8">
-                {templateMeta.map((tpl, i) => (
         <motion.div
-                    key={tpl.type}
-                    whileHover={{ scale: 1.045, boxShadow: '0 8px 32px 0 rgba(16,30,54,0.10)' }}
-                    className="bg-white dark:bg-slate-800 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer px-6 py-5 flex flex-col items-center w-56"
-                    onClick={() => {
-                      if (tpl.type === 'Blank') navigate('/builder');
-                      if (tpl.type === 'Contact') navigate('/builder?template=contact');
-                      if (tpl.type === 'Survey') navigate('/builder?template=survey');
-                      if (tpl.type === 'Feedback') navigate('/builder?template=feedback');
-                    }}
-                  >
-                    <div className="mb-2">{tpl.icon}</div>
-                    <div className="font-bold text-base mb-1">{tpl.title}</div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 text-center">{tpl.desc}</div>
+          className="dashboard-creation-bar"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.2, type: 'spring' }}
+        >
+          {activeTab === 'forms' && <FormCreationBar />}
+          {activeTab === 'quizzes' && <QuizCreationBar />}
+          {activeTab === 'livequiz' && (
+            <LiveQuizTemplateCard
+              onClick={() => navigate('/quiz/create')}
+            />
+          )}
         </motion.div>
-                ))}
-              </div>
-            </div>
 
-            {/* My Forms Section */}
-            <div className="flex items-center justify-between mb-4 mt-12">
-              <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200 ml-1">My Forms</h3>
-              {/* FAB */}
-              <motion.button
-                whileHover={{ scale: 1.08, boxShadow: '0 4px 16px 0 rgba(59,130,246,0.18)' }}
-                className="fixed bottom-8 right-8 z-50 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg p-5 flex items-center justify-center transition-all"
-                title="Create New Form"
-                onClick={() => navigate('/builder')}
-              >
-                <FiPlus size={28} />
-              </motion.button>
-            </div>
-
-            {/* Search & Sort */}
-            <div className="flex flex-wrap gap-4 items-center mb-8">
-              <div className="relative flex-1 min-w-[220px] max-w-[340px]">
-                <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={18} />
+        <div className="dashboard-controls-bar" style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '16px',
+          padding: '24px 0',
+          marginBottom: '24px',
+          flexWrap: 'wrap'
+        }}>
+          <div style={{
+            position: 'relative',
+            flex: '1',
+            minWidth: '280px',
+            maxWidth: '400px'
+          }}>
+            <FiSearch style={{
+              position: 'absolute',
+              left: '16px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: isDarkMode ? '#64748b' : '#94a3b8',
+              fontSize: '18px'
+            }} />
             <input
-                  className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all outline-none"
+              className="dashboard-search"
               type="text"
-                  placeholder="Search forms..."
+              placeholder="Search templates..."
               value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px 16px 12px 48px',
+                border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
+                borderRadius: '12px',
+                fontSize: '15px',
+                background: isDarkMode ? '#1e293b' : '#ffffff',
+                color: isDarkMode ? '#f1f5f9' : '#1e293b',
+                outline: 'none',
+                transition: 'all 0.2s ease',
+                fontFamily: 'Inter, sans-serif'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = isDarkMode ? '#3b82f6' : '#3b82f6';
+                e.target.style.boxShadow = `0 0 0 3px ${isDarkMode ? 'rgba(59, 130, 246, 0.1)' : 'rgba(59, 130, 246, 0.1)'}`;
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = isDarkMode ? '#334155' : '#e2e8f0';
+                e.target.style.boxShadow = 'none';
+              }}
             />
           </div>
-              <div className="relative">
-                <select
-                  className="appearance-none pl-3 pr-8 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-all outline-none"
-                  value={sortBy}
-                  onChange={e => setSortBy(e.target.value)}
-                >
-                  <option>Newest</option>
-                  <option>Oldest</option>
-                  <option>Name A-Z</option>
-                </select>
-                <FiChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
-              <div className="flex gap-2 ml-auto">
+          
+          <div className="dashboard-view-toggle" style={{
+            display: 'flex',
+            gap: '4px',
+            background: isDarkMode ? '#1e293b' : '#f1f5f9',
+            borderRadius: '10px',
+            padding: '4px'
+          }}>
             <button
-                  className={`px-3 py-2 rounded-lg font-semibold text-sm transition-all ${viewMode === 'grid'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300'
-                    }`}
+              className={`dashboard-view-btn${viewMode === 'grid' ? ' active' : ''}`}
               onClick={() => setViewMode('grid')}
+              style={{
+                background: viewMode === 'grid' ? (isDarkMode ? '#3b82f6' : '#3b82f6') : 'transparent',
+                color: viewMode === 'grid' ? '#ffffff' : (isDarkMode ? '#94a3b8' : '#64748b'),
+                border: 'none',
+                borderRadius: '8px',
+                padding: '8px 16px',
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                fontFamily: 'Inter, sans-serif'
+              }}
             >
               Grid
             </button>
             <button
-                  className={`px-3 py-2 rounded-lg font-semibold text-sm transition-all ${viewMode === 'list'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-300'
-                    }`}
+              className={`dashboard-view-btn${viewMode === 'list' ? ' active' : ''}`}
               onClick={() => setViewMode('list')}
+              style={{
+                background: viewMode === 'list' ? (isDarkMode ? '#3b82f6' : '#3b82f6') : 'transparent',
+                color: viewMode === 'list' ? '#ffffff' : (isDarkMode ? '#94a3b8' : '#64748b'),
+                border: 'none',
+                borderRadius: '8px',
+                padding: '8px 16px',
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                fontFamily: 'Inter, sans-serif'
+              }}
             >
               List
             </button>
-              </div>
           </div>
           
-                         {/* Forms List */}
-             <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-7' : 'flex flex-col gap-4'}>
-               <AnimatePresence>
-                 {loading ? (
-                   <Skeleton count={4} height={60} />
-                 ) : currentData.length > 0 ? (
-                   <>
-                     {/* Bulk Selection Bar */}
-                     {selectedIds.length > 0 && (
-                       <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700 px-6 py-4 flex items-center gap-4">
-                         <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{selectedIds.length} selected</span>
           <button
-                           onClick={handleBulkDelete} 
-                           className="text-red-600 hover:text-red-700 font-semibold text-sm transition-colors"
-                         >
-                           Delete
-                         </button>
-                         <button 
-                           onClick={() => handleBulkActivate(true)} 
-                           className="text-green-600 hover:text-green-700 font-semibold text-sm transition-colors"
-                         >
-                           Activate
-                         </button>
-                         <button 
-                           onClick={() => handleBulkActivate(false)} 
-                           className="text-blue-600 hover:text-blue-700 font-semibold text-sm transition-colors"
-                         >
-                           Deactivate
-                         </button>
-                         <button 
-                           onClick={handleSelectAll} 
-                           className="text-indigo-600 hover:text-indigo-700 font-semibold text-sm transition-colors"
-                         >
-                           Select All
-                         </button>
-                         <button 
-                           onClick={handleDeselectAll} 
-                           className="text-indigo-600 hover:text-indigo-700 font-semibold text-sm transition-colors"
-                         >
-                           Clear
-                         </button>
-                       </div>
-                     )}
-                     {currentData.map((form, idx) => (
-                       <motion.div
-                         key={form.id || idx}
-                         initial={{ opacity: 0, scale: 0.96, y: 18 }}
-                         animate={{ opacity: 1, scale: 1, y: 0 }}
-                         exit={{ opacity: 0, scale: 0.95, y: 18 }}
-                         transition={{ duration: 0.32, type: 'spring' }}
-                         whileHover={{
-                           boxShadow: '0 10px 24px -3px rgba(59,130,246,0.10), 0 4px 8px -2px rgba(59,130,246,0.08)',
-                           scale: 1.025,
-                           zIndex: 10
-                         }}
-                         className="relative bg-white dark:bg-slate-800 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer p-5 flex items-center gap-4 min-h-[120px]"
-                         onClick={() => navigate(`/form/${form.id}`)}
-                       >
-                         {/* Checkbox for selection */}
-                         <input
-                           type="checkbox"
-                           checked={selectedIds.includes(form.id)}
-                           onChange={e => {
-                             e.stopPropagation();
-                             handleSelect(form.id, e.target.checked);
-                           }}
-                           onClick={e => e.stopPropagation()}
-                           className="absolute top-4 right-4 w-5 h-5 accent-blue-600"
-                           title="Select form"
-                         />
-                         {/* Thumbnail */}
-                         <div className="flex-shrink-0 w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-2xl font-bold text-blue-600 dark:text-blue-300 shadow">
-                           {form.title?.[0]?.toUpperCase() || 'F'}
-                         </div>
-                         <div className="flex-1 min-w-0">
-                           <div className="flex items-center gap-2">
-                             <span className="font-semibold text-base text-slate-800 dark:text-slate-100 truncate">{form.title || 'Untitled Form'}</span>
-                             {statusBadge(form.is_published ? 'Published' : 'Draft')}
-                           </div>
-                           <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                             Created: {form.created_at ? new Date(form.created_at).toLocaleDateString() : 'N/A'}
-                           </div>
-                         </div>
-                         {/* Activate/Deactivate button in bottom right */}
-                         <button
-                           onClick={e => {
-                             e.stopPropagation();
-                             handlePublishToggle(form.id, !form.is_published);
-                           }}
-                           className={`absolute bottom-4 right-4 px-3 py-1 rounded text-xs font-semibold shadow transition-all duration-150
-                             ${form.is_published
-                               ? 'bg-red-100 text-red-700 hover:bg-red-200 border border-red-200'
-                               : 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-200'
-                             }`}
-                           style={{ minWidth: 70 }}
-                           title={form.is_published ? 'Deactivate' : 'Activate'}
-                         >
-                           {form.is_published ? 'Deactivate' : 'Activate'}
-                         </button>
-                       </motion.div>
-                     ))}
-                   </>
-                 ) : (
-                  // Empty State
-                  <motion.div
-                    className="w-full flex flex-col items-center justify-center py-24"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    {/* Illustration */}
-                    <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
-                      <rect x="10" y="30" width="100" height="60" rx="16" fill="#e0e7ef" />
-                      <rect x="25" y="45" width="70" height="10" rx="4" fill="#c7d2fe" />
-                      <rect x="25" y="60" width="40" height="10" rx="4" fill="#c7d2fe" />
-                      <circle cx="100" cy="80" r="8" fill="#a5b4fc" />
-                    </svg>
-                    <div className="mt-8 text-lg font-semibold text-slate-500 dark:text-slate-400">No forms found</div>
-                    <div className="mt-2 text-slate-400 dark:text-slate-500">Create your first form in seconds!</div>
-                    <button
-                      className="mt-6 px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow transition-all"
-                      onClick={() => navigate('/builder')}
-                    >
-                      Create Form
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        ) : (
-          // Original content for other tabs
-          <motion.div
-            className="dashboard-creation-bar"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.2, type: 'spring' }}
-          >
-            {activeTab === 'quizzes' && <QuizCreationBar />}
-            {activeTab === 'livequiz' && (
-              <LiveQuizTemplateCard
-                onClick={() => navigate('/quiz/create')}
-              />
-            )}
-          </motion.div>
-        )}
-
-        {/* Dark mode toggle for non-forms tabs */}
-        {activeTab !== 'forms' && (
-          <div className="flex justify-end mb-6">
-            <button
-              onClick={() => setIsDarkMode((prev) => !prev)}
-              className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-lg p-3 flex items-center justify-center transition-all hover:bg-slate-200 dark:hover:bg-slate-700"
+            onClick={() => setIsDarkMode((prev) => !prev)}
+            style={{
+              background: isDarkMode ? '#1e293b' : '#f1f5f9',
+              color: isDarkMode ? '#f1f5f9' : '#64748b',
+              border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
+              borderRadius: '10px',
+              padding: '10px',
+              fontWeight: '600',
+              fontSize: '16px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease',
+              fontFamily: 'Inter, sans-serif',
+              minWidth: '44px',
+              height: '44px'
+            }}
             title={isDarkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
           >
-              {isDarkMode ? <FiSun size={20} /> : <FiMoon size={20} />}
+            {isDarkMode ? <FiSun /> : <FiMoon />}
           </button>
         </div>
-        )}
 
-        {/* Content for non-forms tabs */}
-        {activeTab !== 'forms' && (
         <section
           className={`dashboard-animated-section ${viewMode}`}
           style={{ paddingBottom: 30 }}
@@ -941,70 +760,267 @@ const Dashboard = () => {
                   </div>
                 )}
                 {currentData.map((item, idx) => (
-                  <motion.div
-    key={item.id || idx}
-    initial={{ opacity: 0, scale: 0.96, y: 18 }}
-    animate={{ opacity: 1, scale: 1, y: 0 }}
-    exit={{ opacity: 0, scale: 0.95, y: 18 }}
-    transition={{ duration: 0.32, type: 'spring' }}
-    whileHover={{
-      boxShadow: '0 10px 24px -3px rgba(59,130,246,0.10), 0 4px 8px -2px rgba(59,130,246,0.08)',
-      scale: 1.025,
-      zIndex: 10
-    }}
-    className={`relative bg-white dark:bg-slate-800 rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer p-5 flex items-center gap-4 min-h-[120px]`}
-    onClick={() => {
-      if (activeTab === 'forms') navigate(`/form/${item.id}`);
-      else if (activeTab === 'quizzes') navigate(`/userend?quizId=${item.id}`);
-      else if (activeTab === 'livequiz') navigate(`/livequiz/questions/${item.id}`);
-    }}
-  >
-    {/* Checkbox for selection */}
-    <input
-      type="checkbox"
-      checked={selectedIds.includes(item.id)}
-      onChange={e => {
-        e.stopPropagation();
-        handleSelect(item.id, e.target.checked);
-      }}
-      onClick={e => e.stopPropagation()}
-      className="absolute top-4 right-4 w-5 h-5 accent-blue-600"
-      title="Select"
-    />
-    {/* Thumbnail */}
-    <div className={`flex-shrink-0 w-12 h-12 rounded-full ${activeTab === 'forms' ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300' : activeTab === 'quizzes' ? 'bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300' : 'bg-pink-100 dark:bg-pink-900 text-pink-600 dark:text-pink-300'} flex items-center justify-center text-2xl font-bold shadow`}>
-      {item.title?.[0]?.toUpperCase() || (activeTab === 'forms' ? 'F' : activeTab === 'quizzes' ? 'Q' : 'L')}
-    </div>
-    <div className="flex-1 min-w-0">
-      <div className="flex items-center gap-2">
-        <span className="font-semibold text-base text-slate-800 dark:text-slate-100 truncate">{item.title || (activeTab === 'forms' ? 'Untitled Form' : activeTab === 'quizzes' ? 'Untitled Quiz' : 'Untitled Live Quiz')}</span>
-        {statusBadge(activeTab === 'forms' || activeTab === 'quizzes' ? (item.is_published ? 'Published' : 'Draft') : (item.status || 'Draft'))}
-      </div>
-      <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-        Created: {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'N/A'}
-      </div>
-    </div>
-    {/* Action button for quizzes only */}
-    {activeTab === 'quizzes' && (
-      <button
-        onClick={e => {
-          e.stopPropagation();
-          handleQuizPublishToggle(item.id, !item.is_published);
-        }}
-        className={`absolute bottom-4 right-4 px-3 py-1 rounded text-xs font-semibold shadow transition-all duration-150
-          ${item.is_published
-            ? 'bg-red-100 text-red-700 hover:bg-red-200 border border-red-200'
-            : 'bg-green-100 text-green-700 hover:bg-green-200 border border-green-200'
-          }`}
-        style={{ minWidth: 70 }}
-        title={item.is_published ? 'Deactivate' : 'Activate'}
-      >
-        {item.is_published ? 'Deactivate' : 'Activate'}
-      </button>
-    )}
-    {/* For livequiz, leave bottom right empty for now */}
-  </motion.div>
-))}
+                  activeTab === 'livequiz' ? (
+                    <motion.div
+                      key={item.id || idx}
+                      initial={{ opacity: 0, scale: 0.96, y: 18 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 18 }}
+                      transition={{ duration: 0.32, type: 'spring' }}
+                      className="dashboard-animated-card livequiz-card-hover"
+                      style={{ 
+                        position: 'relative', 
+                        borderLeft: '4px solid #8b5cf6', 
+                        background: isDarkMode ? '#1e293b' : '#ffffff',
+                        color: isDarkMode ? '#f1f5f9' : '#1e293b',
+                        borderRadius: '16px', 
+                        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', 
+                        padding: '20px', 
+                        minHeight: '120px', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        justifyContent: 'center', 
+                        gap: '12px', 
+                        marginBottom: '20px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        border: `1px solid ${isDarkMode ? '#334155' : '#e2e8f0'}`,
+                        fontFamily: 'Inter, sans-serif'
+                      }}
+                      onClick={() => navigate(`/livequiz/questions/${item.id}`)}
+                      whileHover={{
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                        scale: 1.02,
+                        zIndex: 10
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(item.id)}
+                        onChange={e => {
+                          e.stopPropagation();
+                          handleSelect(item.id, e.target.checked);
+                        }}
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                          position: 'absolute',
+                          top: '20px',
+                          right: '20px',
+                          zIndex: 2,
+                          width: '20px',
+                          height: '20px',
+                          accentColor: '#8b5cf6'
+                        }}
+                        title="Select"
+                      />
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '12px', 
+                        marginBottom: '8px' 
+                      }}>
+                        <span style={{ 
+                          fontWeight: '600', 
+                          fontSize: '18px',
+                          color: isDarkMode ? '#f1f5f9' : '#1e293b'
+                        }}>
+                          {item.title || 'Untitled Live Quiz'}
+                        </span>
+                        <span style={{ 
+                          background: '#fef3c7', 
+                          color: '#d97706', 
+                          fontWeight: '600', 
+                          fontSize: '12px', 
+                          borderRadius: '6px', 
+                          padding: '4px 8px'
+                        }}>
+                          Draft
+                        </span>
+                        <span style={{ 
+                          background: '#8b5cf6', 
+                          color: '#ffffff', 
+                          fontWeight: '600', 
+                          fontSize: '12px', 
+                          borderRadius: '6px', 
+                          padding: '4px 8px'
+                        }}>
+                          Live
+                        </span>
+                      </div>
+                      <div style={{ 
+                        color: isDarkMode ? '#94a3b8' : '#64748b', 
+                        fontSize: '14px', 
+                        wordBreak: 'break-all', 
+                        marginBottom: '4px' 
+                      }}>
+                        Code: {item.code || item.id}
+                      </div>
+                      <div style={{ 
+                        color: isDarkMode ? '#64748b' : '#94a3b8', 
+                        fontSize: '13px', 
+                        marginBottom: '12px' 
+                      }}>
+                        Created: {item.created_at ? new Date(item.created_at).toLocaleString() : 'N/A'}
+                      </div>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '16px', 
+                        marginBottom: '8px' 
+                      }}>
+                        <button 
+                          title="View" 
+                          style={{ 
+                            background: 'none', 
+                            border: 'none', 
+                            color: '#3b82f6', 
+                            fontSize: '18px', 
+                            cursor: 'pointer',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            transition: 'background 0.2s ease'
+                          }} 
+                          onMouseOver={e => e.currentTarget.style.background = isDarkMode ? '#1e293b' : '#f1f5f9'}
+                          onMouseOut={e => e.currentTarget.style.background = 'none'}
+                          onClick={e => { 
+                            e.stopPropagation(); 
+                            navigate(`/livequiz/details/${item.id}`); 
+                          }}
+                        >
+                          <FaEye />
+                        </button>
+                        <button 
+                          title="Results" 
+                          style={{ 
+                            background: 'none', 
+                            border: 'none', 
+                            color: '#10b981', 
+                            fontSize: '18px', 
+                            cursor: 'pointer',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            transition: 'background 0.2s ease'
+                          }} 
+                          onMouseOver={e => e.currentTarget.style.background = isDarkMode ? '#1e293b' : '#f1f5f9'}
+                          onMouseOut={e => e.currentTarget.style.background = 'none'}
+                          onClick={e => { 
+                            e.stopPropagation(); 
+                            navigate(`/livequiz/details/${item.id}`); 
+                          }}
+                        >
+                          <i className="fa fa-bar-chart" />
+                        </button>
+                        <button 
+                          title="Link" 
+                          style={{ 
+                            background: 'none', 
+                            border: 'none', 
+                            color: '#06b6d4', 
+                            fontSize: '18px', 
+                            cursor: 'pointer',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            transition: 'background 0.2s ease'
+                          }} 
+                          onMouseOver={e => e.currentTarget.style.background = isDarkMode ? '#1e293b' : '#f1f5f9'}
+                          onMouseOut={e => e.currentTarget.style.background = 'none'}
+                          onClick={e => { 
+                            e.stopPropagation(); 
+                            navigator.clipboard.writeText(window.location.origin + `/livequiz/details/${item.id}`); 
+                            toast('Link copied!', 'success'); 
+                          }}
+                        >
+                          <i className="fa fa-link" />
+                        </button>
+                        <button 
+                          title="Past Sessions" 
+                          style={{ 
+                            background: 'none', 
+                            border: 'none', 
+                            color: '#8b5cf6', 
+                            fontSize: '18px', 
+                            cursor: 'pointer',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            transition: 'background 0.2s ease'
+                          }} 
+                          onMouseOver={e => e.currentTarget.style.background = isDarkMode ? '#1e293b' : '#f1f5f9'}
+                          onMouseOut={e => e.currentTarget.style.background = 'none'}
+                          onClick={e => { 
+                            e.stopPropagation(); 
+                            navigate(`/admin/${item.id}/sessions`); 
+                          }}
+                        >
+                          <FaHistory size={18} />
+                        </button>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key={item.id || idx}
+                      initial={{ opacity: 0, scale: 0.96, y: 18 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 18 }}
+                      transition={{ duration: 0.32, type: 'spring' }}
+                      className="dashboard-animated-card formquiz-card-hover"
+                      style={{ marginBottom: 30, transition: 'box-shadow 0.2s, transform 0.2s' }}
+                      whileHover={{
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                        scale: 1.02,
+                        zIndex: 10
+                      }}
+                    >
+                      <MemoFormCardRow
+                        view={viewMode}
+                        name={item.title}
+                        timestamp={new Date(
+                          item.created_at
+                        ).toLocaleString()}
+                        sharedWith={item.shared_with || []}
+                        link={
+                          activeTab === 'forms'
+                            ? `/form/${item.id}`
+                            : activeTab === 'quizzes'
+                            ? `/userend?quizId=${item.id}`
+                            : `/join/${item.id}`
+                        }
+                        creator={username}
+                        formId={item.id}
+                        isForm={activeTab === 'forms'}
+                        onDelete={
+                          activeTab === 'forms'
+                            ? handleDeleteForm
+                            : handleDeleteQuiz
+                        }
+                        isPublished={item.is_published}
+                        onPublishToggle={
+                          activeTab === 'forms'
+                            ? handlePublishToggle
+                            : handleQuizPublishToggle
+                        }
+                        quizType={
+                          activeTab === 'quizzes'
+                            ? item.type || 'blank'
+                            : undefined
+                        }
+                        formType={
+                          activeTab === 'forms'
+                            ? item.type || 'Forms'
+                            : undefined
+                        }
+                        expanded={expandedCardId === item.id}
+                        setExpandedCardId={setExpandedCardId}
+                        titleStyle={{ 
+                          fontWeight: '600', 
+                          color: isDarkMode ? '#f1f5f9' : '#1e293b',
+                          fontSize: '16px'
+                        }}
+                        selected={selectedIds.includes(item.id)}
+                        onSelect={handleSelect}
+                      />
+                    </motion.div>
+                  )
+                ))}
                 <div style={{ height: 30 }} />
               </>
             ) : (
@@ -1031,7 +1047,6 @@ const Dashboard = () => {
             )}
           </AnimatePresence>
         </section>
-        )}
       </div>
     </div>
   );

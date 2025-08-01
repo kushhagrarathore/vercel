@@ -2,13 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { FiClipboard, FiMic, FiHelpCircle, FiChevronDown } from 'react-icons/fi';
+import './navbar.css';
 
-const Navbar = ({
-  activeTab,
-  onToggle,
-  iconSize = 28,
-  iconHoverEffect = false,
-}) => {
+const Navbar = ({ activeTab, onToggle }) => {
   const [name, setName] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -51,122 +47,103 @@ const Navbar = ({
   const handleViewPlans = () => navigate('/plans');
 
   return (
-    <nav className="px-8 min-h-[72px] max-h-[72px] shadow-sm bg-white border-b border-gray-200 flex items-center justify-between">
+    <nav className="modern-navbar" style={{ padding: '0 2vw', minHeight: 72, maxHeight: 72, boxShadow: '0 1px 8px 0 rgba(0,0,0,0.04)', background: '#fff', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       {/* Logo */}
-      <div className="min-w-20 flex items-center h-18 overflow-hidden">
-        <img
-          src="/MAINLOGO.png"
-          alt="Inquizo Logo"
-          className="max-h-12 w-auto mx-3 object-contain block align-middle"
-        />
+      <div className="inquizo-logo" style={{ minWidth: 80, display: 'flex', alignItems: 'center', height: 72, overflow: 'hidden' }}>
+        <img src="/MAINLOGO.png" alt="Inquizo Logo" className="inquizo-logo-img" style={{ maxHeight: 48, width: 'auto', margin: '0 12px', objectFit: 'contain', display: 'block', verticalAlign: 'middle' }} />
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex items-end gap-0 bg-transparent rounded-none min-w-[340px] max-w-[480px] h-14 p-0 border-b-2 border-gray-200">
+      {/* Navigation Tabs (true tabs, no button look) */}
+      <div className="nav-tabs" style={{ display: 'flex', alignItems: 'flex-end', gap: 0, background: 'transparent', borderRadius: 0, minWidth: 340, maxWidth: 480, height: 56, padding: 0, borderBottom: '2.5px solid #e0e7ef' }}>
         <div
-          className={`flex-1 px-8 h-[54px] flex items-center justify-center font-medium text-base border-none bg-none outline-none cursor-pointer border-b-[3.5px] transition-all duration-200 ${
-            activeTab === 'forms'
-              ? 'font-bold text-lg text-indigo-600 border-indigo-600'
-              : 'text-gray-500 border-transparent'
-          }`}
+          className={`nav-tab${activeTab === 'forms' ? ' active' : ''}`}
+          style={{
+            flex: 1,
+            padding: '0 32px 0 32px',
+            height: 54,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: activeTab === 'forms' ? 700 : 500,
+            fontSize: activeTab === 'forms' ? 18 : 16,
+            color: activeTab === 'forms' ? '#6366f1' : '#64748b',
+            border: 'none',
+            background: 'none',
+            outline: 'none',
+            cursor: 'pointer',
+            borderBottom: activeTab === 'forms' ? '3.5px solid #6366f1' : '3.5px solid transparent',
+            transition: 'all 0.18s',
+          }}
           onClick={() => onToggle && onToggle('forms')}
         >
-          <span
-            className={`mr-2.5 flex items-center transition-all duration-200 ${
-              iconHoverEffect
-                ? 'hover:text-blue-500 hover:scale-110'
-                : ''
-            } ${
-              activeTab === 'forms' ? 'text-indigo-600' : 'text-gray-500'
-            }`}
-            style={{ fontSize: iconSize }}
-          >
-            <FiClipboard />
-          </span>
-          My Forms
+          <span className="nav-icon" style={{ marginRight: 7, fontSize: 20 }}><FiClipboard /></span> My Forms
         </div>
         <div
-          className={`flex-1 px-8 h-[54px] flex items-center justify-center font-medium text-base border-none bg-none outline-none cursor-pointer border-b-[3.5px] transition-all duration-200 ${
-            activeTab === 'livequiz'
-              ? 'font-bold text-lg text-indigo-600 border-indigo-600'
-              : 'text-gray-500 border-transparent'
-          }`}
+          className={`nav-tab${activeTab === 'livequiz' ? ' active' : ''}`}
+          style={{
+            flex: 1,
+            padding: '0 32px 0 32px',
+            height: 54,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: activeTab === 'livequiz' ? 700 : 500,
+            fontSize: activeTab === 'livequiz' ? 18 : 16,
+            color: activeTab === 'livequiz' ? '#6366f1' : '#64748b',
+            border: 'none',
+            background: 'none',
+            outline: 'none',
+            cursor: 'pointer',
+            borderBottom: activeTab === 'livequiz' ? '3.5px solid #6366f1' : '3.5px solid transparent',
+            transition: 'all 0.18s',
+          }}
           onClick={() => onToggle && onToggle('livequiz')}
         >
-          <span
-            className={`mr-2.5 flex items-center transition-all duration-200 ${
-              iconHoverEffect
-                ? 'hover:text-blue-500 hover:scale-110'
-                : ''
-            } ${
-              activeTab === 'livequiz' ? 'text-indigo-600' : 'text-gray-500'
-            }`}
-            style={{ fontSize: iconSize }}
-          >
-            <FiMic />
-          </span>
-          My Livequiz
+          <span className="nav-icon" style={{ marginRight: 7, fontSize: 20 }}><FiMic /></span> My Livequiz
         </div>
         <div
-          className={`flex-1 px-8 h-[54px] flex items-center justify-center font-medium text-base border-none bg-none outline-none cursor-pointer border-b-[3.5px] transition-all duration-200 ${
-            activeTab === 'quizzes'
-              ? 'font-bold text-lg text-indigo-600 border-indigo-600'
-              : 'text-gray-500 border-transparent'
-          }`}
+          className={`nav-tab${activeTab === 'quizzes' ? ' active' : ''}`}
+          style={{
+            flex: 1,
+            padding: '0 32px 0 32px',
+            height: 54,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: activeTab === 'quizzes' ? 700 : 500,
+            fontSize: activeTab === 'quizzes' ? 18 : 16,
+            color: activeTab === 'quizzes' ? '#6366f1' : '#64748b',
+            border: 'none',
+            background: 'none',
+            outline: 'none',
+            cursor: 'pointer',
+            borderBottom: activeTab === 'quizzes' ? '3.5px solid #6366f1' : '3.5px solid transparent',
+            transition: 'all 0.18s',
+          }}
           onClick={() => onToggle && onToggle('quizzes')}
         >
-          <span
-            className={`mr-2.5 flex items-center transition-all duration-200 ${
-              iconHoverEffect
-                ? 'hover:text-blue-500 hover:scale-110'
-                : ''
-            } ${
-              activeTab === 'quizzes' ? 'text-indigo-600' : 'text-gray-500'
-            }`}
-            style={{ fontSize: iconSize }}
-          >
-            <FiHelpCircle />
-          </span>
-          My Quizzes
+          <span className="nav-icon" style={{ marginRight: 7, fontSize: 20 }}><FiHelpCircle /></span> My Quizzes
         </div>
       </div>
 
       {/* User Profile */}
-      <div className="min-w-[120px] justify-end flex items-center gap-3" ref={dropdownRef}>
-        <span className="text-gray-700 font-medium">{name || 'User'}</span>
-        <div className="w-8 h-8 rounded-full ring-2 ring-gray-200 overflow-hidden">
+      <div className="user-profile" ref={dropdownRef} style={{ minWidth: 120, justifyContent: 'flex-end' }}>
+        <span className="user-name">{name || 'User'}</span>
+        <span className="user-avatar-ring">
           <img
             src={`https://api.dicebear.com/7.x/initials/svg?seed=${name || 'User'}`}
             alt="Profile"
-            className="w-full h-full object-cover"
+            className="user-avatar"
           />
-        </div>
-        <button
-          className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
-          onClick={() => setDropdownOpen(!dropdownOpen)}
-        >
+        </span>
+        <span className="dropdown-arrow" onClick={() => setDropdownOpen(!dropdownOpen)}>
           <FiChevronDown />
-        </button>
+        </span>
         {dropdownOpen && (
-          <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-            <button
-              className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors duration-200"
-              onClick={handleProfile}
-            >
-              Profile
-            </button>
-            <button
-              className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors duration-200"
-              onClick={handleViewPlans}
-            >
-              View Plans
-            </button>
-            <button
-              className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 transition-colors duration-200"
-              onClick={handleLogout}
-            >
-              Logout
-            </button>
+          <div className="dropdown-menu">
+            <div className="dropdown-item" onClick={handleProfile}>Profile</div>
+            <div className="dropdown-item" onClick={handleViewPlans}>View Plans</div>
+            <div className="dropdown-item" onClick={handleLogout}>Logout</div>
           </div>
         )}
       </div>
