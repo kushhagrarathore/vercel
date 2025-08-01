@@ -9,7 +9,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { QRCodeCanvas } from "qrcode.react";
-import { FiArrowLeft, FiEye, FiUpload, FiSun, FiMoon, FiSave, FiEdit2, FiTrash2, FiBarChart2, FiSettings, FiChevronsRight, FiChevronsLeft, FiPlus } from "react-icons/fi";
+import { FiArrowLeft, FiEye, FiUpload, FiSun, FiMoon, FiSave, FiEdit2, FiTrash2, FiBarChart2, FiSettings } from "react-icons/fi";
 
 import { Button } from '../../components/buttonquiz';
 import { Input } from '../../components/input';
@@ -842,11 +842,16 @@ export default function Quiz() {
           </Button>
           <Button
             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm"
-            style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db' }}
+            style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db      <div className="flex w-full" style={{ 
+        background: 'var(--bg)', 
+        minHeight: '100vh',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+ }}
             onClick={handlePublishOrSave}
-            title="Publish"
-          >
-            Publish
+            ti        <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-64'}`}>
+blish"}
           </Button>
           {/* Customize toggle button */}
           <Button
@@ -860,6 +865,7 @@ export default function Quiz() {
         </div>
       </header>
       {/* Main Layout */}
+<<<<<<< Updated upstream
       <div className="flex w-full" style={{ background: 'var(--bg)', minHeight: '100vh', position: 'relative' }}>
         {/* Left Sidebar: Add Slide & Slide List */}
         <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-64'}`} style={{ width: isLeftSidebarCollapsed ? '5rem' : '16rem', flexShrink: 0, position: 'fixed', left: 0, top: '4.5rem', height: 'calc(100vh - 4.5rem)', zIndex: 10 }}>
@@ -870,14 +876,41 @@ export default function Quiz() {
               title={isLeftSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
               style={{ border: '1px solid #e5e7eb' }}
             >
-              {isLeftSidebarCollapsed ? <FiChevronsRight className="w-5 h-5" /> : <FiChevronsLeft className="w-5 h-5" />}
+              {isLeftSidebarCollapsed ? <ChevronsRight className="w-5 h-5" /> : <ChevronsLeft className="w-5 h-5" />}
             </button>
             <button
+=======
+      <div className="flex flex-row w-full" style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+        {/* Sidebar */}
+        <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-64'} fixed left-0 h-[calc(100vh-4.5rem)] z-30`} style={{margin:0, padding:0, borderRadius:0, minWidth: isLeftSidebarCollapsed ? '5rem' : '16rem', maxWidth: isLeftSidebarCollapsed ? '5rem' : '18rem', background: '#f8fafc', color: 'var(--text)', borderColor: '#e5e7eb', boxShadow: '0 2px 8px 0 rgba(44,62,80,0.07)', top: '4.5rem'}}>
+          <div className="overflow-y-auto flex-1 p-0 m-0" style={{maxHeight:'100%', minHeight:'0', marginTop:0, paddingTop:0, display: isLeftSidebarCollapsed ? 'flex' : undefined, flexDirection: isLeftSidebarCollapsed ? 'column' : undefined, alignItems: isLeftSidebarCollapsed ? 'center' : undefined, justifyContent: isLeftSidebarCollapsed ? 'center' : undefined}}> 
+            <Button
+              className={isLeftSidebarCollapsed
+                ? "w-12 h-12 flex items-center justify-center font-semibold border-none rounded-lg shadow-sm"
+                : "w-full mb-4 font-medium border-none flex items-center justify-center gap-2 rounded-lg px-4 py-2 shadow-sm"}
+              style={{
+                background: '#4f46e5',
+                color: '#fff',
+                borderRadius: 12,
+                margin: isLeftSidebarCollapsed ? 'auto' : 0,
+                fontSize: isLeftSidebarCollapsed ? 24 : 16,
+                boxShadow: '0 1px 4px 0 rgba(44,62,80,0.10)',
+                transition: 'background 0.2s',
+                minHeight: isLeftSidebarCollapsed ? 48 : 44,
+                minWidth: isLeftSidebarCollapsed ? 48 : undefined,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: isLeftSidebarCollapsed ? '8px' : '12px 0',
+              }}
+>>>>>>> Stashed changes
               onClick={() => setAddSlidePopupOpen(true)}
-              className="w-full flex items-center justify-center gap-2 p-3 rounded-lg text-sm text-white font-medium mb-4"
-              style={{ background: '#4f46e5', border: '1px solid #4338ca' }}
+              onMouseOver={e => e.currentTarget.style.background = '#4338ca'}
+              onMouseOut={e => e.currentTarget.style.background = '#4f46e5'}
             >
-              <FiPlus className="w-5 h-5" />
+<<<<<<< Updated upstream
+              <PlusIcon className="w-5 h-5" />
               {!isLeftSidebarCollapsed && <span>Add Slide</span>}
             </button>
             <div className="space-y-2">
@@ -898,14 +931,80 @@ export default function Quiz() {
                       {slide.question || 'Untitled Slide'}
                     </span>
                   )}
+=======
+              <svg width={isLeftSidebarCollapsed ? "24" : "20"} height={isLeftSidebarCollapsed ? "24" : "20"} fill="none" stroke="#fff" strokeWidth="2.5" viewBox="0 0 24 24" style={isLeftSidebarCollapsed ? {} : {marginRight:8}}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              {!isLeftSidebarCollapsed && <span style={{fontWeight:500, fontSize:16}}>Add Slide</span>}
+            </Button>
+            {addSlidePopupOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30" onClick={() => setAddSlidePopupOpen(false)}>
+                <div className="bg-white rounded-xl shadow-2xl p-6 min-w-[260px] max-w-[90vw] relative" style={{ background: '#fff', borderColor: '#e0e7ff' }} onClick={e => e.stopPropagation()}>
+                  <button className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-xl font-bold" onClick={() => setAddSlidePopupOpen(false)} title="Close">×</button>
+                  <div className="font-semibold text-lg mb-4 text-center">Select Question Type</div>
+                  <div className="flex flex-col gap-2">
+                    {questionTypes.map(qt => (
+                      <button
+                        key={qt.value}
+                        className="w-full text-left px-4 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+                        style={{ color: '#222', background: '#fff' }}
+                        onClick={() => {
+                          addSlide(qt.value);
+                          setAddSlidePopupOpen(false);
+                        }}
+                      >
+                        {qt.label}
+                      </button>
+                    ))}
+                  </div>
+>>>>>>> Stashed changes
                 </div>
-              ))}
+              </div>
+            )}
+            <div className="flex-1">
+              <DndContext collisionDetection={closestCenter} onDragEnd={onDragEnd} modifiers={[]}>
+                <SortableContext items={slides.map(s => s.id)} strategy={verticalListSortingStrategy}>
+                  <div className="space-y-1 m-0 p-0">
+                    {slides.map((slide, i) => (
+                      <SortableSlideItem key={slide.id} id={slide.id}>
+                        <div
+                          className={`quizbuilder-slide-item${i === selectedSlide ? ' selected' : ''} flex items-center cursor-pointer overflow-hidden`}
+                          style={{ background: 'transparent', color: '#222', borderWidth: 0, borderColor: 'transparent', borderRadius: 0, marginBottom: 2, boxShadow: 'none', padding: '8px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+                          onPointerDown={e => { e.stopPropagation(); setSelectedSlide(i); }}
+                          title={slide.question && slide.question.trim() ? slide.question : slide.name}
+                        >
+                          <span className="text-xs font-bold w-8 text-center" style={{ background: 'none', color: '#222', opacity: i === selectedSlide ? 1 : 0.5 }}>{(i+1).toString().padStart(2, '0')}</span>
+                          {!isLeftSidebarCollapsed && (
+                            <span className="flex-1 text-sm font-medium truncate" style={{ color: i === selectedSlide ? 'var(--text)' : 'var(--text-secondary)' }}>{slide.question && slide.question.trim() ? slide.question : slide.name}</span>
+                          )}
+                          <button className="p-1 hover:text-red-600" style={{ color: '#f87171' }} onPointerDown={e => { e.stopPropagation(); deleteSlide(i); }} title="Delete slide"><FiTrash2 /></button>
+                        </div>
+                      </SortableSlideItem>
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             </div>
           </div>
+          <div className="p-0 border-t flex flex-col items-center" style={{ marginBottom: '1.5rem' }}>
+            <button
+              onClick={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
+              className="w-11/12 flex items-center justify-center gap-2 p-0 rounded-none text-sm text-gray-600 hover:bg-gray-100 mt-4"
+              style={{borderRadius:0, margin:0, padding:0}}
+              title={isLeftSidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+            >
+              {isLeftSidebarCollapsed ? (
+                // Expand icon (chevron right)
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              ) : (
+                // Collapse icon (chevron left)
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+              )}
+            </button>
+          </div>
         </aside>
+<<<<<<< Updated upstream
 
         {/* Center Content Area */}
-        <main
+        <div
           className="flex-1 flex min-h-screen quiz-center-content"
           style={{
             display: "flex",
@@ -1009,6 +1108,35 @@ export default function Quiz() {
               }}
             >
               {questionTypes.map((qt, index) => (
+=======
+        {/* Main Content */}
+        <main
+          className={`flex-1 p-8 transition-all duration-300 flex flex-col items-center justify-start ${isLeftSidebarCollapsed ? 'ml-20' : 'ml-64'} ${isCustomizeOpen ? 'mr-80' : 'mr-0'}`}
+          style={{ maxWidth: isCustomizeOpen ? 'calc(100vw - 15rem - 20rem)' : 'calc(100vw - 15rem)', width: '100%', overflowY: 'auto', background: 'var(--bg)', color: 'var(--text)' }}
+        >
+          <div className="shadow-2xl max-w-2xl w-full mx-auto flex flex-col gap-10 justify-center items-center" style={{
+            background: currentSlide?.background || defaultSlideStyle.background,
+            borderRadius: (current              maxWidth: '800px',
+Slide?.borderRadius || defaultSlideStyle.borderRadius) * 0.7,
+            color: currentSlide?.textColor || defaultSlideStyle.textColor,
+            fontFamily: currentSlide?.fontFamily || defaultSlideStyle.fontFamily,
+            fontSize: currentSlide?.fontSize || defaultSlideStyle.fontSize,
+            fontWeight: currentSlide?.bold ? 'bold' : 'normal',
+            fontStyle: currentSlide?.italic ? 'italic' : 'normal',
+            boxShadow: currentSlide?.shadow ? '0 4px 16px 0 rgba(0,0,0,0.08)' : 'none',
+            padding: '2.5rem 2.5rem 3.5rem 2.5rem',
+            margin: '2.5rem',
+            textAlign: currentSlide?.alignment || defaultSlideStyle.alignment,
+            transition: 'all 0.3s',
+            boxSizing: 'border-box',
+            overflow: 'visible',
+            minHeight: '520px',
+            maxHeight: '700px',
+          }}>
+            <div className="font-semibold mb-2 text-blue-700">Slide {selectedSlide + 1} of {slides.length}</div>
+            <div className="flex gap-3 mb-4">
+              {questionTypes.map(qt => (
+>>>>>>> Stashed changes
                 <button
                   key={qt.value}
                   className={`quizbuilder-question-type-btn${currentSlide?.type === qt.value ? ' active' : ''}`}
@@ -1150,12 +1278,25 @@ export default function Quiz() {
               </div>
             )}
             {currentSlide?.type === 'one_word' && (
-              <div className="space-y-3 w-full">
+<<<<<<< Updated upstream
+              <div 
+                className="space-y-3 w-full"
+                style={{
+                  animation: 'slideInFromCenter 0.6s ease-out 0.4s both',
+                  transform: 'translateY(0)',
+                  transition: 'all 0.3s ease'
+                }}
+              >
                 <div className="quizbuilder-option-row flex items-center px-4 py-2 rounded-full border transition-all duration-200 group mb-2" style={{ minHeight: '56px', position: 'relative', boxShadow: 'none', background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}>
                   <span className="font-semibold mr-2">Correct Answer:</span>
                   <input
                     type="text"
                     value={currentSlide?.correctAnswers[0] || ''}
+=======
+              <div className="space-y-3 w-full">
+                <div className="quizbuilder-option-row flex items-center        <aside className={`fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-72 min-w-[16rem] p-[2rem_1.5rem] shadow-lg z-20 transition-transform duration-300 flex flex-col bg-white overflow-y-auto ${isCustomizeOpen ? 'translate-x-0' : 'translate-x-[100vw]'}`} style={{ borderRadius: 0, margin: 0, background: 'var(--card)', color: 'var(--text)', boxShadow: '0 4px 24px 0 var(--border)' }}>
+Slide?.correctAnswers[0] || ''}
+>>>>>>> Stashed changes
                     onChange={e => updateSlide('correctAnswers', [e.target.value])}
                     placeholder="Enter the correct answer"
                     className="flex-1 bg-transparent border-none outline-none px-2 py-2 text-base font-semibold rounded-full focus:ring-0 focus:outline-none"
@@ -1164,7 +1305,6 @@ export default function Quiz() {
                 </div>
               </div>
             )}
-          </div>
           </div>
         </main>
         {/* Right Panel: Customization */}
