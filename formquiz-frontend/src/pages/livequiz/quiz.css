@@ -1,5 +1,170 @@
 /* MentimeterClone.css */
 
+/* Dynamic Animations and Centering */
+@keyframes slideInFromCenter {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes slideInFromLeft {
+  0% {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInFromRight {
+  0% {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Quiz Slide Container Animations */
+.quiz-slide-container {
+  animation: slideInFromCenter 0.6s ease-out;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.quiz-slide-container:hover {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* Responsive centering */
+@media (max-width: 1200px) {
+  .quiz-center-content {
+    padding: 1rem;
+  }
+  
+  .quiz-slide-container {
+    max-width: 600px;
+  }
+}
+
+@media (max-width: 768px) {
+  .quiz-center-content {
+    padding: 0.5rem;
+  }
+  
+  .quiz-slide-container {
+    max-width: 100%;
+    margin: 0 1rem;
+  }
+}
+
+/* Center Content Area */
+.quiz-center-content {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - 4.5rem);
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.quiz-center-content::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 200px;
+  height: 200px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  animation: pulse 4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Dynamic Background Particles */
+.quiz-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.quiz-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: rgba(99, 102, 241, 0.3);
+  border-radius: 50%;
+  animation: float 6s ease-in-out infinite;
+}
+
+.quiz-particle:nth-child(1) { top: 20%; left: 10%; animation-delay: 0s; }
+.quiz-particle:nth-child(2) { top: 60%; left: 80%; animation-delay: 1s; }
+.quiz-particle:nth-child(3) { top: 80%; left: 20%; animation-delay: 2s; }
+.quiz-particle:nth-child(4) { top: 30%; left: 70%; animation-delay: 3s; }
+.quiz-particle:nth-child(5) { top: 70%; left: 30%; animation-delay: 4s; }
+
+/* Enhanced Slide Transitions */
+.slide-transition-enter {
+  opacity: 0;
+  transform: translateX(100px) scale(0.9);
+}
+
+.slide-transition-enter-active {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-transition-exit {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.slide-transition-exit-active {
+  opacity: 0;
+  transform: translateX(-100px) scale(0.9);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 /* Modal-like dropdown styling for question types */
 .question-type-window {
   position: absolute;

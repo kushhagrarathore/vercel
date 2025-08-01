@@ -264,6 +264,7 @@ export default function Quiz() {
     fontFamily: textStyles[0].value,
   }]);
   const [selectedSlide, setSelectedSlide] = useState(0);
+  const [slideTransition, setSlideTransition] = useState(false);
   const [showModal, setShowModal] = useState(false);
   // Removed dark mode state
   const [editingName, setEditingName] = useState(null);
@@ -864,9 +865,9 @@ export default function Quiz() {
         </div>
       </header>
       {/* Main Layout */}
-      <div className="flex w-full" style={{ background: 'var(--bg)', minHeight: '100vh' }}>
+      <div className="flex w-full" style={{ background: 'var(--bg)', minHeight: '100vh', position: 'relative' }}>
         {/* Left Sidebar: Add Slide & Slide List */}
-        <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-64'}`} style={{ width: isLeftSidebarCollapsed ? '5rem' : '16rem', flexShrink: 0 }}>
+        <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-64'}`} style={{ width: isLeftSidebarCollapsed ? '5rem' : '16rem', flexShrink: 0, position: 'fixed', left: 0, top: '4.5rem', height: 'calc(100vh - 4.5rem)', zIndex: 10 }}>
           <div className="p-4 flex-1 overflow-y-auto">
             <button
               onClick={() => setIsLeftSidebarCollapsed(!isLeftSidebarCollapsed)}
@@ -886,7 +887,13 @@ export default function Quiz() {
             <div className="space-y-2">
               {slides.map((slide, index) => (
                 <div key={slide.id} className={`p-3 rounded-lg flex items-center cursor-pointer overflow-hidden ${selectedSlide === index ? 'bg-blue-100' : 'bg-gray-100 hover:bg-gray-200'}`}
-                  onClick={() => setSelectedSlide(index)}
+                  onClick={() => {
+                    setSlideTransition(true);
+                    setTimeout(() => {
+                      setSelectedSlide(index);
+                      setTimeout(() => setSlideTransition(false), 100);
+                    }, 200);
+                  }}
                   title={slide.question || 'Untitled Slide'}
                 >
                   <span className="text-gray-500 font-bold">{String(index + 1).padStart(2, '0')}</span>
@@ -930,7 +937,7 @@ export default function Quiz() {
 
         {/* Center Content Area */}
         <div
-          className="flex-1 flex min-h-screen"
+          className="flex-1 flex min-h-screen quiz-center-content"
           style={{
             display: "flex",
             justifyContent: "center",
@@ -939,40 +946,116 @@ export default function Quiz() {
             transition: "all 0.3s ease",
             marginLeft: isLeftSidebarCollapsed ? "5rem" : "16rem", // left panel width
             marginRight: isCustomizeOpen ? "20rem" : "0rem",       // right panel width
+            position: "relative",
+            overflow: "hidden",
+            minHeight: "calc(100vh - 4.5rem)",
+            width: `calc(100vw - ${isLeftSidebarCollapsed ? "5rem" : "16rem"} - ${isCustomizeOpen ? "20rem" : "0rem"})`,
+            maxWidth: "100%",
           }}
         >
-          <div className="max-w-2xl w-full flex flex-col gap-10 justify-center items-center">
-            <div className="border-2 rounded-2xl shadow-2xl bg-white" style={{
-              boxShadow: '0 8px 32px 0 rgba(44,62,80,0.12)',
-              borderColor: '#e0e7ff',
-              background: currentSlide?.background || defaultSlideStyle.background,
-              backgroundImage: currentSlide?.backgroundImage ? `url(${currentSlide.backgroundImage})` : undefined,
-              backgroundSize: currentSlide?.backgroundImage ? 'cover' : undefined,
-              backgroundPosition: currentSlide?.backgroundImage ? 'center' : undefined,
-              backgroundRepeat: currentSlide?.backgroundImage ? 'no-repeat' : undefined,
-              borderRadius: (currentSlide?.borderRadius || defaultSlideStyle.borderRadius),
-              color: currentSlide?.textColor || defaultSlideStyle.textColor,
-              fontFamily: currentSlide?.fontFamily || defaultSlideStyle.fontFamily,
-              fontSize: currentSlide?.fontSize || defaultSlideStyle.fontSize,
-              fontWeight: currentSlide?.bold ? 'bold' : 'normal',
-              fontStyle: currentSlide?.italic ? 'italic' : 'normal',
-              boxShadow: currentSlide?.shadow ? '0 4px 16px 0 rgba(0,0,0,0.08)' : '0 8px 32px 0 rgba(44,62,80,0.12)',
-              padding: '2.5rem 2.5rem 3.5rem 2.5rem',
-              margin: '0',
-              textAlign: currentSlide?.alignment || defaultSlideStyle.alignment,
-              transition: 'all 0.3s',
-              boxSizing: 'border-box',
-              overflow: 'visible',
-              minHeight: '520px',
-              maxHeight: '700px',
-            }}>
-              <div className="font-semibold mb-2 text-blue-700">Slide {selectedSlide + 1} of {slides.length}</div>
-              <div className="flex gap-3 mb-4">
-              {questionTypes.map(qt => (
+          {/* Dynamic Background Particles */}
+          <div className="quiz-particles">
+            <div className="quiz-particle"></div>
+            <div className="quiz-particle"></div>
+            <div className="quiz-particle"></div>
+            <div className="quiz-particle"></div>
+            <div className="quiz-particle"></div>
+          </div>
+          
+          <div 
+            className="max-w-2xl w-full flex flex-col gap-10 justify-center items-center"
+            style={{
+              animation: "slideInFromCenter 0.6s ease-out",
+              transform: "translateY(0)",
+              transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              zIndex: 1,
+              margin: "0",
+              padding: "2rem",
+              width: "100%",
+              maxWidth: "800px",
+            }}
+          >
+            <div 
+              className={`border-2 rounded-2xl shadow-2xl bg-white quiz-slide-container ${slideTransition ? 'slide-transition-enter' : ''}`}
+              style={{
+                boxShadow: '0 8px 32px 0 rgba(44,62,80,0.12)',
+                borderColor: '#e0e7ff',
+                background: currentSlide?.background || defaultSlideStyle.background,
+                backgroundImage: currentSlide?.backgroundImage ? `url(${currentSlide.backgroundImage})` : undefined,
+                backgroundSize: currentSlide?.backgroundImage ? 'cover' : undefined,
+                backgroundPosition: currentSlide?.backgroundImage ? 'center' : undefined,
+                backgroundRepeat: currentSlide?.backgroundImage ? 'no-repeat' : undefined,
+                borderRadius: (currentSlide?.borderRadius || defaultSlideStyle.borderRadius),
+                color: currentSlide?.textColor || defaultSlideStyle.textColor,
+                fontFamily: currentSlide?.fontFamily || defaultSlideStyle.fontFamily,
+                fontSize: currentSlide?.fontSize || defaultSlideStyle.fontSize,
+                fontWeight: currentSlide?.bold ? 'bold' : 'normal',
+                fontStyle: currentSlide?.italic ? 'italic' : 'normal',
+                boxShadow: currentSlide?.shadow ? '0 4px 16px 0 rgba(0,0,0,0.08)' : '0 8px 32px 0 rgba(44,62,80,0.12)',
+                padding: '2.5rem 2.5rem 3.5rem 2.5rem',
+                margin: '0',
+                textAlign: currentSlide?.alignment || defaultSlideStyle.alignment,
+                transition: slideTransition ? 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxSizing: 'border-box',
+                overflow: 'visible',
+                minHeight: '520px',
+                maxHeight: '700px',
+                transform: slideTransition ? 'translateX(100px) scale(0.9)' : 'scale(1)',
+                opacity: slideTransition ? 0 : 1,
+                animation: slideTransition ? 'none' : 'slideInFromCenter 0.6s ease-out',
+              }}
+              onMouseEnter={(e) => {
+                if (!slideTransition) {
+                  e.currentTarget.style.transform = 'scale(1.02) translateY(-5px)';
+                  e.currentTarget.style.boxShadow = '0 12px 40px 0 rgba(44,62,80,0.18)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!slideTransition) {
+                  e.currentTarget.style.transform = 'scale(1) translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 8px 32px 0 rgba(44,62,80,0.12)';
+                }
+              }}
+            >
+              <div 
+              className="font-semibold mb-2 text-blue-700"
+              style={{
+                animation: 'slideInFromLeft 0.5s ease-out',
+                transform: 'translateX(0)',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              Slide {selectedSlide + 1} of {slides.length}
+            </div>
+              <div 
+              className="flex gap-3 mb-4"
+              style={{
+                animation: 'slideInFromRight 0.5s ease-out',
+                transform: 'translateX(0)',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              {questionTypes.map((qt, index) => (
                 <button
                   key={qt.value}
                   className={`quizbuilder-question-type-btn${currentSlide?.type === qt.value ? ' active' : ''}`}
-                  style={{ padding: '6px 14px', fontSize: 14, borderRadius: 8, border: 'none', fontWeight: 600, background: currentSlide?.type === qt.value ? '#2563eb' : '#f7f8fa', color: currentSlide?.type === qt.value ? '#fff' : '#2563eb', marginRight: 8 }}
+                  style={{ 
+                    padding: '6px 14px', 
+                    fontSize: 14, 
+                    borderRadius: 8, 
+                    border: 'none', 
+                    fontWeight: 600, 
+                    background: currentSlide?.type === qt.value ? '#2563eb' : '#f7f8fa', 
+                    color: currentSlide?.type === qt.value ? '#fff' : '#2563eb', 
+                    marginRight: 8,
+                    animation: `slideInFromRight 0.5s ease-out ${index * 0.1}s`,
+                    transform: 'translateX(0)',
+                    transition: 'all 0.3s ease'
+                  }}
                   onClick={() => {
                     if (qt.value === 'true_false') {
                       updateSlide('type', 'true_false');
@@ -1000,11 +1083,26 @@ export default function Quiz() {
               value={currentSlide?.question}
               onChange={(e) => updateSlide("question", e.target.value)}
               className="quizbuilder-question-input w-full p-4 border border-gray-200 rounded-lg text-lg shadow-sm focus:ring-2 focus:ring-blue-200 focus:border-blue-300 transition-all mb-4"
-              style={{ color: '#222', background: '#f8fafc', borderColor: '#e0e7ff', fontFamily: 'Inter, Arial, sans-serif' }}
+              style={{ 
+                color: '#222', 
+                background: '#f8fafc', 
+                borderColor: '#e0e7ff', 
+                fontFamily: 'Inter, Arial, sans-serif',
+                animation: 'slideInFromCenter 0.6s ease-out 0.2s both',
+                transform: 'translateY(0)',
+                transition: 'all 0.3s ease'
+              }}
             />
             {/* Render input UI based on type */}
             {currentSlide?.type === 'multiple' && (
-              <div className="space-y-3 w-full">
+              <div 
+                className="space-y-3 w-full"
+                style={{
+                  animation: 'slideInFromCenter 0.6s ease-out 0.4s both',
+                  transform: 'translateY(0)',
+                  transition: 'all 0.3s ease'
+                }}
+              >
                 {currentSlide?.options.map((opt, i) => {
                   const isCorrect = currentSlide?.correctAnswers.includes(i);
            
@@ -1046,7 +1144,14 @@ export default function Quiz() {
               </div>
             )}
             {currentSlide?.type === 'true_false' && (
-              <div className="space-y-3 w-full">
+              <div 
+                className="space-y-3 w-full"
+                style={{
+                  animation: 'slideInFromCenter 0.6s ease-out 0.4s both',
+                  transform: 'translateY(0)',
+                  transition: 'all 0.3s ease'
+                }}
+              >
                 {['True', 'False'].map((opt, i) => {
                   const isCorrect = currentSlide?.correctAnswers.includes(i);
                   return (
@@ -1076,7 +1181,14 @@ export default function Quiz() {
               </div>
             )}
             {currentSlide?.type === 'one_word' && (
-              <div className="space-y-3 w-full">
+              <div 
+                className="space-y-3 w-full"
+                style={{
+                  animation: 'slideInFromCenter 0.6s ease-out 0.4s both',
+                  transform: 'translateY(0)',
+                  transition: 'all 0.3s ease'
+                }}
+              >
                 <div className="quizbuilder-option-row flex items-center px-4 py-2 rounded-full border transition-all duration-200 group mb-2" style={{ minHeight: '56px', position: 'relative', boxShadow: 'none', background: 'var(--bg)', borderColor: 'var(--border)', color: 'var(--text)' }}>
                   <span className="font-semibold mr-2">Correct Answer:</span>
                   <input
@@ -1095,7 +1207,7 @@ export default function Quiz() {
         </div>
 
         {/* Right Panel: Customization */}
-        <aside className={`fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-80 min-w-[16rem] p-[2rem_1.5rem] shadow-lg z-20 transition-transform duration-300 flex flex-col bg-white overflow-y-auto ${isCustomizeOpen ? 'translate-x-0' : 'translate-x-[100vw]'}`} style={{ borderRadius: 0, margin: 0, background: 'var(--card)', color: 'var(--text)', boxShadow: '0 4px 24px 0 var(--border)' }}>
+        <aside className={`fixed right-0 top-[4.5rem] h-[calc(100vh-4.5rem)] w-80 min-w-[16rem] p-[2rem_1.5rem] shadow-lg z-20 transition-transform duration-300 flex flex-col bg-white overflow-y-auto ${isCustomizeOpen ? 'translate-x-0' : 'translate-x-full'}`} style={{ borderRadius: 0, margin: 0, background: 'var(--card)', color: 'var(--text)', boxShadow: '0 4px 24px 0 var(--border)' }}>
           {isCustomizeOpen && (
             <>
               <div className="flex mb-6 border-b" style={{ borderColor: 'var(--border)' }}>
