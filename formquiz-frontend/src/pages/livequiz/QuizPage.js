@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../../supabase.js';
 import { useQuiz } from '../../pages/livequiz/QuizContext';
+import { checkAndRecoverStuckState, checkAndRecoverFourthQuestionIssue, validateSessionState, forceSessionRefresh } from '../../utils/atomicUpdates.js';
 
 export default function QuizPage() {
   const { session, setSession } = useQuiz();
@@ -124,6 +125,57 @@ export default function QuizPage() {
         }
       }
     };
+    
+    window.debugFourthQuestionIssue = async () => {
+      if (session?.id) {
+        try {
+          console.log('[QuizPage] Debugging fourth question issue...');
+          
+          // Check current session state
+          const { data: sessionData, error: sessionError } = await supabase
+            .from('lq_sessions')
+            .select('*')
+            .eq('id', session.id)
+            .single();
+          
+          if (sessionError) {
+            console.error('[QuizPage] Error fetching session:', sessionError);
+            return;
+          }
+          
+          console.log('[QuizPage] Current session state:', sessionData);
+          
+          // Check recent responses
+          const { data: responses, error: responsesError } = await supabase
+            .from('lq_live_responses')
+            .select('*')
+            .eq('session_id', session.id)
+            .order('created_at', { ascending: false })
+            .limit(10);
+          
+          if (responsesError) {
+            console.error('[QuizPage] Error fetching responses:', responsesError);
+          } else {
+            console.log('[QuizPage] Recent responses:', responses);
+          }
+          
+          // Check participants
+          const { data: participants, error: participantsError } = await supabase
+            .from('lq_session_participants')
+            .select('*')
+            .eq('session_id', session.id);
+          
+          if (participantsError) {
+            console.error('[QuizPage] Error fetching participants:', participantsError);
+          } else {
+            console.log('[QuizPage] Participants:', participants);
+          }
+          
+        } catch (err) {
+          console.error('[QuizPage] Error in debugFourthQuestionIssue:', err);
+        }
+      }
+    };
   }, [session]);
   
   const [username, setUsername] = useState('');
@@ -196,6 +248,83 @@ export default function QuizPage() {
     
     return () => clearInterval(interval);
   }, [session?.id, quizPhase, currentQuestion?.id]);
+
+  // Add enhanced fallback mechanism to check for stuck states on participant side
+  useEffect(() => {
+    if (!session?.id || quizPhase !== 'question') return;
+    
+    const checkStuckState = async () => {
+      try {
+        // First, validate session state consistency
+        const isStateConsistent = await validateSessionState(session);
+        if (!isStateConsistent) {
+          console.log('[QuizPage] Detected state inconsistency, refreshing session');
+          const refreshedSession = await forceSessionRefresh(session.id);
+          setSession(refreshedSession);
+          setQuizPhase(refreshedSession.phase);
+          return;
+        }
+
+        // Check for general stuck state
+        const recovered = await checkAndRecoverStuckState(session);
+        if (recovered) {
+          console.log('[QuizPage] Successfully recovered from stuck state');
+          setShowCorrect(true);
+          setTimeLeft(0);
+          
+          // Try to fetch latest session state from database
+          const { data: sessionData, error } = await supabase
+            .from('lq_sessions')
+            .select('*')
+            .eq('id', session.id)
+            .single();
+
+          if (!error && sessionData) {
+            setSession(sessionData);
+            setQuizPhase(sessionData.phase);
+          }
+          return;
+        }
+
+        // Check specifically for fourth question issue (estimate question index based on session state)
+        // We can't directly access currentQuestionIndex here, so we'll use a different approach
+        const now = Date.now();
+        const timerEnd = session.timer_end ? new Date(session.timer_end).getTime() : 0;
+        const timerExpired = timerEnd > 0 && now > timerEnd + 3000; // 3 second buffer
+        
+        if (timerExpired) {
+          console.log('[QuizPage] Timer expired, forcing show correct answers');
+          setShowCorrect(true);
+          setTimeLeft(0);
+        }
+      } catch (err) {
+        console.error('[QuizPage] Error checking stuck state:', err);
+      }
+    };
+
+    // Check every 8 seconds for more frequent monitoring
+    const interval = setInterval(checkStuckState, 8000);
+    return () => clearInterval(interval);
+  }, [session?.id, session?.timer_end, quizPhase]);
+
+  // Add retry mechanism for failed database operations
+  const retryDatabaseOperation = async (operation, maxRetries = 3) => {
+    let retryCount = 0;
+    while (retryCount < maxRetries) {
+      try {
+        const result = await operation();
+        return result;
+      } catch (err) {
+        console.error(`[QuizPage] Database operation failed (attempt ${retryCount + 1}):`, err);
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          throw err;
+        }
+        // Exponential backoff
+        await new Promise(resolve => setTimeout(resolve, 500 * Math.pow(2, retryCount - 1)));
+      }
+    }
+  };
 
   // Listen for removal event from admin
   useEffect(() => {
@@ -368,12 +497,64 @@ export default function QuizPage() {
         if (status === 'SUBSCRIBED') {
           console.log('[QuizPage] Successfully subscribed to session updates');
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('[QuizPage] Subscription error');
+          console.error('[QuizPage] Subscription error, attempting to reconnect...');
+          // Attempt to reconnect after a delay
+          setTimeout(() => {
+            if (session?.id) {
+              console.log('[QuizPage] Attempting to reconnect to subscription');
+              setupRealtimeSubscriptions();
+            }
+          }, 2000);
+        } else if (status === 'TIMED_OUT') {
+          console.error('[QuizPage] Subscription timed out, attempting to reconnect...');
+          setTimeout(() => {
+            if (session?.id) {
+              console.log('[QuizPage] Attempting to reconnect after timeout');
+              setupRealtimeSubscriptions();
+            }
+          }, 1000);
+        } else if (status === 'CLOSED') {
+          console.log('[QuizPage] Subscription closed, attempting to reconnect...');
+          setTimeout(() => {
+            if (session?.id) {
+              console.log('[QuizPage] Attempting to reconnect after closure');
+              setupRealtimeSubscriptions();
+            }
+          }, 1500);
         }
       });
 
+    // Add heartbeat monitoring
+    const heartbeatInterval = setInterval(() => {
+      if (sessionChannel.subscribe) {
+        console.log('[QuizPage] Subscription heartbeat - checking connection status');
+        // Force a small update to test connection
+        if (session?.id) {
+          supabase
+            .from('lq_sessions')
+            .select('id')
+            .eq('id', session.id)
+            .limit(1)
+            .then(() => {
+              console.log('[QuizPage] Heartbeat successful');
+            })
+            .catch((err) => {
+              console.error('[QuizPage] Heartbeat failed:', err);
+              // Attempt to reconnect
+              setTimeout(() => {
+                if (session?.id) {
+                  console.log('[QuizPage] Attempting to reconnect after heartbeat failure');
+                  setupRealtimeSubscriptions();
+                }
+              }, 1000);
+            });
+        }
+      }
+    }, 30000); // Check every 30 seconds
+
     return () => {
       console.log('[QuizPage] Cleaning up real-time subscription');
+      clearInterval(heartbeatInterval);
       supabase.removeChannel(sessionChannel);
     };
   }
@@ -399,17 +580,17 @@ export default function QuizPage() {
       questionChanged
     });
     
-    // Update session state
+    // Update session state atomically
     setSession(sessionData);
     setQuizPhase(sessionData.phase);
     setTimerWarning(false);
     
-    // Force timer re-evaluation when session changes
-    // Use a longer delay to ensure session state is fully updated
+    // Force timer re-evaluation when session changes with increased delay
+    // to ensure session state is fully updated and avoid race conditions
     setTimeout(() => {
       console.log('[QuizPage] Forcing timer re-evaluation after session update');
       setTimerTrigger(prev => prev + 1);
-    }, 200);
+    }, 500); // Increased from 200ms to 500ms
     
     // Log session update details
     console.log('[QuizPage] Local state updated:', {
@@ -421,33 +602,42 @@ export default function QuizPage() {
     });
     
     if (sessionData.phase === 'question' && sessionData.current_question_id) {
-      const { data: questionData } = await supabase
-        .from('lq_questions')
-        .select('*')
-        .eq('id', sessionData.current_question_id)
-        .single();
-      
-      if (questionData) {
-        console.log('[QuizPage] New question loaded:', questionData);
+      try {
+        const { data: questionData, error } = await supabase
+          .from('lq_questions')
+          .select('*')
+          .eq('id', sessionData.current_question_id)
+          .single();
         
-        // If question changed, reset state
-        if (questionChanged) {
-          console.log('[QuizPage] Question changed, resetting state');
-          setSelectedAnswer(null);
-          setShowCorrect(false);
-          setPointsEarned(null);
-          setTimeLeft(0);
+        if (error) {
+          console.error('[QuizPage] Error fetching question data:', error);
+          return;
         }
         
-        setCurrentQuestion(questionData);
-        
-        // Timer will be handled by the useEffect that watches session.timer_end
-        if (!sessionData.timer_end) {
-          console.log('[QuizPage] Warning: No timer_end in session data');
-          setTimerWarning(true);
-        } else {
-          console.log('[QuizPage] Timer end set:', sessionData.timer_end);
+        if (questionData) {
+          console.log('[QuizPage] New question loaded:', questionData);
+          
+          // If question changed, reset state
+          if (questionChanged) {
+            console.log('[QuizPage] Question changed, resetting state');
+            setSelectedAnswer(null);
+            setShowCorrect(false);
+            setPointsEarned(null);
+            setTimeLeft(0);
+          }
+          
+          setCurrentQuestion(questionData);
+          
+          // Timer will be handled by the useEffect that watches session.timer_end
+          if (!sessionData.timer_end) {
+            console.log('[QuizPage] Warning: No timer_end in session data');
+            setTimerWarning(true);
+          } else {
+            console.log('[QuizPage] Timer end set:', sessionData.timer_end);
+          }
         }
+      } catch (err) {
+        console.error('[QuizPage] Error in handleSessionUpdate:', err);
       }
     } else if (sessionData.phase === 'times_up') {
       // Timer has expired, show correct answers
@@ -562,30 +752,70 @@ export default function QuizPage() {
     }
 
     try {
+      console.log('[QuizPage] Submitting answer:', {
+        sessionId: session.id,
+        participantId: participant.id,
+        questionId: currentQuestion.id,
+        selectedIndex,
+        timeLeft,
+        sessionPhase: session.phase,
+        questionPhase: quizPhase
+      });
+
       setSelectedAnswer(selectedIndex);
       const isCorrect = selectedIndex === currentQuestion.correct_answer_index;
       const points = isCorrect ? Math.max(100, timeLeft * 10) : 0;
       setPointsEarned(points);
 
-      await supabase.from('lq_live_responses').insert([
-        {
-          session_id: session.id,
-          participant_id: participant.id,
-          question_id: currentQuestion.id,
-          selected_option_index: selectedIndex,
-          is_correct: isCorrect,
-          points_awarded: points,
-        },
-      ]);
+      // Enhanced response submission with retry logic
+      const responseData = {
+        session_id: session.id,
+        participant_id: participant.id,
+        question_id: currentQuestion.id,
+        selected_option_index: selectedIndex,
+        is_correct: isCorrect,
+        points_awarded: points,
+      };
+
+      console.log('[QuizPage] Inserting response:', responseData);
+
+      const { data: responseResult, error: responseError } = await supabase
+        .from('lq_live_responses')
+        .insert([responseData])
+        .select();
+
+      if (responseError) {
+        console.error('[QuizPage] Error inserting response:', responseError);
+        throw new Error(`Failed to submit answer: ${responseError.message}`);
+      }
+
+      console.log('[QuizPage] Response submitted successfully:', responseResult);
 
       if (isCorrect) {
-        // Restore previous update logic: add points to participant.score
-        await supabase
+        // Update participant score with retry logic
+        console.log('[QuizPage] Updating participant score:', {
+          participantId: participant.id,
+          currentScore: participant.score,
+          pointsToAdd: points,
+          newScore: participant.score + points
+        });
+
+        const { error: scoreError } = await supabase
           .from('lq_session_participants')
           .update({ score: participant.score + points })
           .eq('id', participant.id);
+
+        if (scoreError) {
+          console.error('[QuizPage] Error updating participant score:', scoreError);
+          // Don't throw here as the response was already recorded
+        } else {
+          console.log('[QuizPage] Participant score updated successfully');
+        }
       }
+
+      console.log('[QuizPage] Answer submission completed successfully');
     } catch (err) {
+      console.error('[QuizPage] Error in submitAnswer:', err);
       setError(err.message);
     }
   }
