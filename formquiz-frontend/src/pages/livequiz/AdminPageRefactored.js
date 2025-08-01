@@ -21,7 +21,6 @@ export default function AdminPage() {
   const [error, setError] = useState(null);
   const [pollResults, setPollResults] = useState([]);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [serverTimeOffset, setServerTimeOffset] = useState(0);
 
   // --- Data Fetching and Subscriptions ---
 
@@ -84,34 +83,9 @@ export default function AdminPage() {
     }
   }, []);
 
-  // --- Server Time Sync ---
-  const syncServerTime = useCallback(async () => {
-    try {
-      const start = Date.now();
-      const { data, error } = await supabase.rpc('get_server_time');
-      if (!error && data) {
-        const end = Date.now();
-        const roundTrip = end - start;
-        const serverTime = new Date(data).getTime();
-        const estimatedServerTime = serverTime + (roundTrip / 2);
-        const offset = estimatedServerTime - end;
-        setServerTimeOffset(offset);
-        console.log('Server time synced, offset:', offset, 'ms');
-      }
-    } catch (err) {
-      console.warn('Could not sync server time:', err);
-    }
-  }, []);
-
-  // Get synchronized time
-  const getSyncedTime = useCallback(() => {
-    return Date.now() + serverTimeOffset;
-  }, [serverTimeOffset]);
-
   useEffect(() => {
     fetchQuizAndQuestions();
-    syncServerTime(); // Sync server time on mount
-  }, [fetchQuizAndQuestions, syncServerTime]);
+  }, [fetchQuizAndQuestions]);
 
   useEffect(() => {
     if (!session?.id) return;
@@ -134,7 +108,7 @@ export default function AdminPage() {
     };
   }, [session?.id, fetchParticipants, fetchAllScores]);
 
-  // --- Improved Timer Logic with Server Sync ---
+  // --- Timer Logic ---
   useEffect(() => {
     if (!session?.timer_end || session.phase !== 'question') {
       setTimeLeft(0);
@@ -143,18 +117,12 @@ export default function AdminPage() {
 
     const timerEndDate = new Date(session.timer_end);
     const interval = setInterval(() => {
-      const syncedNow = getSyncedTime();
-      const secondsLeft = Math.max(0, Math.floor((timerEndDate.getTime() - syncedNow) / 1000));
+      const secondsLeft = Math.max(0, Math.floor((timerEndDate.getTime() - Date.now()) / 1000));
       setTimeLeft(secondsLeft);
-      
-      // Auto-advance to results when timer hits 0
-      if (secondsLeft === 0 && session.phase === 'question') {
-        handlePresentationNext();
-      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [session, getSyncedTime]);
+  }, [session]);
 
   // --- Poll Results Fetching ---
   useEffect(() => {
@@ -198,11 +166,10 @@ export default function AdminPage() {
         nextPhase = 'question';
         setCurrentQuestionIndex(0);
         const firstQuestion = questions[0];
-        const syncedNow = getSyncedTime();
         updatePayload = {
           phase: nextPhase,
           current_question_id: firstQuestion.id,
-          timer_end: new Date(syncedNow + (firstQuestion.timer || 20) * 1000).toISOString(),
+          timer_end: new Date(Date.now() + (firstQuestion.timer || 20) * 1000).toISOString(),
         };
         break;
 
@@ -229,11 +196,10 @@ export default function AdminPage() {
           nextPhase = 'question';
           setCurrentQuestionIndex(nextIndex);
           const nextQuestion = questions[nextIndex];
-          const syncedNow = getSyncedTime();
           updatePayload = {
             phase: nextPhase,
             current_question_id: nextQuestion.id,
-            timer_end: new Date(syncedNow + (nextQuestion.timer || 20) * 1000).toISOString(),
+            timer_end: new Date(Date.now() + (nextQuestion.timer || 20) * 1000).toISOString(),
           };
         }
         break;
@@ -241,8 +207,6 @@ export default function AdminPage() {
       default:
         return; // No action for 'ended' or other phases
     }
-
-    console.log('Advancing to phase:', nextPhase, 'from:', session.phase, 'question index:', currentQuestionIndex);
 
     const { data, error: updateError } = await supabase
       .from('lq_sessions')
@@ -264,7 +228,7 @@ export default function AdminPage() {
       case 'lobby':
         return 'Start Quiz';
       case 'question':
-        return timeLeft > 0 ? `Show Results (${timeLeft}s)` : 'Show Results';
+        return timeLeft > 0 ? 'Show Results' : 'Show Results';
       case 'results':
         return 'Show Leaderboard';
       case 'leaderboard':
@@ -305,7 +269,6 @@ export default function AdminPage() {
         <div>
           <h1 className="text-xl font-bold">{quiz?.title}</h1>
           <p className="text-gray-600">Session Code: <span className="font-bold text-blue-600">{session.code}</span></p>
-          <p className="text-sm text-gray-500">Question {currentQuestionIndex + 1} of {questions.length}</p>
         </div>
         <div className="flex items-center space-x-4">
           <span className="font-semibold">Phase: {session.phase}</span>

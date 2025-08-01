@@ -23,31 +23,6 @@ export default function QuizPage() {
   const [pollResults, setPollResults] = useState([]);
   const [participantScores, setParticipantScores] = useState({});
   const [participants, setParticipants] = useState([]);
-  const [serverTimeOffset, setServerTimeOffset] = useState(0);
-
-  // --- Server Time Sync ---
-  const syncServerTime = useCallback(async () => {
-    try {
-      const start = Date.now();
-      const { data, error } = await supabase.rpc('get_server_time');
-      if (!error && data) {
-        const end = Date.now();
-        const roundTrip = end - start;
-        const serverTime = new Date(data).getTime();
-        const estimatedServerTime = serverTime + (roundTrip / 2);
-        const offset = estimatedServerTime - end;
-        setServerTimeOffset(offset);
-        console.log('QuizPage: Server time synced, offset:', offset, 'ms');
-      }
-    } catch (err) {
-      console.warn('QuizPage: Could not sync server time:', err);
-    }
-  }, []);
-
-  // Get synchronized time
-  const getSyncedTime = useCallback(() => {
-    return Date.now() + serverTimeOffset;
-  }, [serverTimeOffset]);
 
   // --- Real-time Subscription ---
 
@@ -60,7 +35,7 @@ export default function QuizPage() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'lq_sessions', filter: `id=eq.${session.id}` },
         (payload) => {
-          console.log('QuizPage: Received session update:', payload.new);
+          console.log('Received session update:', payload.new);
           setSession(payload.new);
         }
       )
@@ -98,23 +73,21 @@ export default function QuizPage() {
     }
   }, [session, currentQuestion?.id]);
 
-  // --- Improved Timer Logic with Server Sync ---
+  // --- Timer Logic (Visual Only) ---
 
   useEffect(() => {
     if (session?.phase !== 'question' || !session.timer_end) {
       setTimeLeft(0);
       return;
     }
-    
     const timerEndDate = new Date(session.timer_end);
     const interval = setInterval(() => {
-      const syncedNow = getSyncedTime();
-      const secondsLeft = Math.max(0, Math.floor((timerEndDate.getTime() - syncedNow) / 1000));
+      const secondsLeft = Math.max(0, Math.floor((timerEndDate.getTime() - Date.now()) / 1000));
       setTimeLeft(secondsLeft);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [session, getSyncedTime]);
+  }, [session]);
 
   // --- Fetch Participants and Scores ---
 
@@ -251,11 +224,6 @@ export default function QuizPage() {
     ease: "anticipate",
     duration: 0.5
   };
-
-  // --- Initialize server time sync ---
-  useEffect(() => {
-    syncServerTime();
-  }, [syncServerTime]);
 
   // --- UI Rendering ---
 
