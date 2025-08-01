@@ -89,6 +89,11 @@ const PreviewQuizPage = () => {
       customization = {};
     }
   }
+  
+  // Debug log for background image
+  console.log('PreviewQuizPage - Quiz data:', quiz);
+  console.log('PreviewQuizPage - Customization:', customization);
+  console.log('PreviewQuizPage - Background image:', customization.backgroundImage);
   const slide = slides?.[current];
   if (!slide) return <div style={{ padding: 40, color: 'red' }}>No slide data available.</div>;
   // Section grid: active for current, filled for previous, inactive for next
@@ -98,7 +103,13 @@ const PreviewQuizPage = () => {
   const TopRightButton = (
     <button
       onClick={() => {
-        navigate(`/quiz/edit/${quizId}`);
+        if (quizId === 'preview') {
+          // For draft preview, go back to quiz builder without quizId
+          navigate('/quiz');
+        } else {
+          // For saved quiz preview, go to edit page
+          navigate(`/quiz/edit/${quizId}`);
+        }
       }}
       style={{
         background: customization.nextButtonColor || '#2563eb',
@@ -129,7 +140,17 @@ const PreviewQuizPage = () => {
   const isFirst = current === 0;
 
   return (
-    <div style={{ position: 'relative', minHeight: '100vh', background: customization.background || customization.backgroundColor || '#f8f9fb', fontFamily: customization.fontFamily || customization.font || 'Inter, Arial, sans-serif' }}>
+    <div style={{ 
+      position: 'relative', 
+      minHeight: '100vh', 
+      background: customization.backgroundImage ? 'transparent' : (customization.background || customization.backgroundColor || '#f8f9fb'),
+      backgroundImage: customization.backgroundImage ? `url(${customization.backgroundImage})` : undefined,
+      backgroundSize: customization.backgroundImage ? 'cover' : undefined,
+      backgroundPosition: customization.backgroundImage ? 'center' : undefined,
+      backgroundRepeat: customization.backgroundImage ? 'no-repeat' : undefined,
+      backgroundAttachment: customization.backgroundImage ? 'fixed' : undefined,
+      fontFamily: customization.fontFamily || customization.font || 'Inter, Arial, sans-serif' 
+    }}>
       {TopRightButton}
       <QuizArenaLayout
         logo={customization.logo}

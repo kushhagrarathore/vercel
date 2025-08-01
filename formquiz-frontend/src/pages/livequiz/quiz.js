@@ -190,9 +190,24 @@ const MinimalBackgroundCustomization = ({ customization, setCustomization }) => 
   const [bgImageInput, setBgImageInput] = useState(customization.backgroundImage || "");
   const [bgImageError, setBgImageError] = useState("");
 
+  // Update input when customization changes
+  useEffect(() => {
+    setBgImageInput(customization.backgroundImage || "");
+  }, [customization.backgroundImage]);
+
   // Validate image URL
   const validateImageUrl = (url, cb) => {
-    if (!url) { cb(false); return; }
+    if (!url) { cb(true); return; }
+    
+    // Allow common image formats
+    const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg)$/i;
+    const isImageUrl = imageExtensions.test(url) || url.startsWith('data:image');
+    
+    if (!isImageUrl) {
+      cb(false);
+      return;
+    }
+    
     const img = new window.Image();
     img.onload = () => cb(true);
     img.onerror = () => cb(false);
@@ -206,10 +221,44 @@ const MinimalBackgroundCustomization = ({ customization, setCustomization }) => 
       setCustomization(prev => ({ ...prev, backgroundImage: "" }));
       return;
     }
-    validateImageUrl(value, (isValid) => {
+    
+    // Convert Google Drive links to direct links
+    let processedUrl = value;
+    if (value.includes('drive.google.com')) {
+      const match = value.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      if (match) {
+        processedUrl = `https://drive.google.com/uc?export=view&id=${match[1]}`;
+      }
+    }
+    
+    validateImageUrl(processedUrl, (isValid) => {
       if (isValid) {
         setBgImageError("");
-        setCustomization(prev => ({ ...prev, backgroundImage: value }));
+        setCustomization(prev => ({ ...prev, backgroundImage: processedUrl }));
+        // Show success notification
+        if (processedUrl) {
+          const notification = document.createElement('div');
+          notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #10b981;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          `;
+          notification.textContent = 'Background image applied successfully!';
+          document.body.appendChild(notification);
+          setTimeout(() => {
+            if (notification.parentNode) {
+              notification.parentNode.removeChild(notification);
+            }
+          }, 3000);
+        }
       } else {
         setBgImageError("Invalid image URL. Please use a direct/public image link.");
       }
@@ -236,11 +285,32 @@ const MinimalBackgroundCustomization = ({ customization, setCustomization }) => 
           placeholder="Paste image URL (optional)"
           value={bgImageInput}
           onChange={e => handleBgImageChange(e.target.value)}
+          onBlur={e => handleBgImageChange(e.target.value)}
           style={{ border: '1px solid #e2e8f0', borderRadius: 8, padding: '8px 12px', fontSize: 15, background: '#f7fafc', color: '#2d314d' }}
         />
         {bgImageError && <div style={{ color: 'red', fontSize: 13 }}>{bgImageError}</div>}
         {customization.backgroundImage && !bgImageError && (
-          <div style={{ width: '100%', height: 60, background: `url(${customization.backgroundImage}) center/cover no-repeat`, border: '1px dashed #ccc', borderRadius: 4, marginTop: 6 }} />
+          <div style={{ position: 'relative', width: '100%', height: 60, background: `url(${customization.backgroundImage}) center/cover no-repeat`, border: '1px dashed #ccc', borderRadius: 4, marginTop: 6 }}>
+            <button
+              onClick={() => handleBgImageChange('')}
+              style={{
+                position: 'absolute',
+                top: 4,
+                right: 4,
+                background: 'rgba(0,0,0,0.7)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: 20,
+                height: 20,
+                fontSize: 12,
+                cursor: 'pointer'
+              }}
+              title="Remove background image"
+            >
+              ×
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -265,6 +335,7 @@ export default function Quiz() {
   }]);
   const [selectedSlide, setSelectedSlide] = useState(0);
   const [slideTransition, setSlideTransition] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [showModal, setShowModal] = useState(false);
   // Removed dark mode state
   const [editingName, setEditingName] = useState(null);
@@ -313,7 +384,34 @@ export default function Quiz() {
     const tab = params.get('tab');
     if (tab === 'results') setActiveTab('results');
     else setActiveTab('edit');
+    
+    // Set initialized after a short delay to prevent glitchy start
+    setTimeout(() => setIsInitialized(true), 100);
+    
+    // Prevent scrolling on quiz page
+    document.body.classList.add('quiz-page');
+    document.documentElement.classList.add('quiz-page');
+    
+    return () => {
+      document.body.classList.remove('quiz-page');
+      document.documentElement.classList.remove('quiz-page');
+    };
   }, [location.search]);
+
+  // Cleanup saved state when navigating away
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Only clear if not returning from preview
+      if (!localStorage.getItem('quizState')) {
+        localStorage.removeItem('quizDraft');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
 
   // Removed dark mode effects
 
@@ -373,6 +471,20 @@ export default function Quiz() {
             setTitle(quizData.title || 'AI Generated Quiz');
             setPublishedQuizId(quizId);
             
+            // Load customization settings from database
+            if (quizData.customization_settings) {
+              try {
+                const parsedSettings = JSON.parse(quizData.customization_settings);
+                setCustomization(prev => ({
+                  ...prev,
+                  backgroundColor: parsedSettings.backgroundColor || '#ffffff',
+                  backgroundImage: parsedSettings.backgroundImage || '',
+                }));
+              } catch (error) {
+                console.error('Error parsing customization settings:', error);
+              }
+            }
+            
             // Fetch slides for this AI-generated quiz
             const { data: slidesData, error: slidesError } = await supabase
               .from('slides')
@@ -419,6 +531,21 @@ export default function Quiz() {
       if (quizError || !quizData) return;
       setTitle(quizData.title || 'Untitled Presentation');
       setPublishedQuizId(quizId); // Ensure Save button is shown for existing quiz
+      
+      // Load customization settings from database
+      if (quizData.customization_settings) {
+        try {
+          const parsedSettings = JSON.parse(quizData.customization_settings);
+          setCustomization(prev => ({
+            ...prev,
+            backgroundColor: parsedSettings.backgroundColor || '#ffffff',
+            backgroundImage: parsedSettings.backgroundImage || '',
+          }));
+        } catch (error) {
+          console.error('Error parsing customization settings:', error);
+        }
+      }
+      
       // Fetch slides
       const { data: slidesData, error: slidesError } = await supabase
         .from('slides')
@@ -556,17 +683,49 @@ export default function Quiz() {
   })();
 
   const handlePublishOrSave = async () => {
-    const { data: user, error: userError } = await supabase.auth.getUser();
-    if (userError || !user?.user) {
-      setNotification('Unable to get user info.');
-      console.error(userError);
+    console.log('handlePublishOrSave started');
+    
+    // Validate quiz content
+    if (!title || title.trim() === '') {
+      setNotification('Please enter a quiz title.');
+      setTimeout(() => setNotification(null), 3000);
       return;
     }
+    
+    if (!slides || slides.length === 0) {
+      setNotification('Please add at least one slide to your quiz.');
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+    
+    // Check if slides have content
+    const hasContent = slides.some(slide => 
+      slide.question && slide.question.trim() !== '' && 
+      slide.options && slide.options.length > 0 && 
+      slide.options.some(opt => opt && opt.trim() !== '')
+    );
+    
+    if (!hasContent) {
+      setNotification('Please add questions and options to your quiz.');
+      setTimeout(() => setNotification(null), 3000);
+      return;
+    }
+    
+    try {
+      const { data: user, error: userError } = await supabase.auth.getUser();
+      if (userError || !user?.user) {
+        setNotification('Unable to get user info.');
+        console.error('User error:', userError);
+        return;
+      }
+      console.log('User authenticated:', user.user.email);
     const { id: user_id, email } = user.user;
     const customization_settings = JSON.stringify({
       fontFamily: currentSlide?.fontFamily || textStyles[0].value,
       textColor: currentSlide?.textColor || '#000000',
       background: currentSlide?.background || '#ffffff',
+      backgroundColor: customization.backgroundColor || '#ffffff',
+      backgroundImage: customization.backgroundImage || '',
     });
     let quizIdToUse = publishedQuizId;
     let quiz;
@@ -718,6 +877,15 @@ export default function Quiz() {
     setShowModal(true);
     setTimeout(() => setNotification(null), 3000);
     setInitialStateNow(slides, title);
+    
+    // Clear saved state after successful save
+    localStorage.removeItem('quizState');
+    console.log('Cleared saved quiz state after successful save');
+    } catch (error) {
+      console.error('Error in handlePublishOrSave:', error);
+      setNotification('Error saving quiz: ' + error.message);
+      setTimeout(() => setNotification(null), 3000);
+    }
   };
 
   // Quiz-wide customization state
@@ -726,26 +894,277 @@ export default function Quiz() {
     backgroundImage: '',
   });
 
+  // Load customization and quiz state from localStorage on mount
+  useEffect(() => {
+    const savedCustomization = localStorage.getItem('quizCustomization');
+    if (savedCustomization) {
+      try {
+        const parsed = JSON.parse(savedCustomization);
+        setCustomization(prev => ({ ...prev, ...parsed }));
+      } catch (error) {
+        console.error('Error loading customization from localStorage:', error);
+      }
+    }
+
+    // Restore quiz state from localStorage if returning from preview
+    const savedQuizState = localStorage.getItem('quizState');
+    if (savedQuizState) {
+      try {
+        const parsed = JSON.parse(savedQuizState);
+        if (parsed.slides && parsed.slides.length > 0) {
+          setSlides(parsed.slides);
+          setTitle(parsed.title || 'Untitled Quiz');
+          setSelectedSlide(parsed.selectedSlide || 0);
+          console.log('Restored quiz state from localStorage:', parsed);
+        }
+      } catch (error) {
+        console.error('Error loading quiz state from localStorage:', error);
+      }
+    }
+  }, []);
+
+  // Save customization to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('quizCustomization', JSON.stringify(customization));
+    console.log('Customization updated:', customization);
+  }, [customization]);
+
   const gradientBg = {
-    backgroundColor: customization.backgroundColor || '#f8fafc',
+    backgroundColor: customization.backgroundImage ? 'transparent' : (customization.backgroundColor || '#f8fafc'),
     backgroundImage: customization.backgroundImage ? `url(${customization.backgroundImage})` : undefined,
     backgroundSize: customization.backgroundImage ? 'cover' : undefined,
     backgroundPosition: customization.backgroundImage ? 'center' : undefined,
     backgroundRepeat: customization.backgroundImage ? 'no-repeat' : undefined,
+    backgroundAttachment: customization.backgroundImage ? 'fixed' : undefined,
     minHeight: '100vh',
     width: '100%',
     transition: 'background 0.3s',
   };
 
+  // Debug log for background image
+  useEffect(() => {
+    if (customization.backgroundImage) {
+      console.log('Background image URL:', customization.backgroundImage);
+      console.log('GradientBg style:', gradientBg);
+    }
+  }, [customization.backgroundImage, gradientBg]);
+
   // Add state for customization tab
   const [customTab, setCustomTab] = useState('templates');
   const [startDateTime, setStartDateTime] = useState("");
   const [endDateTime, setEndDateTime] = useState("");
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
   // Collapsible customize panel state
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(true);
 
+  // Preview mode component
+  const PreviewMode = () => {
+    const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+    const currentPreviewSlide = slides[currentSlideIndex];
+
+    const handleNext = () => {
+      if (currentSlideIndex < slides.length - 1) {
+        setCurrentSlideIndex(currentSlideIndex + 1);
+      }
+    };
+
+    const handlePrev = () => {
+      if (currentSlideIndex > 0) {
+        setCurrentSlideIndex(currentSlideIndex - 1);
+      }
+    };
+
+    return (
+      <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: customization.backgroundImage ? 'transparent' : (customization.backgroundColor || '#f8fafc'),
+        backgroundImage: customization.backgroundImage ? `url(${customization.backgroundImage})` : undefined,
+        backgroundSize: customization.backgroundImage ? 'cover' : undefined,
+        backgroundPosition: customization.backgroundImage ? 'center' : undefined,
+        backgroundRepeat: customization.backgroundImage ? 'no-repeat' : undefined,
+        backgroundAttachment: customization.backgroundImage ? 'fixed' : undefined,
+        zIndex: 1000,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '2rem'
+      }}>
+        {/* Preview Header */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          background: 'rgba(255,255,255,0.1)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          borderBottom: '1px solid rgba(255,255,255,0.2)',
+          padding: '1rem 2rem',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          zIndex: 1001
+        }}>
+          <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>{title || 'Untitled Quiz'}</div>
+          <button
+            onClick={() => setIsPreviewMode(false)}
+            style={{
+              background: 'rgba(37,99,235,0.8)',
+              backdropFilter: 'blur(10px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(10px) saturate(180%)',
+              color: 'white',
+              border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: '8px',
+              padding: '8px 16px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = 'rgba(37,99,235,0.9)';
+              e.target.style.transform = 'translateY(-1px)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'rgba(37,99,235,0.8)';
+              e.target.style.transform = 'translateY(0)';
+            }}
+          >
+            <span>←</span> Back to Edit
+          </button>
+        </div>
+
+        {/* Preview Content */}
+        <div style={{
+          background: 'rgba(255,255,255,0.1)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+          border: '1px solid rgba(255,255,255,0.2)',
+          borderRadius: '18px',
+          boxShadow: '0 8px 32px rgba(60,60,100,0.10)',
+          maxWidth: '600px',
+          width: '100%',
+          padding: '2rem',
+          marginTop: '4rem',
+          position: 'relative'
+        }}>
+          {/* Progress Bar */}
+          <div style={{ width: '100%', height: '6px', background: '#e5eaf0', borderRadius: '4px', marginBottom: '1.5rem' }}>
+            <div style={{ 
+              width: `${((currentSlideIndex + 1) / slides.length) * 100}%`, 
+              height: '100%', 
+              background: '#3b82f6', 
+              borderRadius: '4px', 
+              transition: 'width 0.3s' 
+            }} />
+          </div>
+
+          {/* Question */}
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <div style={{ fontWeight: 600, color: '#6b7280', marginBottom: '0.5rem' }}>
+              Question {currentSlideIndex + 1} of {slides.length}
+            </div>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1f2937' }}>
+              {currentPreviewSlide?.question || 'No question'}
+            </h2>
+          </div>
+
+          {/* Options */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {currentPreviewSlide?.options?.map((option, index) => (
+              <button
+                key={index}
+                style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(10px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(10px) saturate(180%)',
+                  color: '#1f2937',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '12px',
+                  padding: '1rem',
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  textAlign: 'left'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = 'rgba(255,255,255,0.2)';
+                  e.target.style.borderColor = 'rgba(59,130,246,0.5)';
+                  e.target.style.transform = 'translateY(-2px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'rgba(255,255,255,0.1)';
+                  e.target.style.borderColor = 'rgba(255,255,255,0.2)';
+                  e.target.style.transform = 'translateY(0)';
+                }}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+
+          {/* Navigation */}
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            marginTop: '2rem',
+            gap: '1rem'
+          }}>
+            <button
+              onClick={handlePrev}
+              disabled={currentSlideIndex === 0}
+              style={{
+                background: currentSlideIndex === 0 ? 'rgba(243,244,246,0.3)' : 'rgba(59,130,246,0.8)',
+                backdropFilter: 'blur(10px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(10px) saturate(180%)',
+                color: currentSlideIndex === 0 ? '#9ca3af' : 'white',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '8px',
+                padding: '0.75rem 1.5rem',
+                fontWeight: 600,
+                cursor: currentSlideIndex === 0 ? 'not-allowed' : 'pointer',
+                opacity: currentSlideIndex === 0 ? 0.5 : 1,
+                transition: 'all 0.2s'
+              }}
+            >
+              Previous
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={currentSlideIndex === slides.length - 1}
+              style={{
+                background: currentSlideIndex === slides.length - 1 ? 'rgba(243,244,246,0.3)' : 'rgba(59,130,246,0.8)',
+                backdropFilter: 'blur(10px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(10px) saturate(180%)',
+                color: currentSlideIndex === slides.length - 1 ? '#9ca3af' : 'white',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '8px',
+                padding: '0.75rem 1.5rem',
+                fontWeight: 600,
+                cursor: currentSlideIndex === slides.length - 1 ? 'not-allowed' : 'pointer',
+                opacity: currentSlideIndex === slides.length - 1 ? 0.5 : 1,
+                transition: 'all 0.2s'
+              }}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div style={gradientBg}>
+    <div style={gradientBg} className="quiz-page-container">
       {notification && (
         <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 9999 }}>
           <div style={{ background: '#2563eb', color: '#fff', padding: '12px 32px', borderRadius: 8, fontWeight: 600, boxShadow: '0 2px 12px rgba(0,0,0,0.10)' }}>
@@ -770,7 +1189,7 @@ export default function Quiz() {
       )}
 
       {/* Top Bar */}
-      <header className="sticky top-0 z-30 bg-white border-b border-gray-200 p-4 flex justify-between items-center shrink-0">
+      <header className="sticky top-0 z-30 bg-white border-b border-gray-200 p-4 flex justify-between items-center shrink-0" style={{ position: 'relative', zIndex: 20 }}>
         <div className="flex items-center gap-4">
           <Button
             variant="outline"
@@ -786,7 +1205,12 @@ export default function Quiz() {
               minWidth: 110,
               outline: 'none',
             }}
-            onClick={() => navigate('/dashboard')}
+            onClick={() => {
+              // Clear saved state when explicitly navigating away
+              localStorage.removeItem('quizState');
+              localStorage.removeItem('quizDraft');
+              navigate('/dashboard');
+            }}
             title="Back to Dashboard"
           >
             <span style={{ display: 'flex', alignItems: 'center', marginRight: 6 }}><FiArrowLeft style={{ fontSize: 20, marginRight: 2 }} /></span>
@@ -807,21 +1231,7 @@ export default function Quiz() {
             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm"
             style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db', fontWeight: 500, borderRadius: 8, boxShadow: '0 1px 2px 0 rgba(0,0,0,0.04)', fontSize: 14 }}
             onClick={() => {
-              if (!quizId) {
-                localStorage.setItem('quizDraft', JSON.stringify({
-                  slides,
-                  quizTitle: title,
-                  globalSettings: {
-                    fontFamily: currentSlide?.fontFamily || textStyles[0].value,
-                    textColor: currentSlide?.textColor || '#000000',
-                    background: currentSlide?.background || '#ffffff',
-                    backgroundImage: customization.backgroundImage || '',
-                  }
-                }));
-                window.open('/quiz/preview/preview', '_blank');
-              } else {
-                window.open(`/quiz/preview/${quizId}`, '_blank');
-              }
+              setIsPreviewMode(!isPreviewMode);
             }}
             title="Preview as Admin"
           >
@@ -848,10 +1258,21 @@ export default function Quiz() {
           <Button
             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-sm"
             style={{ background: '#fff', color: '#374151', border: '1px solid #d1d5db', fontWeight: 500, borderRadius: 8, boxShadow: '0 1px 2px 0 rgba(0,0,0,0.04)', fontSize: 14 }}
-            onClick={handlePublishOrSave}
+            onClick={() => {
+              if (isPublishing) return;
+              console.log('Publish button clicked');
+              console.log('Current quiz state:', { title, slides, publishedQuizId });
+              setIsPublishing(true);
+              handlePublishOrSave().finally(() => setIsPublishing(false));
+            }}
+            disabled={isPublishing}
             title={publishedQuizId ? "Save" : "Publish"}
           >
-            {publishedQuizId ? <FiSave /> : <FiUpload />} {publishedQuizId ? "Save" : "Publish"}
+            {isPublishing ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-700"></div>
+            ) : (
+              publishedQuizId ? <FiSave /> : <FiUpload />
+            )} {isPublishing ? "Saving..." : (publishedQuizId ? "Save" : "Publish")}
           </Button>
           {/* Customize toggle button */}
           <Button
@@ -865,7 +1286,7 @@ export default function Quiz() {
         </div>
       </header>
       {/* Main Layout */}
-      <div className="flex w-full" style={{ background: 'var(--bg)', minHeight: '100vh', position: 'relative' }}>
+      <div className="flex w-full" style={{ background: 'transparent', height: 'calc(100vh - 4.5rem)', position: 'relative', overflow: 'hidden', zIndex: 1 }}>
         {/* Left Sidebar: Add Slide & Slide List */}
         <aside className={`bg-white border-r transition-all duration-300 ease-in-out flex flex-col ${isLeftSidebarCollapsed ? 'w-20' : 'w-64'}`} style={{ width: isLeftSidebarCollapsed ? '5rem' : '16rem', flexShrink: 0, position: 'fixed', left: 0, top: '4.5rem', height: 'calc(100vh - 4.5rem)', zIndex: 10 }}>
           <div className="p-4 flex-1 overflow-y-auto">
@@ -948,9 +1369,10 @@ export default function Quiz() {
             marginRight: isCustomizeOpen ? "20rem" : "0rem",       // right panel width
             position: "relative",
             overflow: "hidden",
-            minHeight: "calc(100vh - 4.5rem)",
+            height: "calc(100vh - 4.5rem)",
             width: `calc(100vw - ${isLeftSidebarCollapsed ? "5rem" : "16rem"} - ${isCustomizeOpen ? "20rem" : "0rem"})`,
             maxWidth: "100%",
+            flex: 1,
           }}
         >
           {/* Dynamic Background Particles */}
@@ -963,32 +1385,38 @@ export default function Quiz() {
           </div>
           
           <div 
-            className="max-w-2xl w-full flex flex-col gap-10 justify-center items-center"
+            className="max-w-2xl w-full flex flex-col gap-6 justify-center items-center"
             style={{
-              animation: "slideInFromCenter 0.6s ease-out",
-              transform: "translateY(0)",
+              animation: isInitialized ? "slideInFromCenter 0.6s ease-out" : "none",
               transition: "all 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
+              position: "relative",
               zIndex: 1,
-              margin: "0",
-              padding: "2rem",
+              margin: "0 auto",
+              padding: "1rem",
               width: "100%",
-              maxWidth: "800px",
+              maxWidth: "700px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: isInitialized ? 1 : 0,
+              transform: isInitialized ? "translateY(0)" : "translateY(20px)",
+              height: "100%",
             }}
           >
             <div 
-              className={`border-2 rounded-2xl shadow-2xl bg-white quiz-slide-container ${slideTransition ? 'slide-transition-enter' : ''}`}
+              className={`border-2 rounded-2xl shadow-2xl quiz-slide-container ${slideTransition ? 'slide-transition-enter' : ''}`}
               style={{
                 boxShadow: '0 8px 32px 0 rgba(44,62,80,0.12)',
-                borderColor: '#e0e7ff',
-                background: currentSlide?.background || defaultSlideStyle.background,
-                backgroundImage: currentSlide?.backgroundImage ? `url(${currentSlide.backgroundImage})` : undefined,
-                backgroundSize: currentSlide?.backgroundImage ? 'cover' : undefined,
-                backgroundPosition: currentSlide?.backgroundImage ? 'center' : undefined,
-                backgroundRepeat: currentSlide?.backgroundImage ? 'no-repeat' : undefined,
+                borderColor: 'rgba(255,255,255,0.2)',
+                background: 'rgba(255,255,255,0.1)',
+                backdropFilter: 'blur(20px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                backgroundImage: currentSlide?.backgroundImage ? `url(${currentSlide.backgroundImage})` : (customization.backgroundImage ? `url(${customization.backgroundImage})` : undefined),
+                backgroundSize: currentSlide?.backgroundImage ? 'cover' : (customization.backgroundImage ? 'cover' : undefined),
+                backgroundPosition: currentSlide?.backgroundImage ? 'center' : (customization.backgroundImage ? 'center' : undefined),
+                backgroundRepeat: currentSlide?.backgroundImage ? 'no-repeat' : (customization.backgroundImage ? 'no-repeat' : undefined),
                 borderRadius: (currentSlide?.borderRadius || defaultSlideStyle.borderRadius),
                 color: currentSlide?.textColor || defaultSlideStyle.textColor,
                 fontFamily: currentSlide?.fontFamily || defaultSlideStyle.fontFamily,
@@ -996,17 +1424,17 @@ export default function Quiz() {
                 fontWeight: currentSlide?.bold ? 'bold' : 'normal',
                 fontStyle: currentSlide?.italic ? 'italic' : 'normal',
                 boxShadow: currentSlide?.shadow ? '0 4px 16px 0 rgba(0,0,0,0.08)' : '0 8px 32px 0 rgba(44,62,80,0.12)',
-                padding: '2.5rem 2.5rem 3.5rem 2.5rem',
+                padding: '2rem 2rem 2.5rem 2rem',
                 margin: '0',
                 textAlign: currentSlide?.alignment || defaultSlideStyle.alignment,
                 transition: slideTransition ? 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)' : 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                 boxSizing: 'border-box',
-                overflow: 'visible',
-                minHeight: '520px',
-                maxHeight: '700px',
-                transform: slideTransition ? 'translateX(100px) scale(0.9)' : 'scale(1)',
-                opacity: slideTransition ? 0 : 1,
-                animation: slideTransition ? 'none' : 'slideInFromCenter 0.6s ease-out',
+                overflow: 'hidden',
+                height: 'auto',
+                maxHeight: '600px',
+                transform: slideTransition ? 'translateX(50px)' : 'translateX(0)',
+                opacity: slideTransition ? 0.5 : 1,
+                animation: slideTransition ? 'none' : (isInitialized ? 'slideInFromCenter 0.6s ease-out' : 'none'),
               }}
               onMouseEnter={(e) => {
                 if (!slideTransition) {
@@ -1516,6 +1944,9 @@ export default function Quiz() {
           )}
         </div>
       )}
+      
+      {/* Preview Mode Overlay */}
+      {isPreviewMode && <PreviewMode />}
     </div>
   );
 }

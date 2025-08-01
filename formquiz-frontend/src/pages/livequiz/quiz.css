@@ -1,14 +1,38 @@
 /* MentimeterClone.css */
 
+/* Prevent scrolling on quiz page */
+body.quiz-page {
+  overflow: hidden;
+  height: 100vh;
+}
+
+html.quiz-page {
+  overflow: hidden;
+  height: 100vh;
+}
+
+/* Quiz page background container */
+.quiz-page-container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  z-index: 0;
+}
+
 /* Dynamic Animations and Centering */
 @keyframes slideInFromCenter {
   0% {
     opacity: 0;
-    transform: translateY(30px) scale(0.95);
+    transform: translateY(20px);
   }
   100% {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
   }
 }
 
@@ -57,8 +81,11 @@
   animation: slideInFromCenter 0.6s ease-out;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
-  max-width: 800px;
+  max-width: 700px;
   margin: 0 auto;
+  height: auto;
+  max-height: 600px;
+  overflow: hidden;
 }
 
 .quiz-slide-container:hover {
@@ -92,8 +119,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 4.5rem);
-  padding: 2rem;
+  height: calc(100vh - 4.5rem);
+  padding: 1rem;
   position: relative;
   overflow: hidden;
   width: 100%;

@@ -39,7 +39,18 @@ const QuizArenaLayout = ({
   } = customization;
 
   return (
-    <div style={{ minHeight: '100vh', background, fontFamily: font, display: 'flex', flexDirection: 'column' }}>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: customization.backgroundImage ? 'transparent' : background, 
+      backgroundImage: customization.backgroundImage ? `url(${customization.backgroundImage})` : undefined,
+      backgroundSize: customization.backgroundImage ? 'cover' : undefined,
+      backgroundPosition: customization.backgroundImage ? 'center' : undefined,
+      backgroundRepeat: customization.backgroundImage ? 'no-repeat' : undefined,
+      backgroundAttachment: customization.backgroundImage ? 'fixed' : undefined,
+      fontFamily: font, 
+      display: 'flex', 
+      flexDirection: 'column' 
+    }}>
       {/* No header bar or QUIZ ARENA text */}
       {/* Main Card */}
       <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '32px 8px' }}>
