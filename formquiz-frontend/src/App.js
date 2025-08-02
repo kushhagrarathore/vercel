@@ -32,6 +32,7 @@ import Plan from './pages/Plan';
 import UpdatePassword from './pages/UpdatePassword';
 import AdminSummaryPage from './pages/livequiz/AdminSummaryPage';
 import QuizSessionsPage from './pages/livequiz/QuizSessionsPage';
+import APITest from './components/APITest';
 
 // RequireAuth component for protected routes
 function RequireAuth({ children }) {
@@ -71,6 +72,8 @@ function App() {
             <Route path="/update-password" element={<UpdatePassword />} />
             {/* Public user quiz route */}
             <Route path="/userend" element={<UserEnd />} />
+            {/* API Test Route */}
+            <Route path="/api-test" element={<APITest />} />
             {/* Protected routes */}
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
             <Route path="/builder" element={<RequireAuth><FormBuilder /></RequireAuth>} />

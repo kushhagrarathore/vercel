@@ -3,19 +3,23 @@ import { createClient } from "@supabase/supabase-js";
 import { v4 as uuidv4 } from 'uuid';
 
 export async function generateQuestions(topic, session_code, userId = null) {
-  // Validate environment variables
-  if (!process.env.REACT_APP_GEMINI_API_KEY) {
-    throw new Error('REACT_APP_GEMINI_API_KEY environment variable is required');
+  // Validate environment variables - support both REACT_APP_ and direct naming for Vercel
+  const geminiApiKey = process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY;
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY || process.env.REACT_APP_SUPABASE_SERVICE_KEY;
+
+  if (!geminiApiKey) {
+    throw new Error('GEMINI_API_KEY environment variable is required');
   }
-  if (!process.env.REACT_APP_SUPABASE_URL) {
-    throw new Error('REACT_APP_SUPABASE_URL environment variable is required');
+  if (!supabaseUrl) {
+    throw new Error('SUPABASE_URL environment variable is required');
   }
-  if (!process.env.REACT_APP_SUPABASE_SERVICE_KEY) {
-    throw new Error('REACT_APP_SUPABASE_SERVICE_KEY environment variable is required');
+  if (!supabaseServiceKey) {
+    throw new Error('SUPABASE_SERVICE_KEY environment variable is required');
   }
 
-  const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_API_KEY);
-  const supabase = createClient(process.env.REACT_APP_SUPABASE_URL, process.env.REACT_APP_SUPABASE_SERVICE_KEY);
+  const genAI = new GoogleGenerativeAI(geminiApiKey);
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
