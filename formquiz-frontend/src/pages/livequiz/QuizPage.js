@@ -226,20 +226,11 @@ export default function QuizPage() {
       sessionId: session?.id
     });
 
-    // Clear any existing timer immediately
-    let interval = null;
-
-    // Don't start timer if:
-    // 1. No session or current question
-    // 2. Not in question phase
-    // 3. No timer_end set
     if (!session || !currentQuestion || quizPhase !== 'question') {
       console.log('[QuizPage] Timer stopped - missing session, question, or wrong phase');
       setTimeLeft(0);
       setShowCorrect(false);
-      return () => {
-        if (interval) clearInterval(interval);
-      };
+      return;
     }
 
     // Only proceed if we have a valid timer_end from the database
@@ -247,9 +238,7 @@ export default function QuizPage() {
       console.log('[QuizPage] Timer stopped - no timer_end in session');
       setTimeLeft(0);
       setShowCorrect(false);
-      return () => {
-        if (interval) clearInterval(interval);
-      };
+      return;
     }
 
     // Validate timer_end is a valid date
@@ -258,13 +247,13 @@ export default function QuizPage() {
       console.error('[QuizPage] Invalid timer_end date:', session.timer_end);
       setTimeLeft(0);
       setShowCorrect(false);
-      return () => {
-        if (interval) clearInterval(interval);
-      };
+      return;
     }
 
     console.log('[QuizPage] Starting timer with end time:', timerEndDate.toISOString());
     setShowCorrect(false); // Reset at the start of each question
+    
+    let interval = null;
     
     function updateTime() {
       const now = new Date();
@@ -278,35 +267,22 @@ export default function QuizPage() {
       });
       
       setTimeLeft(secondsLeft);
-      
-      // Timer expired
       if (secondsLeft === 0) {
         console.log('[QuizPage] Timer expired');
         setShowCorrect(true);
-        if (interval) {
-          clearInterval(interval);
-          interval = null;
-        }
+        if (interval) clearInterval(interval);
       }
     }
     
-    // Set initial value immediately
-    updateTime();
-    
-    // Start the countdown interval
+    updateTime(); // Set initial value
     interval = setInterval(updateTime, 1000);
     
-    // Cleanup function to clear interval
     return () => {
-      console.log('[QuizPage] Cleaning up timer interval');
-      if (interval) {
-        clearInterval(interval);
-        interval = null;
-      }
+      if (interval) clearInterval(interval);
     };
   }, [session?.timer_end, currentQuestion?.id, quizPhase, timerTrigger]);
 
-  // Reset state when question changes or quiz starts
+  // Reset state when question changes
   useEffect(() => {
     if (currentQuestion?.id && currentQuestion.id !== lastQuestionId) {
       console.log('[QuizPage] Question changed, resetting state:', {
@@ -317,60 +293,9 @@ export default function QuizPage() {
       setSelectedAnswer(null);
       setShowCorrect(false);
       setPointsEarned(null);
-      setTimeLeft(0); // Reset timer display
+      setTimeLeft(0);
     }
   }, [currentQuestion?.id, lastQuestionId]);
-
-  // Handle quiz phase changes
-  useEffect(() => {
-    console.log('[QuizPage] Quiz phase changed:', quizPhase);
-    
-    switch (quizPhase) {
-      case 'lobby':
-        // Quiz hasn't started yet - clear timer and reset state
-        console.log('[QuizPage] Quiz in lobby - clearing timer');
-        setTimeLeft(0);
-        setShowCorrect(false);
-        setSelectedAnswer(null);
-        setCurrentQuestion(null);
-        break;
-        
-      case 'question':
-        // Quiz question is active - timer will be handled by the timer useEffect
-        console.log('[QuizPage] Quiz question active - timer will start when timer_end is set');
-        break;
-        
-      case 'times_up':
-        // Time's up - show correct answers
-        console.log('[QuizPage] Time\'s up - showing correct answers');
-        setShowCorrect(true);
-        setTimeLeft(0);
-        break;
-        
-      case 'leaderboard':
-        // Showing leaderboard - clear timer
-        console.log('[QuizPage] Showing leaderboard - clearing timer');
-        setTimeLeft(0);
-        setShowCorrect(false);
-        break;
-        
-      case 'finished':
-        // Quiz finished - clear timer and reset state
-        console.log('[QuizPage] Quiz finished - clearing timer');
-        setTimeLeft(0);
-        setShowCorrect(false);
-        setSelectedAnswer(null);
-        setCurrentQuestion(null);
-        break;
-        
-      default:
-        // Unknown phase - clear timer
-        console.log('[QuizPage] Unknown phase - clearing timer');
-        setTimeLeft(0);
-        setShowCorrect(false);
-        break;
-    }
-  }, [quizPhase]);
 
   // Fetch live score
   useEffect(() => {
@@ -464,9 +389,6 @@ export default function QuizPage() {
     // Check if question has changed
     const questionChanged = currentQuestion?.id !== sessionData.current_question_id;
     
-    // Check if this is a quiz start event (phase changes from lobby to question)
-    const isQuizStart = quizPhase === 'lobby' && sessionData.phase === 'question';
-    
     console.log('[QuizPage] Session update received:', {
       phase: sessionData.phase,
       timerEnd: sessionData.timer_end,
@@ -474,35 +396,13 @@ export default function QuizPage() {
       currentQuestionId: sessionData.current_question_id,
       sessionId: sessionData.id,
       oldQuestionId: currentQuestion?.id,
-      questionChanged,
-      isQuizStart,
-      oldPhase: quizPhase
+      questionChanged
     });
     
     // Update session state
     setSession(sessionData);
     setQuizPhase(sessionData.phase);
     setTimerWarning(false);
-    
-    // Handle quiz start event
-    if (isQuizStart) {
-      console.log('[QuizPage] Quiz start event detected!');
-      // Reset all state for fresh start
-      setSelectedAnswer(null);
-      setShowCorrect(false);
-      setPointsEarned(null);
-      setTimeLeft(0);
-      setCurrentQuestion(null);
-    }
-    
-    // Handle question changes
-    if (questionChanged) {
-      console.log('[QuizPage] Question changed, resetting state');
-      setSelectedAnswer(null);
-      setShowCorrect(false);
-      setPointsEarned(null);
-      setTimeLeft(0);
-    }
     
     // Force timer re-evaluation when session changes
     // Use a longer delay to ensure session state is fully updated
@@ -517,8 +417,7 @@ export default function QuizPage() {
       timerEnd: sessionData.timer_end,
       hasTimerEnd: !!sessionData.timer_end,
       currentPhase: sessionData.phase,
-      questionChanged,
-      isQuizStart
+      questionChanged
     });
     
     if (sessionData.phase === 'question' && sessionData.current_question_id) {
@@ -531,6 +430,15 @@ export default function QuizPage() {
       if (questionData) {
         console.log('[QuizPage] New question loaded:', questionData);
         
+        // If question changed, reset state
+        if (questionChanged) {
+          console.log('[QuizPage] Question changed, resetting state');
+          setSelectedAnswer(null);
+          setShowCorrect(false);
+          setPointsEarned(null);
+          setTimeLeft(0);
+        }
+        
         setCurrentQuestion(questionData);
         
         // Timer will be handled by the useEffect that watches session.timer_end
@@ -539,41 +447,20 @@ export default function QuizPage() {
           setTimerWarning(true);
         } else {
           console.log('[QuizPage] Timer end set:', sessionData.timer_end);
-          // Calculate initial time left for immediate display
-          const timerEndDate = new Date(sessionData.timer_end);
-          const now = new Date();
-          const initialTimeLeft = Math.max(0, Math.floor((timerEndDate.getTime() - now.getTime()) / 1000));
-          console.log('[QuizPage] Initial time left:', initialTimeLeft);
-          setTimeLeft(initialTimeLeft);
         }
       }
     } else if (sessionData.phase === 'times_up') {
       // Timer has expired, show correct answers
       console.log('[QuizPage] Phase changed to times_up');
       setShowCorrect(true);
-      setTimeLeft(0);
-    } else if (sessionData.phase === 'lobby') {
-      // Quiz in lobby - clear everything
-      console.log('[QuizPage] Phase changed to lobby');
-      setCurrentQuestion(null);
-      setTimeLeft(0);
-      setSelectedAnswer(null);
-      setShowCorrect(false);
-    } else if (sessionData.phase === 'leaderboard') {
-      // Showing leaderboard - clear timer but keep question for review
-      console.log('[QuizPage] Phase changed to leaderboard');
-      setTimeLeft(0);
-      setShowCorrect(true);
-    } else if (sessionData.phase === 'finished') {
-      // Quiz finished - clear everything
-      console.log('[QuizPage] Phase changed to finished');
+    } else if (sessionData.phase === 'waiting') {
+      // Waiting for next question
+      console.log('[QuizPage] Phase changed to waiting');
       setCurrentQuestion(null);
       setTimeLeft(0);
       setSelectedAnswer(null);
       setShowCorrect(false);
     } else if (sessionData.phase !== 'question') {
-      // Any other phase - clear question and timer
-      console.log('[QuizPage] Phase changed to:', sessionData.phase);
       setCurrentQuestion(null);
       setTimeLeft(0);
       setSelectedAnswer(null);
