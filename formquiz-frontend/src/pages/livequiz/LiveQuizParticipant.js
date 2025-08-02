@@ -75,26 +75,66 @@ const LiveQuizParticipant = () => {
 
   // When liveQuiz changes, update currentIndex and reset state
   useEffect(() => {
-    if (liveQuiz && liveQuiz.current_slide_index != null && slides.length > 0) {
-      setCurrentIndex(liveQuiz.current_slide_index);
+    if (!liveQuiz) return;
+    
+    debug('LiveQuiz state changed:', {
+      phase: liveQuiz.phase,
+      currentSlideIndex: liveQuiz.current_slide_index,
+      timerEnd: liveQuiz.timer_end,
+      hasSlides: slides.length > 0
+    });
+    
+    // Handle quiz start event (phase changes to question)
+    if (liveQuiz.phase === 'question') {
+      debug('Quiz question phase detected');
+      setIsLocked(false);
+      setSubmitted(false);
+      setFeedback(null);
+      
+      // Update current index if available
+      if (liveQuiz.current_slide_index != null && slides.length > 0) {
+        setCurrentIndex(liveQuiz.current_slide_index);
+        setSelectedOption(null);
+      }
+      
+      // Timer will be handled by the timer useEffect
+      if (liveQuiz.timer_end) {
+        const end = new Date(liveQuiz.timer_end).getTime();
+        const now = Date.now();
+        const initialTimeLeft = Math.max(0, Math.ceil((end - now + 500) / 1000));
+        debug('Initial time left:', initialTimeLeft);
+        setTimeLeft(initialTimeLeft);
+      }
+    } else if (liveQuiz.phase === 'lobby') {
+      // Quiz in lobby - reset everything
+      debug('Quiz in lobby - resetting state');
+      setCurrentIndex(0);
       setSelectedOption(null);
       setFeedback(null);
       setIsLocked(false);
       setSubmitted(false);
-    }
-    // Reset lock and submission on new question phase
-    if (liveQuiz && liveQuiz.phase === 'question') {
+      setTimeLeft(0);
+    } else if (liveQuiz.phase === 'times_up') {
+      // Time's up - lock submissions
+      debug('Time\'s up - locking submissions');
+      setIsLocked(true);
+    } else if (liveQuiz.phase === 'leaderboard') {
+      // Showing leaderboard - keep question but clear timer
+      debug('Showing leaderboard');
+      setTimeLeft(0);
+    } else if (liveQuiz.phase === 'ended') {
+      // Quiz ended
+      debug('Quiz ended');
+      setFinished(true);
+      setTimeLeft(0);
+    } else {
+      // Any other phase - reset state
+      debug('Unknown phase - resetting state');
+      setSelectedOption(null);
+      setFeedback(null);
       setIsLocked(false);
       setSubmitted(false);
-      // Recalculate timer
-      if (liveQuiz.timer_end) {
-        const end = new Date(liveQuiz.timer_end).getTime();
-        const now = Date.now();
-        setTimeLeft(Math.max(0, Math.ceil((end - now + 500) / 1000))); // add 0.5s buffer
-      }
-    }
-    if (liveQuiz && liveQuiz.phase === 'ended') {
-      setFinished(true); // Quiz ended
+      setTimeLeft(0);
     }
   }, [liveQuiz, slides]);
 
@@ -110,11 +150,17 @@ const LiveQuizParticipant = () => {
 
   // Timer lock
   useEffect(() => {
-    if (!liveQuiz?.timer_end || liveQuiz.phase !== 'question') return;
+    if (!liveQuiz?.timer_end || liveQuiz.phase !== 'question') {
+      setIsLocked(false);
+      return;
+    }
+    
     const end = new Date(liveQuiz.timer_end).getTime();
     const now = Date.now();
-    if (end <= now) setIsLocked(true);
-    else {
+    
+    if (end <= now) {
+      setIsLocked(true);
+    } else {
       const timeout = setTimeout(() => setIsLocked(true), end - now + 500); // add 0.5s buffer
       return () => clearTimeout(timeout);
     }
@@ -122,13 +168,51 @@ const LiveQuizParticipant = () => {
 
   // Timer for countdown display
   useEffect(() => {
-    if (!liveQuiz?.timer_end || liveQuiz.phase !== 'question') return;
-    const interval = setInterval(() => {
-      const end = new Date(liveQuiz.timer_end).getTime();
+    let interval = null;
+    
+    if (!liveQuiz?.timer_end || liveQuiz.phase !== 'question') {
+      setTimeLeft(0);
+      return () => {
+        if (interval) clearInterval(interval);
+      };
+    }
+    
+    const end = new Date(liveQuiz.timer_end).getTime();
+    const now = Date.now();
+    
+    // If timer has already expired, set to 0
+    if (end <= now) {
+      setTimeLeft(0);
+      return () => {
+        if (interval) clearInterval(interval);
+      };
+    }
+    
+    function updateTime() {
       const now = Date.now();
-      setTimeLeft(Math.max(0, Math.ceil((end - now + 500) / 1000)));
-    }, 200);
-    return () => clearInterval(interval);
+      const secondsLeft = Math.max(0, Math.ceil((end - now + 500) / 1000)); // add 0.5s buffer
+      setTimeLeft(secondsLeft);
+      
+      if (secondsLeft === 0) {
+        if (interval) {
+          clearInterval(interval);
+          interval = null;
+        }
+      }
+    }
+    
+    // Set initial value immediately
+    updateTime();
+    
+    // Start the countdown interval
+    interval = setInterval(updateTime, 200);
+    
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
+      }
+    };
   }, [liveQuiz?.timer_end, liveQuiz?.phase]);
 
   // Subscribe to own participant row for status updates
