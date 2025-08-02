@@ -13,9 +13,21 @@ export default async function handler(req, res) {
 
   // Check environment variables
   const envCheck = {
-    GEMINI_API_KEY: !!(process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY),
-    SUPABASE_URL: !!(process.env.SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL),
-    SUPABASE_SERVICE_KEY: !!(process.env.SUPABASE_SERVICE_KEY || process.env.REACT_APP_SUPABASE_SERVICE_KEY),
+    GEMINI_API_KEY: {
+      exists: !!(process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY),
+      value: process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY || 'NOT_SET',
+      length: (process.env.GEMINI_API_KEY || process.env.REACT_APP_GEMINI_API_KEY || '').length
+    },
+    SUPABASE_URL: {
+      exists: !!(process.env.SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL),
+      value: process.env.SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL || 'NOT_SET',
+      length: (process.env.SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL || '').length
+    },
+    SUPABASE_SERVICE_KEY: {
+      exists: !!(process.env.SUPABASE_SERVICE_KEY || process.env.REACT_APP_SUPABASE_SERVICE_KEY),
+      value: process.env.SUPABASE_SERVICE_KEY || process.env.REACT_APP_SUPABASE_SERVICE_KEY || 'NOT_SET',
+      length: (process.env.SUPABASE_SERVICE_KEY || process.env.REACT_APP_SUPABASE_SERVICE_KEY || '').length
+    },
     NODE_ENV: process.env.NODE_ENV,
   };
 
