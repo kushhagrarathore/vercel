@@ -32,6 +32,7 @@ import Plan from './pages/Plan';
 import UpdatePassword from './pages/UpdatePassword';
 import AdminSummaryPage from './pages/livequiz/AdminSummaryPage';
 import QuizSessionsPage from './pages/livequiz/QuizSessionsPage';
+import QRCodeTest from './components/QRCodeTest';
 
 // RequireAuth component for protected routes
 function RequireAuth({ children }) {
@@ -109,6 +110,8 @@ function App() {
             <Route path="/admin/:quizId/summary" element={<RequireAuth><AdminSummaryPage /></RequireAuth>} />
             <Route path="/admin/:quizId/sessions" element={<RequireAuth><QuizSessionsPage /></RequireAuth>} />
             <Route path="/admin/:quizId/summary/:sessionId" element={<RequireAuth><AdminSummaryPage /></RequireAuth>} />
+            {/* QR Code Test Route */}
+            <Route path="/qr-test" element={<QRCodeTest />} />
 
           </Routes>
         </LiveQuizProvider>

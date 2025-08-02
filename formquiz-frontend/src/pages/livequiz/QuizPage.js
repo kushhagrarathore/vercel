@@ -2,83 +2,34 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabase } from '../../supabase.js';
 import { useQuiz } from '../../pages/livequiz/QuizContext';
+import { useServerTimer } from '../../hooks/useServerTimer';
 
 export default function QuizPage() {
   const { session, setSession } = useQuiz();
 
   // Add global test functions for debugging
-  React.useEffect(() => {
+  useEffect(() => {
     window.testQuizTimer = () => {
-      if (session?.timer_end) {
-        const now = Date.now();
-        const timerEnd = new Date(session.timer_end).getTime();
-        const remaining = Math.max(0, Math.floor((timerEnd - now) / 1000));
-        console.log('[QuizPage] Manual timer test:', {
-          now: new Date(now).toISOString(),
-          timerEnd: new Date(timerEnd).toISOString(),
-          remaining,
-          difference: timerEnd - now,
-          session: session
-        });
-        return remaining;
-      } else {
-        console.log('[QuizPage] No timer_end in session');
-        return null;
-      }
-    };
-    
-    window.checkQuizDatabaseTimer = async () => {
-      if (session?.id) {
-        try {
-          const { data, error } = await supabase
-            .from('lq_sessions')
-            .select('timer_end, phase, current_question_id')
-            .eq('id', session.id)
-            .single();
-          
-          if (error) {
-            console.error('[QuizPage] Error checking database timer:', error);
-            return null;
-          }
-          
-          console.log('[QuizPage] Database timer check:', data);
-          
-          // Calculate remaining time if timer_end exists
-          if (data.timer_end) {
-            const now = Date.now();
-            const timerEnd = new Date(data.timer_end).getTime();
-            const remaining = Math.max(0, Math.floor((timerEnd - now) / 1000));
-            console.log('[QuizPage] Timer calculation:', {
-              now: new Date(now).toISOString(),
-              timerEnd: new Date(timerEnd).toISOString(),
-              remaining,
-              difference: timerEnd - now
-            });
-          }
-          
-          return data;
-        } catch (err) {
-          console.error('[QuizPage] Error in checkQuizDatabaseTimer:', err);
-          return null;
-        }
-      } else {
-        console.error('[QuizPage] No session ID for database check');
-        return null;
-      }
+      console.log('[QuizPage] Test timer function called');
+      syncWithServer(true);
     };
     
     window.forceQuizTimerUpdate = () => {
-      console.log('[QuizPage] Manually forcing timer update');
-      setTimerTrigger(prev => prev + 1);
+      console.log('[QuizPage] Force timer update called');
+      syncWithServer(true);
     };
-  }, [session]);
+    
+    return () => {
+      delete window.testQuizTimer;
+      delete window.forceQuizTimerUpdate;
+    };
+  }, [syncWithServer]);
   const [username, setUsername] = useState('');
   const [sessionCode, setSessionCode] = useState('');
   const [searchParams] = useSearchParams();
   const [participant, setParticipant] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [selectedAnswer, setSelectedAnswer] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(0);
   const [quizPhase, setQuizPhase] = useState('waiting');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -88,8 +39,18 @@ export default function QuizPage() {
   const [liveScore, setLiveScore] = useState(null);
   const [cumulativeScore, setCumulativeScore] = useState(0);
   const [isRemoved, setIsRemoved] = useState(false);
-  const [timerTrigger, setTimerTrigger] = useState(0);
 
+  // Replace local timer state with server-based timer
+  const { timeLeft, isExpired, timerError, syncWithServer } = useServerTimer(
+    session?.id, 
+    session?.timer_end, 
+    quizPhase === 'question'
+  );
+  
+  // Remove old timer states
+  // const [timeLeft, setTimeLeft] = useState(0);
+  // const [timerTrigger, setTimerTrigger] = useState(0);
+  
   // Auto-fill session code from URL query param 'code' on mount
   useEffect(() => {
     const codeFromUrl = searchParams.get('code');
@@ -123,96 +84,13 @@ export default function QuizPage() {
 
 
 
-  // Timer logic using Supabase timer_end as single source of truth
+  // Update timer expiration effect to use server timer
   useEffect(() => {
-    console.log('[QuizPage] Timer useEffect triggered:', {
-      hasTimerEnd: !!session?.timer_end,
-      timerEnd: session?.timer_end,
-      quizPhase,
-      sessionId: session?.id,
-      timerTrigger
-    });
-
-    if (!session?.timer_end || quizPhase !== 'question') {
-      console.log('[QuizPage] Timer stopped - no timer_end or not in question phase', {
-        hasTimerEnd: !!session?.timer_end,
-        timerEnd: session?.timer_end,
-        quizPhase,
-        sessionId: session?.id
-      });
-      setTimeLeft(0);
-      setShowCorrect(false);
-      return;
+    if (isExpired && quizPhase === 'question' && selectedAnswer === null) {
+      console.log('[QuizPage] Timer expired and no answer submitted');
+      setShowCorrect(true);
     }
-
-    // Validate timer_end is a valid date
-    const timerEndDate = new Date(session.timer_end);
-    if (isNaN(timerEndDate.getTime())) {
-      console.error('[QuizPage] Invalid timer_end date:', session.timer_end);
-      setTimeLeft(0);
-      setShowCorrect(false);
-      return;
-    }
-
-    console.log('[QuizPage] Timer validation passed, starting timer with:', {
-      timerEnd: session.timer_end,
-      timerEndDate: timerEndDate.toISOString(),
-      quizPhase
-    });
-
-    let animationFrameId;
-    
-    function updateTimer() {
-      try {
-        const now = Date.now();
-        const timerEnd = new Date(session.timer_end).getTime();
-        
-        // Validate timer end date
-        if (isNaN(timerEnd)) {
-          console.error('[QuizPage] Invalid timer_end in updateTimer:', session.timer_end);
-          setTimeLeft(0);
-          setShowCorrect(false);
-          return;
-        }
-        
-        const remaining = Math.max(0, Math.floor((timerEnd - now) / 1000));
-        
-        console.log('[QuizPage] Timer update:', {
-          now: new Date(now).toISOString(),
-          timerEnd: new Date(timerEnd).toISOString(),
-          remaining,
-          timeLeft: timeLeft,
-          difference: timerEnd - now
-        });
-        
-        setTimeLeft(remaining);
-        
-        if (remaining <= 0) {
-          console.log('[QuizPage] Timer expired');
-          // Only show correct answer if user hasn't answered yet
-          if (selectedAnswer === null) {
-            setShowCorrect(true);
-          }
-          return;
-        }
-        
-        // Use setTimeout instead of requestAnimationFrame for more consistent timing
-        animationFrameId = setTimeout(updateTimer, 100);
-      } catch (error) {
-        console.error('[QuizPage] Error in updateTimer:', error);
-        setTimeLeft(0);
-        setShowCorrect(false);
-      }
-    }
-    
-    updateTimer();
-    
-    return () => {
-      if (animationFrameId) {
-        clearTimeout(animationFrameId);
-      }
-    };
-  }, [session?.timer_end, quizPhase, timerTrigger]);
+  }, [isExpired, quizPhase, selectedAnswer]);
 
   // Show feedback/results screen for 2.5s after answering, before moving to next question or waiting
   useEffect(() => {
@@ -306,50 +184,45 @@ export default function QuizPage() {
       console.log('[QuizPage] No session data in payload');
       return;
     }
+
     console.log('[QuizPage] Session update received:', {
       phase: sessionData.phase,
       timerEnd: sessionData.timer_end,
       currentQuestionId: sessionData.current_question_id,
       sessionId: sessionData.id
     });
-    // Update session state
+
     setSession(sessionData);
     setTimerWarning(false);
-    // If the phase is 'times_up', we only trigger the display of results.
-    // We do NOT change the overall quizPhase, as this would hide the feedback
-    // screen for users who have already answered.
+
     if (sessionData.phase === 'times_up') {
       console.log('[QuizPage] Phase is times_up, showing correct answers.');
       setShowCorrect(true);
     } else {
-      // For all other phases ('waiting', 'question', 'ended'), we update the component's phase.
       setQuizPhase(sessionData.phase);
     }
-    // Log session update details
+
     console.log('[QuizPage] Local state updated:', {
       currentPhase: quizPhase,
       newPhaseFromServer: sessionData.phase,
       timerEnd: sessionData.timer_end,
       hasTimerEnd: !!sessionData.timer_end,
     });
-    // Trigger timer re-evaluation when session changes
-    setTimeout(() => {
-      console.log('[QuizPage] Triggering timer re-evaluation after session update');
-      setTimerTrigger(prev => prev + 1);
-    }, 100);
-    // When a new question is sent, reset the UI.
+
+    // When a new question is sent, reset the UI
     if (sessionData.phase === 'question' && sessionData.current_question_id) {
       const { data: questionData } = await supabase
         .from('lq_questions')
         .select('*')
         .eq('id', sessionData.current_question_id)
         .single();
+
       if (questionData) {
         setCurrentQuestion(questionData);
-        setSelectedAnswer(null); // Reset selected answer for new question
+        setSelectedAnswer(null);
         setShowCorrect(false);
         setPointsEarned(null);
-        // Timer will be handled by the useEffect that watches session.timer_end
+        
         if (!sessionData.timer_end) {
           console.log('[QuizPage] Warning: No timer_end in session data');
           setTimerWarning(true);
@@ -357,10 +230,8 @@ export default function QuizPage() {
           console.log('[QuizPage] Timer end set:', sessionData.timer_end);
         }
       }
-    // When the quiz moves to a state that is not a question, clear the question data.
     } else if (sessionData.phase !== 'question' && sessionData.phase !== 'times_up') {
       setCurrentQuestion(null);
-      setTimeLeft(0);
       setSelectedAnswer(null);
       setShowCorrect(false);
     }
@@ -444,47 +315,93 @@ export default function QuizPage() {
     }
   }
 
-  async function submitAnswer(selectedIndex) {
-    console.log('[QuizPage] submitAnswer called. isRemoved:', isRemoved);
-    if (isRemoved) {
-      console.log('[QuizPage] Blocked submitAnswer because user is removed.');
+  // Enhanced submitAnswer with re-answering prevention
+  async function submitAnswer(selectedOptionIndex) {
+    if (!participant?.id || !currentQuestion?.id || selectedAnswer !== null) {
+      console.log('[QuizPage] Blocked submitAnswer - already answered or missing data');
       return;
     }
-    if (!participant?.id || !currentQuestion?.id || selectedAnswer !== null) return;
-
-    // Enforce timer restriction - block submission if time is up
-    if (session?.timer_end && Date.now() >= new Date(session.timer_end).getTime()) {
+    
+    if (isExpired || timeLeft <= 0) {
       console.log('[QuizPage] Blocked submitAnswer because time is up.');
       setError('Time is up! You cannot submit answers after the timer expires.');
       return;
     }
 
     try {
-      setSelectedAnswer(selectedIndex);
-      const isCorrect = selectedIndex === currentQuestion.correct_answer_index;
-      const points = isCorrect ? Math.max(100, timeLeft * 10) : 0;
-      setPointsEarned(points);
+      // Check if user has already answered this question
+      const { data: existingResponse } = await supabase
+        .from('lq_live_responses')
+        .select('id')
+        .eq('session_id', session.id)
+        .eq('participant_id', participant.id)
+        .eq('question_id', currentQuestion.id)
+        .single();
 
-      await supabase.from('lq_live_responses').insert([
-        {
+      if (existingResponse) {
+        console.log('[QuizPage] Blocked submitAnswer - already answered this question');
+        setError('You have already answered this question.');
+        return;
+      }
+
+      console.log('[QuizPage] Submitting answer:', {
+        participantId: participant.id,
+        questionId: currentQuestion.id,
+        selectedOption: selectedOptionIndex,
+        timeLeft
+      });
+
+      setSelectedAnswer(selectedOptionIndex);
+      setError(null);
+
+      // Calculate if answer is correct
+      const isCorrect = selectedOptionIndex === currentQuestion.correct_answer_index;
+      const pointsEarned = isCorrect ? 10 : 0;
+
+      // Submit response to database
+      const { error: responseError } = await supabase
+        .from('lq_live_responses')
+        .insert({
           session_id: session.id,
           participant_id: participant.id,
           question_id: currentQuestion.id,
-          selected_option_index: selectedIndex,
+          selected_option_index: selectedOptionIndex,
           is_correct: isCorrect,
-          points_awarded: points,
-        },
-      ]);
+          points_awarded: pointsEarned
+        });
 
-      if (isCorrect) {
-        // Restore previous update logic: add points to participant.score
-        await supabase
-          .from('lq_session_participants')
-          .update({ score: participant.score + points })
-          .eq('id', participant.id);
+      if (responseError) {
+        console.error('[QuizPage] Response submission error:', responseError);
+        setError('Failed to submit answer. Please try again.');
+        setSelectedAnswer(null);
+        return;
       }
+
+      // Update participant score
+      const { error: scoreError } = await supabase
+        .from('lq_session_participants')
+        .update({ 
+          score: participant.score + pointsEarned 
+        })
+        .eq('id', participant.id);
+
+      if (scoreError) {
+        console.error('[QuizPage] Score update error:', scoreError);
+      }
+
+      setPointsEarned(pointsEarned);
+      setLiveScore(prev => prev + pointsEarned);
+
+      console.log('[QuizPage] Answer submitted successfully:', {
+        isCorrect,
+        pointsEarned,
+        newScore: participant.score + pointsEarned
+      });
+
     } catch (err) {
-      setError(err.message);
+      console.error('[QuizPage] Submit answer error:', err);
+      setError('Failed to submit answer. Please try again.');
+      setSelectedAnswer(null);
     }
   }
 
