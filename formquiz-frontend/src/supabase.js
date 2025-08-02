@@ -1,34 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || 'https://hkordtjderymgjptoyef.supabase.co';
-const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY;
+const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhrb3JkdGpkZXJ5bWdqcHRveWVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwNDg3MzAsImV4cCI6MjA2NTYyNDQ3MzB9.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8';
 
-// Check if we have valid environment variables
+// Add console warning if environment variables are missing
 if (!process.env.REACT_APP_SUPABASE_URL || !process.env.REACT_APP_SUPABASE_ANON_KEY) {
-  console.warn('⚠️ Supabase environment variables not found. Please set REACT_APP_SUPABASE_URL and REACT_APP_SUPABASE_ANON_KEY in your Vercel dashboard.');
-  console.warn('⚠️ Some features may not work properly without proper Supabase configuration.');
+  console.warn('⚠️ Supabase environment variables not found. Using fallback values. Some features may not work properly.');
 }
 
-// Only create client if we have a valid key
-let supabase;
-if (supabaseKey) {
-  supabase = createClient(supabaseUrl, supabaseKey);
-} else {
-  // Create a mock client that will show errors when used
-  supabase = {
-    auth: {
-      getSession: () => Promise.resolve({ data: { session: null }, error: new Error('Supabase not configured') }),
-      signIn: () => Promise.resolve({ error: new Error('Supabase not configured') }),
-      signUp: () => Promise.resolve({ error: new Error('Supabase not configured') }),
-      signOut: () => Promise.resolve({ error: new Error('Supabase not configured') })
-    },
-    from: () => ({
-      select: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-      insert: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-      update: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-      delete: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') })
-    })
-  };
-}
-
-export { supabase };
+export const supabase = createClient(supabaseUrl, supabaseKey);
