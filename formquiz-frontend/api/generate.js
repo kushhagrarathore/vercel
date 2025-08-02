@@ -16,21 +16,6 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method Not Allowed" });
   }
 
-  // Check if required environment variables are set
-  if (!process.env.GEMINI_API_KEY) {
-    return res.status(500).json({ 
-      success: false, 
-      error: "GEMINI_API_KEY environment variable is not configured. Please set it in your Vercel dashboard." 
-    });
-  }
-
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
-    return res.status(500).json({ 
-      success: false, 
-      error: "Supabase environment variables are not configured. Please set SUPABASE_URL and SUPABASE_SERVICE_KEY in your Vercel dashboard." 
-    });
-  }
-
   const { topic, session_code } = req.body;
 
   if (!topic || !session_code) {
