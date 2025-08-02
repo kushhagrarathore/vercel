@@ -6,6 +6,7 @@ import QuestionPreview from './QuestionPreview';
 import { useNavigate, useParams } from 'react-router-dom';
 // Remove Confetti import
 // import Confetti from 'react-confetti';
+import { useAdminTimer } from '../../hooks/useServerTimer';
 
 function useWindowSizeSimple() {
   const isClient = typeof window !== 'undefined';
@@ -22,6 +23,14 @@ function useWindowSizeSimple() {
   return size;
 }
 
+// Helper to format IST
+function toISTString(date) {
+  if (!date) return 'N/A';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return 'Invalid Date';
+  return new Date(d.getTime() + 19800000).toISOString().replace('T', ' ').replace('Z', ' IST');
+}
+
 export default function AdminPage() {
   const navigate = useNavigate();
   const { quizId } = useParams();
@@ -36,12 +45,81 @@ export default function AdminPage() {
     setQuizPhase,
   } = useQuiz();
 
+  // Add global test functions for debugging
+  React.useEffect(() => {
+    window.testTimer = () => {
+      if (session?.timer_end) {
+        const now = Date.now();
+        const timerEnd = new Date(session.timer_end).getTime();
+        const remaining = Math.max(0, Math.floor((timerEnd - now) / 1000));
+        console.log('[AdminPage] Manual timer test:', {
+          nowUTC: new Date(now).toISOString(),
+          nowIST: toISTString(now),
+          timerEndUTC: new Date(timerEnd).toISOString(),
+          timerEndIST: toISTString(timerEnd),
+          remaining,
+          difference: timerEnd - now
+        });
+        return remaining;
+      } else {
+        console.log('[AdminPage] No timer_end in session');
+        return null;
+      }
+    };
+    
+    window.checkDatabaseTimer = async () => {
+      if (session?.id) {
+        try {
+          const { data, error } = await supabase
+            .from('lq_sessions')
+            .select('timer_end, phase, current_question_id')
+            .eq('id', session.id)
+            .single();
+          
+          if (error) {
+            console.error('[AdminPage] Error checking database timer:', error);
+            return null;
+          }
+          
+          console.log('[AdminPage] Database timer check:', data);
+          
+          // Calculate remaining time if timer_end exists
+          if (data.timer_end) {
+            const now = Date.now();
+            const timerEnd = new Date(data.timer_end).getTime();
+            const remaining = Math.max(0, Math.floor((timerEnd - now) / 1000));
+            console.log('[AdminPage] Timer calculation:', {
+              nowUTC: new Date(now).toISOString(),
+              nowIST: toISTString(now),
+              timerEndUTC: new Date(timerEnd).toISOString(),
+              timerEndIST: toISTString(timerEnd),
+              remaining,
+              difference: timerEnd - now
+            });
+          }
+          
+          return data;
+        } catch (err) {
+          console.error('[AdminPage] Error in checkDatabaseTimer:', err);
+          return null;
+        }
+      } else {
+        console.error('[AdminPage] No session ID for database check');
+        return null;
+      }
+    };
+    
+    window.forceTimerUpdate = () => {
+      console.log('[AdminPage] Manually forcing timer update');
+      setTimerTrigger(prev => prev + 1);
+    };
+  }, [session]);
+
   const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(0);
   const [showCorrect, setShowCorrect] = useState(false);
   const [pollResults, setPollResults] = useState([]);
   const [participantScores, setParticipantScores] = useState({});
@@ -52,6 +130,7 @@ export default function AdminPage() {
   const [justStartedSession, setJustStartedSession] = useState(false);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [timerTrigger, setTimerTrigger] = useState(0);
   const handleCopyLink = (url) => {
     navigator.clipboard.writeText(url);
     setCopied(true);
@@ -119,35 +198,29 @@ export default function AdminPage() {
     // eslint-disable-next-line
   }, [quizId]);
 
-  useEffect(() => {
-    if (!session || !currentQuestion || quizPhase !== 'question') {
-      setTimeLeft(0);
-      setShowCorrect(false); // Always reset when not in question phase
-      return;
-    }
-    let interval = null;
-    let end;
-    if (session.timer_end) {
-      end = new Date(session.timer_end);
-    } else {
-      end = new Date(Date.now() + (currentQuestion.timer || 20) * 1000);
-    }
-    setShowCorrect(false); // Reset at the start of each question
-    function updateTime() {
-      const now = new Date();
-      const secondsLeft = Math.max(0, Math.floor((end - now) / 1000));
-      setTimeLeft(secondsLeft);
-      if (secondsLeft === 0) {
-        setShowCorrect(true);
-        if (interval) clearInterval(interval);
-      }
-    }
-    updateTime(); // Set initial value
-    interval = setInterval(updateTime, 1000);
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [session, currentQuestion, quizPhase]);
+  // Replace local timer state with server-based timer
+  const { 
+    timeLeft, 
+    isExpired, 
+    isTimerActive, 
+    timerError, 
+    isStarting,
+    startTimer, 
+    stopTimer, 
+    resetTimer 
+  } = useAdminTimer(session?.id);
+  
+  // Remove old timer state
+  // const [timeLeft, setTimeLeft] = useState(0);
+  
+  // Remove old timer useEffect
+  // useEffect(() => {
+  //   if (!session?.timer_end || quizPhase !== 'question') {
+  //     setTimeLeft(0);
+  //     return;
+  //   }
+  //   // ... old timer logic
+  // }, [session?.timer_end, quizPhase]);
 
   useEffect(() => {
     if (quizId) {
@@ -163,13 +236,14 @@ export default function AdminPage() {
     // Fetch participants immediately when session.id is available
     fetchParticipants(session.id);
 
-    // Subscribe to real-time changes for participants in this session
+    // Subscribe to real-time changes for participants only
     const channel = supabase
       .channel('participants-' + session.id)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'lq_session_participants', filter: `session_id=eq.${session.id}` },
-        () => {
+        (payload) => {
+          console.log('[AdminPage] Real-time participant event:', payload);
           fetchParticipants(session.id);
         }
       )
@@ -287,6 +361,7 @@ export default function AdminPage() {
       console.error('Error fetching participants:', error);
       return;
     }
+    console.log('Fetched participants:', data);
     setParticipants(data || []);
   }
 
@@ -316,7 +391,6 @@ export default function AdminPage() {
       setQuizPhase('waiting');
       setWaitingToStart(true);
       setJustStartedSession(true);
-      setPresentationMode(true); // Automatically enable presentation mode
     } catch (err) {
       setError(err.message);
     }
@@ -324,108 +398,181 @@ export default function AdminPage() {
 
   // Handler for 'Start Quiz' button (after session is created, before first question)
   async function handleStartQuiz() {
+    console.log('[AdminPage] handleStartQuiz called');
     setWaitingToStart(false);
     setPresentationMode(true);
     await startQuestion();
   }
 
+  // Enhanced session creation with admin_id
+  async function createSession() {
+    if (!quiz?.id) return;
+    
+    try {
+      const sessionCode = generateSessionCode();
+      console.log('[AdminPage] Creating session with code:', sessionCode);
+      
+      const { data: newSession, error } = await supabase
+        .from('lq_sessions')
+        .insert({
+          quiz_id: quiz.id,
+          admin_id: user?.id, // Add admin_id
+          code: sessionCode,
+          phase: 'lobby',
+          is_active: true,
+          is_live: true,
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      console.log('[AdminPage] Session created successfully:', {
+        sessionId: newSession.id,
+        code: newSession.code,
+        adminId: newSession.admin_id
+      });
+      
+      setSession(newSession);
+      setQuizPhase('lobby');
+    } catch (err) {
+      console.error('[AdminPage] Session creation error:', err);
+      setError('Failed to create session');
+    }
+  }
+
+  // Enhanced start question with server timer
   async function startQuestion() {
     if (!session?.id || !currentQuestion?.id) return;
-
-    try {
-      const timerEnd = new Date(Date.now() + (currentQuestion.timer || 20) * 1000);
-      console.log('[AdminPage] Setting timer_end in startQuestion:', {
-        timerEnd: timerEnd.toISOString(),
-        currentQuestionTimer: currentQuestion.timer,
-        currentQuestionId: currentQuestion.id
-      });
-
-      const { data, error } = await supabase
-        .from('lq_sessions')
-        .update({
-          phase: 'question',
-          timer_end: timerEnd.toISOString(),
-          current_question_id: currentQuestion.id,
-        })
-        .eq('id', session.id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      // Update local session state with the database response
-      setSession(data);
-      setQuizPhase('question');
-    } catch (err) {
-      setError(err.message);
-    }
-  }
-
-  async function nextQuestion() {
-    // Show leaderboard after results, before moving to next question
-    setShowLeaderboard(true);
-    // Wait for admin to click 'Next' on leaderboard before advancing
-  }
-
-  // Handler for 'Next' button on leaderboard
-  async function handleLeaderboardNext() {
-    if (currentQuestionIndex >= questions.length - 1) {
-      // Show podium leaderboard after last question
-      if (!showPodium) setShowPodium(true); // Only set if not already true
-      return;
-    }
-    const nextIndex = currentQuestionIndex + 1;
-    setCurrentQuestionIndex(nextIndex);
-    setCurrentQuestion(questions[nextIndex]);
     
-    // Update lq_sessions with new current_question_id, phase, and timer_end
-    if (session?.id && questions[nextIndex]?.id) {
-      const timerEnd = new Date(Date.now() + (questions[nextIndex].timer || 20) * 1000);
-      console.log('[AdminPage] Setting timer_end in handleLeaderboardNext:', {
-        timerEnd: timerEnd.toISOString(),
-        nextQuestionTimer: questions[nextIndex].timer,
-        nextQuestionId: questions[nextIndex].id,
-        nextIndex
-      });
+    try {
+      console.log('[AdminPage] Starting question with server-based timer');
       
-      const { data, error } = await supabase
-        .from('lq_sessions')
-        .update({
-          current_question_id: questions[nextIndex].id,
-          phase: 'question',
-          timer_end: timerEnd.toISOString(),
-        })
-        .eq('id', session.id)
-        .select()
-        .single();
+      // Reset any existing timer state
+      resetTimer();
+      
+      // Start server-based timer
+      const timerEnd = await startTimer(currentQuestion.timer || 20);
+      
+      if (timerEnd) {
+        console.log('[AdminPage] Timer started successfully:', {
+          questionId: currentQuestion.id,
+          timerEnd,
+          duration: currentQuestion.timer || 20
+        });
+        
+        // Update session with current question and phase
+        const { data, error } = await supabase
+          .from('lq_sessions')
+          .update({
+            current_question_id: currentQuestion.id,
+            phase: 'question', // Ensure phase is set
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', session.id)
+          .select()
+          .single();
 
-      if (error) throw error;
-      
-      // Update local session state with the database response
-      setSession(data);
+        if (error) throw error;
+        
+        setSession(data);
+        setQuizPhase('question');
+        setShowCorrect(false);
+        
+        console.log('[AdminPage] Question started and session updated:', {
+          sessionId: session.id,
+          questionId: currentQuestion.id,
+          phase: 'question',
+          timerEnd
+        });
+      } else {
+        console.error('[AdminPage] Failed to start timer');
+        setError('Failed to start timer. Please try again.');
+      }
+    } catch (err) {
+      console.error('[AdminPage] Start question error:', err);
+      setError('Failed to start question');
     }
-    setQuizPhase('question');
-    setShowLeaderboard(false);
+  }
+
+  // Enhanced leaderboard next with server timer
+  async function handleLeaderboardNext() {
+    if (!session?.id) return;
+    
+    try {
+      console.log('[AdminPage] Moving to next question');
+      
+      // Reset timer for next question
+      resetTimer();
+      
+      const nextIndex = currentQuestionIndex + 1;
+      if (nextIndex < questions.length) {
+        setCurrentQuestionIndex(nextIndex);
+        setCurrentQuestion(questions[nextIndex]);
+        
+        // Start timer for next question
+        const timerEnd = await startTimer(questions[nextIndex].timer || 20);
+        
+        if (timerEnd) {
+          const { data, error } = await supabase
+            .from('lq_sessions')
+            .update({
+              current_question_id: questions[nextIndex].id,
+              current_question_index: nextIndex,
+              phase: 'question',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', session.id)
+            .select()
+            .single();
+
+          if (error) throw error;
+          
+          setSession(data);
+          setQuizPhase('question');
+          setShowCorrect(false);
+          
+          console.log('[AdminPage] Next question started:', {
+            questionIndex: nextIndex,
+            questionId: questions[nextIndex].id,
+            timerEnd
+          });
+        }
+      } else {
+        // Quiz finished
+        const { error } = await supabase
+          .from('lq_sessions')
+          .update({
+            phase: 'finished',
+            is_live: false,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', session.id);
+
+        if (error) throw error;
+        
+        setQuizPhase('finished');
+        console.log('[AdminPage] Quiz finished');
+      }
+    } catch (err) {
+      console.error('[AdminPage] Leaderboard next error:', err);
+      setError('Failed to move to next question');
+    }
   }
 
   async function endQuiz() {
     if (!session?.id) return;
 
     try {
-      const { data, error } = await supabase
+      await supabase
         .from('lq_sessions')
         .update({
           is_live: false,
           phase: 'ended',
         })
-        .eq('id', session.id)
-        .select()
-        .single();
+        .eq('id', session.id);
 
-      if (error) throw error;
-      
-      // Update local session state with the database response
-      setSession(data);
       setQuizPhase('ended');
     } catch (err) {
       setError(err.message);
@@ -443,6 +590,7 @@ export default function AdminPage() {
         event: 'you_were_removed',
         payload: { removed: true }
       });
+      console.log('[AdminPage] Sent removal event to', participantId);
       // 2. Remove participant from DB
       await supabase
         .from('lq_session_participants')
@@ -532,10 +680,115 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
-
+        <div className="flex flex-col items-center gap-4 mt-8">
+          <button
+            onClick={() => setShowPodium(false)}
+            className="px-12 py-5 bg-gray-700 text-white rounded-xl font-bold text-[2vw] shadow hover:bg-gray-800 transition-all"
+            style={{minWidth:'200px'}}>
+            Close
+          </button>
+          <button
+            onClick={() => navigate(`/admin/${quizId}/summary`)}
+            className="px-12 py-5 bg-blue-600 text-white rounded-xl font-bold text-[2vw] shadow hover:bg-blue-800 transition-all"
+            style={{minWidth:'200px'}}>
+            View Full Summary
+          </button>
+        </div>
       </div>
     );
   };
+
+  // Enhanced QR code rendering with better styling and debugging
+  const renderQRCode = () => {
+    if (!session?.code) {
+      return (
+        <div className="w-80 h-80 bg-gray-100 rounded-lg flex items-center justify-center">
+          <span className="text-gray-500">Loading QR Code...</span>
+        </div>
+      );
+    }
+
+    const qrUrl = `${window.location.origin}/quiz/user?code=${session.code}`;
+    console.log('[AdminPage] Generated QR Code URL:', {
+      url: qrUrl,
+      sessionCode: session.code,
+      origin: window.location.origin
+    });
+
+    return (
+      <div className="text-center">
+        <QRCodeSVG
+          value={qrUrl}
+          size={320}
+          level="M"
+          includeMargin={true}
+          className="bg-white p-4 rounded-lg transition-transform group-hover:scale-105 cursor-pointer shadow-lg"
+          onClick={() => setQrModalOpen(true)}
+        />
+        <p className="mt-2 text-sm text-gray-600">
+          Scan with your phone's camera to join
+        </p>
+        <button
+          onClick={() => window.open('/qr-test', '_blank')}
+          className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors text-sm"
+        >
+          Test QR Code Scanner
+        </button>
+      </div>
+    );
+  };
+
+  // Enhanced QR modal with larger code
+  const renderQRModal = () => {
+    if (!session?.code) return null;
+
+    const qrUrl = `${window.location.origin}/quiz/user?code=${session.code}`;
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Join Quiz</h3>
+            <button
+              onClick={() => setQrModalOpen(false)}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              ✕
+            </button>
+          </div>
+          <div className="text-center">
+            <QRCodeSVG
+              value={qrUrl}
+              size={480}
+              level="M"
+              includeMargin={true}
+              className="bg-white p-6 rounded-lg mx-auto"
+            />
+            <p className="mt-4 text-sm text-gray-600">
+              Scan with your phone's camera to join the quiz
+            </p>
+            <div className="mt-4 p-3 bg-gray-100 rounded">
+              <p className="text-xs text-gray-500 mb-1">Session Code:</p>
+              <p className="font-mono text-lg font-bold">{session.code}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Add useEffect to log session details for debugging
+  useEffect(() => {
+    if (session?.code) {
+      console.log('[AdminPage] Session details:', {
+        sessionId: session.id,
+        code: session.code,
+        phase: session.phase,
+        adminId: session.admin_id,
+        isLive: session.is_live
+      });
+    }
+  }, [session]);
 
   if (loading) {
     return <div className="p-4">Loading...</div>;
@@ -547,147 +800,6 @@ export default function AdminPage() {
 
   // Define a constant for the top bar height
   const TOP_BAR_HEIGHT = '4.5rem';
-  async function handlePresentationNext() {
-    if (quizPhase === 'question' || quizPhase === 'answer_poll') {
-      setQuizPhase('leaderboard');
-      setShowLeaderboard(true);
-      return;
-    }
-    if (quizPhase === 'leaderboard' || showLeaderboard) {
-      if (currentQuestionIndex >= questions.length - 1) {
-        setShowLeaderboard(false);
-        setShowPodium(true);
-        setQuizPhase('podium');
-        return;
-      }
-      // Advance to next question
-      const nextIndex = currentQuestionIndex + 1;
-      setCurrentQuestionIndex(nextIndex);
-      setCurrentQuestion(questions[nextIndex]);
-      if (session?.id && questions[nextIndex]?.id) {
-        const timerEnd = new Date(Date.now() + (questions[nextIndex].timer || 20) * 1000);
-        console.log('[AdminPage] Setting timer_end in handlePresentationNext:', {
-          timerEnd: timerEnd.toISOString(),
-          nextQuestionTimer: questions[nextIndex].timer,
-          nextQuestionId: questions[nextIndex].id,
-          nextIndex
-        });
-        
-        const { data, error } = await supabase
-          .from('lq_sessions')
-          .update({
-            current_question_id: questions[nextIndex].id,
-            phase: 'question',
-            timer_end: timerEnd.toISOString(),
-          })
-          .eq('id', session.id)
-          .select()
-          .single();
-
-        if (error) throw error;
-        
-        // Update local session state with the database response
-        setSession(data);
-      }
-      setQuizPhase('question');
-      setShowLeaderboard(false);
-      return;
-    }
-  }
-
-  if (presentationMode && (quizPhase === 'lobby' || waitingToStart)) {
-    return (
-      <div className="w-screen h-screen overflow-hidden bg-gradient-to-br from-white via-blue-50 to-purple-100 flex flex-col">
-        {/* Top Bar: Quiz Code, Start Quiz, Presentation Mode toggle/cross */}
-        <div className="fixed top-0 left-0 w-full z-50 bg-white/90 shadow-lg flex items-center justify-between px-8 py-3 gap-4"
-          style={{ minHeight: TOP_BAR_HEIGHT, height: TOP_BAR_HEIGHT, backdropFilter: 'blur(8px)' }}
-        >
-          <span className="text-4xl font-bold text-blue-700 tracking-wider">Quiz Code: <span className="text-gray-800">{session?.code}</span></span>
-          <div className="absolute left-1/2 transform -translate-x-1/2">
-            <div className="text-4xl font-bold text-neutral-800 truncate" style={{ maxWidth: '35vw', letterSpacing: 0.5 }}>
-              {quiz?.title ? `Quiz: ${quiz.title}` : 'Quiz'}
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={handleStartQuiz}
-              className="bg-green-600 text-white px-6 py-2 rounded-full text-xl font-bold shadow hover:bg-green-700 transition-all"
-              style={{ minWidth: '180px' }}
-            >
-              Start Quiz
-            </button>
-            {/* Presentation Mode cross/exit */}
-            <button
-              onClick={() => setPresentationMode(false)}
-              className="p-2 bg-gray-700 text-white rounded-lg font-semibold shadow hover:bg-gray-900 transition-all border border-gray-900"
-              title="Exit Presentation Mode (ESC)"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-        {/* Main Content */}
-        <div className="flex flex-col flex-1 items-center justify-start mt-[6.5rem] w-full pb-8">
-          {/* Two-Column Layout - full height/width utilization */}
-          <div className="flex flex-row flex-1 w-full max-w-7xl gap-12 justify-center items-stretch px-8" style={{ minHeight: 0 }}>
-            {/* Left Column: QR Code & Link */}
-            <div className="flex flex-col flex-1 justify-center">
-              <div className="bg-white rounded-xl shadow-lg p-4 flex-1 flex flex-col justify-center items-center min-h-0"
-                   style={{ height: '100%' }}>
-                <QRCodeSVG
-                  value={`${window.location.origin}/quiz/user?code=${session?.code}`}
-                  size={480}
-                  level="H"
-                  includeMargin={true}
-                  className="mb-6"
-                />
-                <div className="w-full flex flex-col justify-center items-center">
-                  <div className="bg-white/90 rounded-lg px-4 py-2 shadow-md border border-gray-200 mb-2" style={{ width: '480px' }}>
-                    <div
-                      className="text-blue-600 underline text-center break-all cursor-pointer select-all font-medium text-gray-700"
-                      onClick={() => handleCopyLink(`${window.location.origin}/quiz/user?code=${session?.code}`)}
-                    >
-                      {`${window.location.origin}/quiz/user?code=${session?.code}`}
-                    </div>
-                  </div>
-                  {copied && <div className="text-green-600 font-semibold text-center">Copied!</div>}
-                </div>
-              </div>
-            </div>
-            {/* Right Column: Participants */}
-            <div className="flex flex-col flex-1 justify-center">
-              <div className="bg-white rounded-xl shadow-lg p-4 flex-1 overflow-y-auto min-h-0"
-                   style={{ height: '100%' }}>
-                <div className="text-lg font-semibold mb-4 text-gray-700 border-b border-gray-200 pb-2">
-                  Participants: {participants.length}
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {(() => {
-                    const maxSlots = 12; // 4x3 grid
-                    // Newest participant first, old shift right/down
-                    const displayParticipants = [...participants].slice().reverse();
-                    while (displayParticipants.length < maxSlots) displayParticipants.push(null);
-                    return displayParticipants.map((participant, idx) =>
-                      participant ? (
-                        <div key={participant.id} className="bg-gray-50 rounded-lg shadow p-2 text-center font-medium text-gray-700 truncate">
-                          {participant.username}
-                        </div>
-                      ) : (
-                        <div key={"empty-"+idx} className="bg-gray-100 rounded-lg p-2 text-center text-gray-300">&nbsp;</div>
-                      )
-                    );
-                  })()}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       ref={presentationRef}
@@ -706,18 +818,25 @@ export default function AdminPage() {
           </button>
         </div>
       )}
-
+      {/* Enter Presentation Mode Button */}
+      {!presentationMode && (
+        <div className="fixed top-4 right-4 z-40">
+          <button
+            onClick={() => setPresentationMode(true)}
+            className="px-6 py-2 bg-blue-700 text-white rounded-lg font-semibold shadow hover:bg-blue-900 transition-all text-base border border-blue-900"
+            title="Enter Presentation Mode (Fullscreen)"
+          >
+            Enter Presentation Mode
+          </button>
+        </div>
+      )}
       {/* Fixed Presentation Mode Top Bar */}
-      {presentationMode && !(quizPhase === 'lobby' || waitingToStart) && (
-        <div className="fixed top-0 left-0 w-full z-50 bg-white/90 shadow-lg flex items-center justify-between px-8 py-3 gap-4"
+      {presentationMode && (
+        <div className="fixed top-0 left-0 w-full z-50 bg-white/90 shadow-md flex items-center justify-between px-8 py-3 gap-4"
           style={{ minHeight: TOP_BAR_HEIGHT, height: TOP_BAR_HEIGHT, backdropFilter: 'blur(8px)' }}
         >
           <span className="text-lg md:text-2xl font-bold text-blue-700 tracking-wider">Quiz Code: <span className="text-gray-800">{session?.code}</span></span>
-          <div className="absolute left-1/2 transform -translate-x-1/2">
-            <div className="bg-white/90 rounded-lg px-4 py-2 shadow-md border border-gray-200">
-              <span className="text-xl font-bold text-gray-800">{currentQuestionIndex + 1}/{questions.length}</span>
-            </div>
-          </div>
+          <span className="text-base md:text-xl font-semibold text-gray-700">Q{currentQuestionIndex + 1} of {questions.length}</span>
           <div className="flex items-center gap-6">
             {quizPhase === 'question' && (
               <div className="flex items-center gap-2 text-purple-700 font-bold text-xl bg-white/80 px-4 py-1 rounded-full shadow">
@@ -725,37 +844,12 @@ export default function AdminPage() {
                 {timeLeft}s
               </div>
             )}
-            {(quizPhase === 'leaderboard' || showLeaderboard || quizPhase === 'question') ? (
-              <button
-                onClick={handlePresentationNext}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold shadow hover:bg-green-700 transition-all text-base"
-                title="Next"
-              >
-                <span>Next</span>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </button>
-            ) : showPodium ? (
-              <button
-                onClick={() => navigate(`/admin/${quizId}/summary`)}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition-all text-base"
-                title="View Full Summary"
-              >
-                <span>View Full Summary</span>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </button>
-            ) : null}
             <button
               onClick={() => setPresentationMode(false)}
-              className="p-2 bg-gray-700 text-white rounded-lg font-semibold shadow hover:bg-gray-900 transition-all border border-gray-900"
+              className="px-5 py-2 bg-gray-700 text-white rounded-lg font-semibold shadow hover:bg-gray-900 transition-all text-base border border-gray-900"
               title="Exit Presentation Mode (ESC)"
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              Exit Presentation Mode
             </button>
           </div>
         </div>
@@ -765,54 +859,42 @@ export default function AdminPage() {
         style={presentationMode ? { maxWidth: '100vw', maxHeight: '100vh', padding: 0, marginTop: TOP_BAR_HEIGHT, minHeight: `calc(100vh - ${TOP_BAR_HEIGHT})`, boxSizing: 'border-box', overflow: 'auto' } : { marginTop: TOP_BAR_HEIGHT }}>
         {/* Quiz Start Flow: After creating session, show code, participant list, and Start Quiz button */}
         {waitingToStart && session && !presentationMode ? (
-          <div className="flex flex-col items-center justify-center min-h-screen w-full p-4">
-            <div className="w-full max-w-4xl mx-auto bg-white/90 rounded-2xl shadow-2xl p-8 animate-fade-in relative">
-              <h2 className="text-4xl font-bold text-blue-700 mb-8 text-center">Quiz Lobby</h2>
-              
-              {/* Quiz Code Section */}
-              <div className="mb-8 text-center">
-                <span className="text-2xl font-semibold text-gray-800">Quiz Code: <span className="text-blue-700 text-5xl font-bold tracking-wider">{session.code}</span></span>
+          <div className="flex flex-col items-center justify-center min-h-[60vh] w-full">
+            <div className="w-full max-w-lg mx-auto bg-white/80 rounded-xl shadow-lg p-6 animate-fade-in relative">
+              <h2 className="text-2xl font-bold text-blue-700 mb-4 text-center">Quiz Lobby</h2>
+              <div className="mb-4 text-center">
+                <span className="text-lg font-semibold text-gray-800">Quiz Code: <span className="text-blue-700 text-2xl font-bold">{session.code}</span></span>
               </div>
-              
-              {/* QR Code Section - Much Larger */}
-              <div className="flex flex-col items-center mb-8 group" title="Click to enlarge QR code">
-                <span className="font-semibold text-gray-700 mb-4 text-xl">Join as Participant:</span>
-                <QRCodeSVG
-                  value={`${window.location.origin}/quiz/user?code=${session.code}`}
-                  size={280}
-                  level="H"
-                  includeMargin={true}
-                  className="transition-transform group-hover:scale-105 cursor-pointer shadow-lg"
-                  onClick={() => setQrModalOpen(true)}
-                />
+              {/* QR Code for user response page, inside lobby details */}
+              <div className="flex flex-col items-center mb-4 group" title="Click to enlarge QR code">
+                <span className="font-semibold text-gray-700 mb-2">Join as Participant:</span>
+                {renderQRCode()}
                 <button
                   type="button"
-                  className="mt-4 text-sm text-blue-600 underline break-all hover:text-blue-800 focus:outline-none"
+                  className="mt-2 text-xs text-blue-600 underline break-all hover:text-blue-800 focus:outline-none"
                   onClick={() => handleCopyLink(`${window.location.origin}/quiz/user?code=${session.code}`)}
                   style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
                 >
                   {`${window.location.origin}/quiz/user?code=${session.code}`}
                 </button>
                 {copied && (
-                  <span className="text-green-600 text-sm font-semibold mt-2 animate-fade-in">Copied!</span>
+                  <span className="text-green-600 text-xs font-semibold mt-1 animate-fade-in">Copied!</span>
                 )}
-                <span className="text-sm text-blue-500 mt-2">Click QR to enlarge, link to copy</span>
+                <span className="text-xs text-blue-500 mt-1">Click QR to enlarge, link to copy</span>
               </div>
-              
-              {/* Participants Section */}
-              <div className="mb-8">
-                <h3 className="font-bold mb-4 text-2xl text-gray-800 text-center">Participants ({participants.length})</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
-                  {participants.length === 0 && <div className="text-gray-500 text-center col-span-full py-8">No participants yet.</div>}
+              <div className="mb-6">
+                <h3 className="font-bold mb-2 text-lg text-gray-800 text-center">Participants</h3>
+                <div className="space-y-2">
+                  {participants.length === 0 && <div className="text-gray-500 text-center">No participants yet.</div>}
                   {participants.map((participant) => (
                     <div
                       key={participant.id}
-                      className="flex justify-between items-center p-3 bg-gray-50 rounded-lg shadow-sm border"
+                      className="flex justify-between items-center p-2 bg-gray-50 rounded-lg shadow-sm"
                     >
-                      <span className="truncate max-w-[12rem] font-medium text-gray-800">{participant.username}</span>
+                      <span className="truncate max-w-[10rem] font-medium text-gray-800">{participant.username}</span>
                       <button
                         onClick={() => removeParticipant(participant.id)}
-                        className="px-3 py-1 text-red-500 hover:bg-red-100 rounded transition-all text-sm"
+                        className="px-2 py-1 text-red-500 hover:bg-red-100 rounded transition-all"
                       >
                         Remove
                       </button>
@@ -820,42 +902,93 @@ export default function AdminPage() {
                   ))}
                 </div>
               </div>
-              
-              {/* Start Quiz Button */}
-              <div className="flex justify-center">
+              <div className="flex justify-center gap-4">
                 <button
                   onClick={handleStartQuiz}
-                  className="px-12 py-4 bg-green-600 text-white rounded-2xl font-bold text-2xl shadow-lg hover:bg-green-700 transition-all"
-                  style={{ minWidth: '200px' }}
+                  className="px-8 py-3 bg-green-600 text-white rounded-2xl font-bold text-xl shadow-lg hover:bg-green-700 transition-all"
+                  style={{ minWidth: '120px' }}
                 >
                   Start Quiz
                 </button>
+                <button
+                  onClick={async () => {
+                    if (session?.id) {
+                      const testTimerEnd = new Date(Date.now() + 10000).toISOString(); // 10 seconds
+                      console.log('[AdminPage] Test timer set to:', testTimerEnd);
+                      
+                      try {
+                        const { data, error } = await supabase
+                          .from('lq_sessions')
+                          .update({
+                            phase: 'question',
+                            timer_end: testTimerEnd,
+                          })
+                          .eq('id', session.id)
+                          .select()
+                          .single();
+                          
+                        if (error) {
+                          console.error('[AdminPage] Error setting test timer:', error);
+                          return;
+                        }
+                        
+                        if (!data.timer_end) {
+                          console.error('[AdminPage] Test timer was not set in database response');
+                          return;
+                        }
+                        
+                        setSession(data);
+                        setQuizPhase('question');
+                        console.log('[AdminPage] Test timer applied successfully:', data);
+                        
+                        // Test timer calculation
+                        const now = Date.now();
+                        const timerEnd = new Date(testTimerEnd).getTime();
+                        const remaining = Math.max(0, Math.floor((timerEnd - now) / 1000));
+                        console.log('[AdminPage] Test calculation:', {
+                          nowUTC: new Date(now).toISOString(),
+                          nowIST: toISTString(now),
+                          timerEndUTC: new Date(timerEnd).toISOString(),
+                          timerEndIST: toISTString(timerEnd),
+                          remaining,
+                          difference: timerEnd - now
+                        });
+                        
+                        // Trigger timer re-evaluation
+                        setTimeout(() => {
+                          console.log('[AdminPage] Triggering timer re-evaluation for test timer');
+                          setTimerTrigger(prev => prev + 1);
+                        }, 100);
+                      } catch (err) {
+                        console.error('[AdminPage] Error in test timer:', err);
+                      }
+                    } else {
+                      console.error('[AdminPage] No session ID available for test timer');
+                    }
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold shadow hover:bg-blue-700 transition-all"
+                >
+                  Test Timer (10s)
+                </button>
+                
+                {/* Debug Display */}
+                <div className="mt-4 p-4 bg-gray-100 rounded-lg text-sm">
+                  <h3 className="font-semibold mb-2">Debug Info:</h3>
+                  <div>Timer End (UTC): {session?.timer_end || 'NULL'}</div>
+                  <div>Timer End (IST): {toISTString(session?.timer_end)}</div>
+                  <div>Time Left: {timeLeft}s</div>
+                  <div>Phase: {quizPhase}</div>
+                  <div>Show Correct: {showCorrect ? 'Yes' : 'No'}</div>
+                  <div>Session ID: {session?.id || 'None'}</div>
+                  <div>Current Question: {currentQuestion?.id || 'None'}</div>
+                </div>
               </div>
               {/* QR Code Modal Overlay */}
               {qrModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80" onClick={() => setQrModalOpen(false)}>
-                  <div className="bg-white rounded-3xl shadow-2xl p-12 flex flex-col items-center relative max-w-md mx-4" onClick={e => e.stopPropagation()}>
-                    <button className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-3xl font-bold" onClick={() => setQrModalOpen(false)} aria-label="Close QR code modal">&times;</button>
-                    <h3 className="text-2xl font-bold text-blue-700 mb-6 text-center">Join Quiz</h3>
-                    <QRCodeSVG
-                      value={`${window.location.origin}/quiz/user?code=${session.code}`}
-                      size={400}
-                      level="H"
-                      includeMargin={true}
-                      className="shadow-lg"
-                    />
-                    <span className="mt-6 text-lg text-gray-700 font-semibold text-center">Scan to join as participant</span>
-                    <button
-                      type="button"
-                      className="mt-4 text-sm text-blue-600 underline break-all hover:text-blue-800 focus:outline-none text-center"
-                      onClick={() => handleCopyLink(`${window.location.origin}/quiz/user?code=${session.code}`)}
-                      style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                    >
-                      {`${window.location.origin}/quiz/user?code=${session.code}`}
-                    </button>
-                    {copied && (
-                      <span className="text-green-600 text-sm font-semibold mt-2 animate-fade-in">Copied!</span>
-                    )}
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70" onClick={() => setQrModalOpen(false)}>
+                  <div className="bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center relative" onClick={e => e.stopPropagation()}>
+                    <button className="absolute top-2 right-2 text-gray-500 hover:text-gray-800 text-2xl font-bold" onClick={() => setQrModalOpen(false)} aria-label="Close QR code modal">&times;</button>
+                    {renderQRModal()}
                   </div>
                 </div>
               )}
@@ -893,7 +1026,7 @@ export default function AdminPage() {
               <div style={{ paddingTop: TOP_BAR_HEIGHT, minHeight: `calc(100vh - ${TOP_BAR_HEIGHT})`, boxSizing: 'border-box', width: '100vw', overflow: 'auto' }}>
                 {renderPodium()}
               </div>
-            ) : (quizPhase === 'leaderboard' || showLeaderboard) ? (
+            ) : showLeaderboard ? (
               <div
                 className="flex flex-col items-center justify-center w-full min-h-screen min-w-screen bg-white/90 p-0 m-0"
                 style={{
@@ -941,6 +1074,28 @@ export default function AdminPage() {
                       ));
                     })()}
                   </ol>
+                </div>
+                {/* Next button pinned to bottom, always visible, responsive, never covers menu bar */}
+                <div
+                  style={{
+                    position: 'fixed',
+                    left: 0,
+                    bottom: 0,
+                    width: '100vw',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(to top, rgba(255,255,255,0.97) 80%, rgba(255,255,255,0.7) 100%)',
+                    padding: '1rem 0 1.2rem 0',
+                    zIndex: 20, // Above leaderboard, below menu
+                    pointerEvents: 'auto',
+                  }}
+                >
+                  <button
+                    onClick={handleLeaderboardNext}
+                    className="px-8 py-4 sm:px-12 sm:py-5 bg-gray-700 text-white rounded-xl font-bold text-lg sm:text-2xl shadow hover:bg-gray-800 transition-all"
+                    style={{minWidth:'160px', maxWidth:'90vw'}}>
+                    Next
+                  </button>
                 </div>
               </div>
             ) : (
@@ -1024,17 +1179,30 @@ export default function AdminPage() {
                         onExit={() => setPresentationMode(false)}
                       />
                     ) : null}
-
+                    {/* Next Button - bottom right, floating */}
+                    {quizPhase === 'question' && (
+                      <div className="fixed bottom-10 right-16 z-50">
+                        <button
+                          onClick={handleLeaderboardNext}
+                          className="flex items-center gap-2 px-10 py-5 bg-green-600 text-white rounded-2xl font-bold text-2xl shadow-xl hover:bg-green-700 transition-all border-2 border-green-700"
+                          style={{ minWidth: '200px', fontWeight: 700 }}
+                        >
+                          Next <span className="ml-2 text-3xl">➡</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })()
             ) : (
-              <div className="bg-gray-100 p-4 rounded-xl shadow flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-bold text-gray-800">Session Code: <span className="text-blue-700">{session.code}</span></h2>
-                  <p className="text-gray-600">Status: <span className="font-semibold">{quizPhase}</span></p>
-                  <p className="text-gray-600">Question: <span className="font-semibold">{currentQuestionIndex + 1} / {questions.length}</span></p>
-                </div>
+                          <div className="bg-gray-100 p-4 rounded-xl shadow flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-800">Session Code: <span className="text-blue-700">{session.code}</span></h2>
+                <p className="text-gray-600">Status: <span className="font-semibold">{quizPhase}</span></p>
+                <p className="text-gray-600">Question: <span className="font-semibold">{currentQuestionIndex + 1} / {questions.length}</span></p>
+                <p className="text-gray-600">Timer End: <span className="font-semibold">{session.timer_end ? new Date(session.timer_end).toLocaleTimeString() : 'Not set'}</span></p>
+                <p className="text-gray-600">Time Left: <span className="font-semibold">{timeLeft}s</span></p>
+              </div>
                 <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={startQuestion}
@@ -1044,7 +1212,7 @@ export default function AdminPage() {
                     Start Question
                   </button>
                   <button
-                    onClick={nextQuestion}
+                    onClick={handleLeaderboardNext}
                     className="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold shadow hover:bg-blue-600 transition-all"
                     style={{ display: quizPhase === 'question' ? 'block' : 'none' }}
                   >
@@ -1067,12 +1235,12 @@ export default function AdminPage() {
                   <p className="font-bold text-lg text-gray-900 mb-2">{currentQuestion.question_text}</p>
                   <ul className="ml-4 mt-2 space-y-1">
                     {currentQuestion.options.map((option, index) => (
-                      <li
-                        key={index}
-                        className={
-                          `${showCorrect && timeLeft === 0 && index === currentQuestion.correct_answer_index ? 'text-green-600 font-semibold' : 'text-gray-700'} flex items-center gap-2`
-                        }
-                      >
+                                              <li
+                          key={index}
+                          className={
+                            `${showCorrect && index === currentQuestion.correct_answer_index ? 'text-green-600 font-semibold' : 'text-gray-700'} flex items-center gap-2`
+                          }
+                        >
                         <span
                           style={{
                             wordBreak: 'break-word',
@@ -1090,7 +1258,7 @@ export default function AdminPage() {
                         >
                           {option}
                         </span>
-                        {showCorrect && timeLeft === 0 && index === currentQuestion.correct_answer_index && <span className="ml-2 text-green-600 font-bold">✓</span>}
+                        {showCorrect && index === currentQuestion.correct_answer_index && <span className="ml-2 text-green-600 font-bold">✓</span>}
                       </li>
                     ))}
                   </ul>
