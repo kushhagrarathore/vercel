@@ -30,7 +30,6 @@ const AIGenerationModal = ({ isOpen, onClose }) => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
           },
           body: JSON.stringify({
             topic: topic.trim(),

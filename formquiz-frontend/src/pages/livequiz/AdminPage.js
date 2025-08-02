@@ -22,15 +22,6 @@ function useWindowSizeSimple() {
   return size;
 }
 
-// Utility function to validate phase values
-const validatePhase = (phase) => {
-  const validPhases = ['lobby', 'question', 'times_up', 'leaderboard', 'finished'];
-  if (!validPhases.includes(phase)) {
-    throw new Error(`Invalid phase value: ${phase}. Valid phases are: ${validPhases.join(', ')}`);
-  }
-  return phase;
-};
-
 export default function AdminPage() {
   const navigate = useNavigate();
   const { quizId } = useParams();
@@ -306,17 +297,13 @@ export default function AdminPage() {
     }
     try {
       const sessionCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      
-      // Validate that we're using a valid phase value
-      const initialPhase = validatePhase('lobby');
-      
       const { data, error } = await supabase
         .from('lq_sessions')
         .insert([
           {
             code: sessionCode,
             is_live: true,
-            phase: initialPhase,
+            phase: 'lobby',
             quiz_id: quizId,
             current_question_id: questions[0]?.id,
           },
@@ -353,13 +340,10 @@ export default function AdminPage() {
         currentQuestionId: currentQuestion.id
       });
 
-      // Validate phase value
-      const newPhase = validatePhase('question');
-
       const { data, error } = await supabase
         .from('lq_sessions')
         .update({
-          phase: newPhase,
+          phase: 'question',
           timer_end: timerEnd.toISOString(),
           current_question_id: currentQuestion.id,
         })
@@ -404,14 +388,11 @@ export default function AdminPage() {
         nextIndex
       });
       
-      // Validate phase value
-      const newPhase = validatePhase('question');
-      
       const { data, error } = await supabase
         .from('lq_sessions')
         .update({
           current_question_id: questions[nextIndex].id,
-          phase: newPhase,
+          phase: 'question',
           timer_end: timerEnd.toISOString(),
         })
         .eq('id', session.id)
@@ -431,14 +412,11 @@ export default function AdminPage() {
     if (!session?.id) return;
 
     try {
-      // Validate phase value
-      const endPhase = validatePhase('finished');
-
       const { data, error } = await supabase
         .from('lq_sessions')
         .update({
           is_live: false,
-          phase: endPhase,
+          phase: 'ended',
         })
         .eq('id', session.id)
         .select()
@@ -595,14 +573,11 @@ export default function AdminPage() {
           nextIndex
         });
         
-        // Validate phase value
-        const newPhase = validatePhase('question');
-        
         const { data, error } = await supabase
           .from('lq_sessions')
           .update({
             current_question_id: questions[nextIndex].id,
-            phase: newPhase,
+            phase: 'question',
             timer_end: timerEnd.toISOString(),
           })
           .eq('id', session.id)
